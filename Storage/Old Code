@@ -1,0 +1,186 @@
+  # wolfram query
+  #if message.content.startswith("$q"):
+   # value = message.content.split("$q ",1)[1]
+   # app_id = 'Q8QLWJ-ET2J2WVPLX'
+   # client1 = wolframalpha.Client(app_id)
+   # res = client1.query(value)
+   # print("Appears to have returned wolfram correctly")
+   # answer = next(res.results)['subpod']['img']['@src']
+   # answertxt = next(res.results).text
+   # await message.channel.send("Input: \"" + value + '\", recognized as \"' + next(res.results)['@title'] + '\"')
+   # await message.channel.send('Image:')
+   # await message.channel.send(answer)
+   # await message.channel.send('Plaintext: \n' + answertxt)
+
+
+   old wolfram query
+
+
+
+
+     if message.content.startswith('$about'):
+    await message.channel.send("Welcome to Hunter's Bot! \nThis bot has no purpose. \n \nIt generates insults with the $i command, compliments with the $c command, grabs the lichess daily puzzle with $p daily, $g to spam a user, and answers virtually any question with $q. \n \nSpecial permission commands include $e & $del to manage the manmade database and $c-$j-$k-$t-$h for specific response protocols. \n \n Made by H-Bombmxpwr#2243")
+    if message.author.id == 239605426033786881:
+      await message.channel.send("https://pbs.twimg.com/media/DhXNpOeWkAE-yDE.jpg")
+
+
+  old about send
+
+
+
+
+  Old trivia code
+  # trivia section
+  if message.content.startswith("$v"):
+    value = message.content.split("$v ",1)[1]
+    if value.startswith("l") or value.startswith("list"):
+      embedVar = discord.Embed(title= "Trivia Commands", description = "•\'$v question\' will generate a random multiple choice question that can be answered within 60 seconds by the user\n•\'$v list\' will give a list of trivia commands", color=0x8b0000).set_thumbnail(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
+      await message.channel.send(embed=embedVar)
+    
+    if value.startswith("q"):
+      info = get_question()
+      answers = [info[5],info[4],info[3],info[2]]
+      correct_answer = info[2]
+      random.shuffle(answers)
+      question = info[1]
+      category = info[0]
+      embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + category, color = 0x8b0000 ).set_image(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
+      embedVar.add_field(name = question, value = "\na. " + answers[0] + "\nb. " + answers[1] + "\nc. " + answers[2] + "\nd. " + answers[3] + "\n \nSend your answer below", inline = False)
+      await message.channel.send(embed = embedVar)
+
+      local = answers.index(correct_answer)
+      if local == 0:
+        ans = 'a'
+      elif local == 1:
+        ans = 'b'
+      elif local == 2:
+        ans  = 'c'
+      elif local == 3:
+        ans = 'd'
+      try:
+        msg = await client.wait_for("message", check=lambda message: message.author == message.author, timeout = 30)
+      
+      
+        if msg.content.lower() == ans:
+          await msg.add_reaction('✅')
+          await message.channel.send("YO YOU ARE RIGHT!! It was " + answers[local])
+        else:
+          await msg.add_reaction('❌')
+          await message.channel.send("WRONG! The correct answer was " + answers[local]+  "\nTry harder next time" )
+      except:
+          await message.channel.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
+
+
+
+#twitter code
+# twitter quieries
+  if message.content.startswith("$t"):
+    value = message.content.split("$t ",1)[1]
+    if value.startswith("u") or value.startswith("user"):
+      try:
+
+        value = value.split(' ',1)[1]
+        user = api.get_user(screen_name = value)
+        user_url = user.profile_image_url
+        #starts the embed
+        embedVar = discord.Embed(title= user.name, description = user.description, color=0x1da1f2).set_thumbnail(url = user_url)
+        embedVar.add_field(name = "Follower Count:", value = user.followers_count,inline = False)
+        embedVar.add_field(name = "Account Link:", value = 'https://twitter.com/' + user.screen_name)
+        await message.channel.send(embed=embedVar)
+      except:
+        embedVar = discord.Embed(title= "Error", description = "User not found or has a private account", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
+        await message.channel.send(embed=embedVar)
+
+    
+    if value.startswith("t") or value.startswith("trends"):
+      trends_result = api.get_place_trends(2379574)
+      embedVar = discord.Embed(title='Trends in the US', description = 'Top 25 trends on Twitter in the US', color=0x1da1f2).set_thumbnail(url = 'https://static01.nyt.com/images/2014/08/10/magazine/10wmt/10wmt-superJumbo-v4.jpg')
+
+      for trend in trends_result[0]["trends"]:
+        embedVar.add_field(name = trend["name"], value = "****", inline = True)
+    
+      await message.channel.send(embed=embedVar)
+
+    if value.startswith("m"):
+      if message.author.id == 239605426033786881:
+        timeline = api.home_timeline()
+        for tweet in timeline:
+          await message.channel.send(f"{tweet.user.name} said {tweet.text}\n \n \n \n \n \n")
+      else:
+        await message.channel.send("Sorry you don't have permission to look at Hunter's timeline")
+    
+    if value.startswith("l")or value.startswith("list"):
+      embedVar = discord.Embed(title= "Twitter Commands", description = "•\'$t user <username>\' to view a specific users details\n•\'$t trends\' to view whats currently trending in the US\n•\'$t myself\' to view Hunter's timeline\n•\'$t list\' to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
+      await message.channel.send(embed=embedVar)
+
+
+
+ADD WITH AN INPUT SCHEME WHEN YOU HAVE THE CHANCE
+
+if message.content.startswith("$e"):
+    if message.author.id == 239605426033786881:
+
+      defender_message = message.content.split("$e " ,1)[1]
+      update_data(defender_message)
+      await message.channel.send("New Defense Added! Thanks Hottie")
+    else:
+      await message.channel.send("I noticed you don't have edit permissions, so unfortunately you cannot change this setting. \nSorry Queen!")
+  
+   
+
+  # deletes from the created database
+  if message.content.startswith("$del"):
+    if message.author.id == 239605426033786881:
+      listin = []
+      if "defender3" in db.keys():
+        index = int(message.content.split("$del" , 1)[1])
+        delete_defender(index)
+        listin = db["defender3"]
+      await message.channel.send(listin)
+    else:
+      await message.channel.send("I noticed you don't have edit permissions, so unfortunately you cannot change this setting")
+  
+  
+  # lists the current user database
+  if message.content.startswith("$l"):
+    listin = []
+    if "defender3" in db.keys():
+      listin = db["defender3"]
+    await message.channel.send(listin)
+    await message.channel.send("Database index is " + str(len(listin)))
+
+
+
+different Statuses:
+
+# Setting `Playing ` status
+await bot.change_presence(activity=discord.Game(name="a game"))
+
+# Setting `Streaming ` status
+await bot.change_presence(activity=discord.Streaming(name="My Stream", url=my_twitch_url))
+
+# Setting `Listening ` status
+await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="a song"))
+
+# Setting `Watching ` status
+await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="a movie"))
+
+
+
+#The old trolling garabge
+if message.content.startswith("BONF CURNTANES" or "bonf curntanes"):
+    emoji3 = '🐄'
+    await message.add_reaction(emoji3)
+    await message.channel.send("What\nthe\nactual\nhell!")
+
+  if message.content.lower().startswith("princess parts"):
+    embedVar = discord.Embed(title = "You asked for this"  , desription = " ", color = 0x8b0000 ).set_image(url = "https://cdn.discordapp.com/attachments/757819878844661770/839011749767675944/image0.png")
+    await message.channel.send(embed = embedVar)
+
+  
+  if message.content.startswith("Smegma" or "smegma"):
+    emoji4 = '🧀'
+    emoji5 = '🍆'
+    await message.add_reaction(emoji5)
+    await message.add_reaction(emoji4)
+    await message.channel.send("musty")
