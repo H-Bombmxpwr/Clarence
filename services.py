@@ -70,7 +70,6 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   
   
 
-
   # creates ASCII Art
   @commands.command(help="Return text in ASCII art", aliases=["figlet"])
   @commands.cooldown(1, 3, commands.BucketType.user)

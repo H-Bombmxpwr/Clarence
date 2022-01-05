@@ -9,10 +9,6 @@ import music,services,games,mod #import the cogs
 from functions import check_carrot
 import time
 
-with open('words.txt', 'r') as f:
-    words = f.read()
-    badwords = words.split()
-
 
 cogs = [music,services,mod,games]
 
@@ -43,6 +39,12 @@ async def on_command_error(ctx, error):
 async def on_message(message):
   if message.author == client.user:
     return
+
+  with open('words.txt', 'r') as f:
+    words = f.read()
+    badwords = words.split()
+    f.close()
+
 
   msg = message.content.lower()
   if any(word in msg for word in badwords):

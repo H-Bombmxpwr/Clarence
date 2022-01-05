@@ -123,5 +123,45 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
       ctx.send("Sorry you don't have admin privileges")
 
 
+  #manage profanity text file
+  @commands.command(help = "Manage the words the bot filters\n parameter = add/remove")
+  async def filter(self,ctx, parameter,*, change):
+   if ctx.author.id ==  239605426033786881:
+    with open("words.txt", "r") as f:
+        lines = f.readlines()
+    
+    if parameter.lower() == "add":
+      
+      if change.lower() in lines:
+        await ctx.send(change + " is already in the text file")
+
+      else:
+        with open('words.txt', 'a') as f:
+          f.write('\n'+ change)
+          f.close()
+        await ctx.send(change + " was added to the text file")
+
+    if parameter.lower() == "remove":
+      
+      if change.lower() not in lines:
+        await ctx.send(change + " is not in the text file")
+
+      else:
+        with open("words.txt", "w") as f:
+          for line in lines:
+            if line.strip("\n") != change:
+              f.write(line)
+        await ctx.send(change + ' was removed from the text file')
+   else:
+     ctx.send("You do not have permission to change the text file")
+
+
+
+      
+
+    
+
+
+
 def setup(client):
     client.add_cog(moderation(client))
