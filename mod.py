@@ -129,10 +129,13 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
    if ctx.author.id ==  239605426033786881:
     with open("words.txt", "r") as f:
         lines = f.readlines()
+        f.close()
+    
+    chg = str(change).lower() + '\n'
     
     if parameter.lower() == "add":
       
-      if change.lower() in lines:
+      if chg in lines:
         await ctx.send(change + " is already in the text file")
 
       else:
@@ -143,7 +146,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
     if parameter.lower() == "remove":
       
-      if change.lower() not in lines:
+      if chg not in lines:
         await ctx.send(change + " is not in the text file")
 
       else:
@@ -151,6 +154,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
           for line in lines:
             if line.strip("\n") != change:
               f.write(line)
+          f.close()
         await ctx.send(change + ' was removed from the text file')
    else:
      ctx.send("You do not have permission to change the text file")
