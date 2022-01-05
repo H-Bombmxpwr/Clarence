@@ -175,5 +175,22 @@ def get_fizzbuzz_stats(ctx):
   return stats
   
 
+def punish_user(user_id):
+    user_id = '<@' + str(user_id) + '>'
+    responses = [
+        "You kiss your mother with that mouth, {}?",
+        "That's some colorful language, {}.",
+        "Come on now, {}. Did you really need to say that?",
+        "{} - LANGUAGE!",
+        "Hey now {}, watch your mouth.",
+        "We don't use that kind of language here, {}.",
+        "{} you can be more creative than that."
+    ]
+
+    choice = random.choice(responses)
+    choice = choice.format(user_id)
+
+    return choice
+
 
   
