@@ -105,6 +105,8 @@ class local(commands.Cog, description = 'Local commands within the bot'):
     except:
       await ctx.send("Error: Invalid syntax")
 
+
+  #get general info about anyone in a given server
   @commands.command(help = 'Get info of any user in the server')
   async def userinfo(self, ctx, target: Optional[Member]):
     target = target or ctx.author
@@ -391,15 +393,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send(embed=embed)
 
 
-
   
-  
-  
-  
-  
-  
-  
-  
+  #get an image of an animal if it is supported  
   @commands.command(help="Get a random animal image", aliases=["an"])
   async def animal(self, ctx,animal):
     if animal.lower().startswith("a"):
@@ -420,6 +415,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
         embed = discord.Embed(title="Error " ,description = "A valid animal was not given, see \'$animal about\'", colour = 0x088f8f)
         await ctx.send(embed=embed)
 
+  #pull a random meme from a meme api
   @commands.command(help = "get a random meme",aliases = ["m"])
   async def meme(self,ctx):
           json = requests.get("https://some-random-api.ml/meme").json()
@@ -429,6 +425,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send(embed=embed)
 
 
+  #sends most common gif based on query
   @commands.command(help="Search for GIFs (filtered) on Tenor")
   async def gif(self, ctx, *, query):
         json = requests.get(

@@ -1,5 +1,6 @@
 import random
 
+#class for interactive trivia in services
 class Trivia:
   def __init__(self, question, category, correctAnswer, incorrectAnswers):
     self.question = question
@@ -23,6 +24,7 @@ class Trivia:
     return answers
 
 
+#class to solve fizzbuzz in games
 class FizzBuzz:
   def __init__(self, number):
     self.number = number
@@ -39,7 +41,7 @@ class FizzBuzz:
       value = str(self.number)
     return value
     
-
+#class to define the TrieNode for prafanity filter
 class TrieNode:
     _MAX_SIZE = 40
 
