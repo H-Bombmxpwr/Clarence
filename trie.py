@@ -1,5 +1,6 @@
 from structures import TrieNode
 
+
 class Trie:
     def __init__(self):
         self.root = self.get_node()
@@ -66,6 +67,7 @@ class Trie:
                 temp = word[(i+1):]
                 self.insert('|'+temp, crawler)
                 self.insert('!'+temp, crawler)
+                self.insert('1'+temp, crawler)
 
             if c == 'j':
                 temp = word[(i+1):]
@@ -83,6 +85,8 @@ class Trie:
                 temp = word[(i+1):]
                 self.insert('5'+temp, crawler)
                 self.insert('$'+temp, crawler)
+                self.insert('3'+temp, crawler)
+                self.insert('z'+temp, crawler)
 
             if c == 't':
                 temp = word[(i+1):]

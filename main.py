@@ -49,7 +49,7 @@ def buildTrie():
 async def on_ready():
   print("Trie is building......")
   buildTrie()
-  print("Trie is built. Ready to read messages.\n\n")
+  print("Trie is built. Ready to read messages.\n")
   print('It is still working probably \n{0.user} do be online'.format(client))
   print('=------------------------------=')
   
@@ -57,7 +57,7 @@ async def on_ready():
 
 
 @client.event 
-async def on_command_error(ctx, error): 
+async def on_command_error(ctx, error): #detects if a command is valid
     if isinstance(error, commands.CommandNotFound): 
         em = discord.Embed(title=f"Error", description=f"Command \'" + ctx.message.content + "   \' not found. Use $about or $help for a list of commands", color=0xff0000) 
         await ctx.send(embed=em)
@@ -72,7 +72,7 @@ async def on_message(message):
   text = text.translate(str.maketrans(table))
   author_id = message.author.id
 
-  if author_id != 760613233181720647:
+  if author_id != 239605426033786881: #profanity filter
         isClean = True
         message_word_list = text.split()
         for word in message_word_list:

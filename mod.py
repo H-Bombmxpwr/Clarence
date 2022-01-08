@@ -157,7 +157,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
           f.close()
         await ctx.send(change + ' was removed from the text file')
    else:
-     ctx.send("You do not have permission to change the text file")
+      await ctx.send("You do not have permission to change the text file")
 
 
 
