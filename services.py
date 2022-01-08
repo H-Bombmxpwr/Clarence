@@ -130,7 +130,7 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   
   #set the status of the bot
   @commands.command(help = 'Set the status of the bot')
-  async def status(self,ctx, status, text):
+  async def status(self,ctx, status,*, text):
     if ctx.author.id == 239605426033786881:
       if status.lower() == 'playing':
       # Setting `Playing ` status

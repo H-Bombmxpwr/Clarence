@@ -49,7 +49,7 @@ async def on_ready():
   print("Trie is building......")
   buildTrie()
   print("Trie is built. Ready to read messages.\n")
-  print('It is still working probably \n{0.user} do be online'.format(client))
+  print('{0.user} is back online'.format(client))
   print('=------------------------------=')
   
 
