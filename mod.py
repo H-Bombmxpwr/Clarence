@@ -138,7 +138,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
     
     if parameter.lower() == "add":
       
-      if chg in lines:
+      if chg in lines or chg.strip() in lines:
         await ctx.send(change + " is already in the text file")
 
       else:

@@ -134,7 +134,7 @@ def get_stats(ctx):
   listin = db['trivia']
   embedVar = discord.Embed(title = "Database of Trivia players",description = 'Currently tracking ' + str(round(len(listin)/3)) + ' players', color = 0x6a0dad).set_footer(text = "All scores as of " + str(date.today()))
   for x in range(0,len(listin) - 1,3):
-    embedVar.add_field(name = listin[x], value = 'Correct: ' + str(listin[x+1]) + '\nTotal: ' + str(listin[x+2]) + '\nPercent: ' + str(round(listin[x+1]/listin[x+2] * 100 ,2)) + '%', inline = False)
+    embedVar.add_field(name = listin[x], value = 'Correct: ' + str(listin[x+1]) + '\nTotal: ' + str(listin[x+2]) + '\nPercent: ' + str(round(listin[x+1]/listin[x+2] * 100 ,2)) + '%', inline = True)
   return embedVar
 
 
