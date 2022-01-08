@@ -95,12 +95,15 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
   @commands.command(help = 'delete x number of messages, regardless of sender',aliases = ['cl'])
   async def clean(self,ctx,limit :int):
-    if ctx.message.author.guild_permissions.administrator:
+    if ctx.message.author.guild_permissions.administrator or ctx.author.id == 239605426033786881:
+      if limit > 250:
+        await ctx.send('``` You cannot delete more than 250 messages at a time```')
+      else:
         await ctx.channel.purge(limit=limit)
         await ctx.send('```' + str(limit) + ' messages cleared by {}'.format(ctx.author.name) + '```')
         await ctx.message.delete()
-    if ctx.message.author.guild_permissions.administrator == 0:
-       await ctx.send("Either you are the bot does not have the necessary permissions to perform this task")
+    else:
+       await ctx.send("Either you or the bot does not have the necessary permissions to perform this task")
 
 
 
