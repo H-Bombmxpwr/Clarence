@@ -83,7 +83,7 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
         if len(lyrics) > 2048:
           lyrics = lyrics[:2045] + '...'
 
-        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color).set_thumbnail(url = json["thumbnail"]["genius"]).set_footer(text=  'As requested by @' + str(ctx.author.name) ,icon_url = ctx.author.avatar_url)
+        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color).set_thumbnail(url = json["thumbnail"]["genius"]).set_footer(text=  'Requested by ' + str(ctx.author.name) ,icon_url = ctx.author.avatar_url)
 
         await ctx.send(embed = embedVar)
 
