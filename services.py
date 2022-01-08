@@ -170,7 +170,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
     answers = info.getAnswerList()
 
     if parameter == None:
-      embedVar = discord.Embed(title= "Trivia Commands", description = "•\'$trivia multiple\' will generate a random multiple choice question that can be answered within 60 seconds by the user\n•\'$trivia stats\' will give the senders trivia stats\n•\'$trivia list\' will give a list of trivia commands", color=0x8b0000).set_thumbnail(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
+      embedVar = discord.Embed(title= "Trivia Commands", description = "•\'$trivia multiple\' will generate a random multiple choice question that can be answered within 60 seconds by the user\n•\'$trivia stats\' will give the senders trivia stats\n•\'$trivia\' will give a list of trivia commands", color=0x8b0000).set_thumbnail(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
       await ctx.send(embed=embedVar)
 
     if parameter.lower().startswith('s'):
@@ -241,7 +241,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
 
     if parameter == None:
-      embedVar = discord.Embed(title= "Twitter Commands", description = "•\'$twitter user <username>\' to view a specific users details\n•\'$twitter trends us\' to view whats currently trending in the US\n•\'$twitter m hunter\' to view Hunter's timeline\n•\'$twitter list commands\' to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
+      embedVar = discord.Embed(title= "Twitter Commands", description = "•\'$twitter user <username>\' to view a specific users details\n•\'$twitter trends us\' to view whats currently trending in the US\n•\'$twitter m hunter\' to view Hunter's timeline\n•\'$twitter\' to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
       await ctx.send(embed=embedVar)
     
     
