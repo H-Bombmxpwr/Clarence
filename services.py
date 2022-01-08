@@ -165,11 +165,11 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
   #interactive trivia
   @commands.command(help = 'Interactive triva, waits for a reponse from the user', aliases = ["tr"])
-  async def trivia(self,ctx,parameter):
+  async def trivia(self,ctx,parameter = None):
     info = functions.get_question2()
     answers = info.getAnswerList()
 
-    if parameter.lower().startswith('l'):
+    if parameter == None:
       embedVar = discord.Embed(title= "Trivia Commands", description = "•\'$trivia multiple\' will generate a random multiple choice question that can be answered within 60 seconds by the user\n•\'$trivia stats\' will give the senders trivia stats\n•\'$trivia list\' will give a list of trivia commands", color=0x8b0000).set_thumbnail(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
       await ctx.send(embed=embedVar)
 
@@ -220,7 +220,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
   #twitter commands
   @commands.command(help = 'Interact with twitter', aliases = ["tw"])
-  async def twitter(self,ctx, parameter, second):
+  async def twitter(self,ctx, parameter = None, second = None):
 
     # Authenticate to Twitter
     auth = tweepy.OAuthHandler(os.getenv('twitter_api_key'),os.getenv('twitter_secret_api_key'))
@@ -237,6 +237,13 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
     except:
       print("Error during authentication")
+    
+
+
+    if parameter == None:
+      embedVar = discord.Embed(title= "Twitter Commands", description = "•\'$twitter user <username>\' to view a specific users details\n•\'$twitter trends us\' to view whats currently trending in the US\n•\'$twitter m hunter\' to view Hunter's timeline\n•\'$twitter list commands\' to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
+      await ctx.send(embed=embedVar)
+    
     
     if parameter.lower().startswith("u"):
   
@@ -270,18 +277,13 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send(f"{tweet.user.name} said {tweet.text}\n \n \n \n \n \n")
       else:
         await ctx.send("Sorry you don't have permission to look at Hunter's timeline")
-    
-    if parameter.lower().startswith("l"):
-      embedVar = discord.Embed(title= "Twitter Commands", description = "•\'$twitter user <username>\' to view a specific users details\n•\'$twitter trends us\' to view whats currently trending in the US\n•\'$twitter m hunter\' to view Hunter's timeline\n•\'$twitter list commands\' to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
-      await ctx.send(embed=embedVar)
   
   
 
 
   # lichess queries
   @commands.command(help = 'Interact with lichess.org')
-  async def lichess(self,ctx,parameter):
-    if parameter.lower().startswith("d"):
+  async def lichess(self,ctx,parameter = None):
       response = requests.get("https://lichess.org/api/puzzle/daily")
       json_request = response.json()
       #starts the embed
@@ -296,8 +298,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   
   
   # wolfram query
-  @commands.command(help = 'Ask a question to a computational intelligence')
-  async def q(self,ctx,*,parameter):
+  @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
+  async def query(self,ctx,*,parameter):
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
         app_id = os.getenv('app_id')
@@ -329,8 +331,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
 
   # get insult
-  @commands.command(help = 'Get an insult with an insult api')
-  async def i(self,ctx):
+  @commands.command(help = 'Get an insult with an insult api', aliases = ['i'])
+  async def insult(self,ctx):
     try:
       quote = functions.get_insult()
       embedVar = discord.Embed(title="Random Insult", description = quote, color=0xff0000)
@@ -341,8 +343,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   
   
   #get compliment
-  @commands.command(help = 'Get a compliment using a compliment api')
-  async def c(self,ctx):
+  @commands.command(help = 'Get a compliment using a compliment api', aliases = ['c'])
+  async def compliment(self,ctx):
     try:
       quote = functions.get_compliment()
       embedVar = discord.Embed(title="Random Compliment", description = quote, color=0x89cff0)
@@ -354,8 +356,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
 
   #get joke
-  @commands.command(help = 'Get a joke using a joke api')
-  async def j(self,ctx):
+  @commands.command(help = 'Get a joke using a joke api', aliases = ['j'])
+  async def joke(self,ctx):
     try:
       quote = functions.get_joke()
       embedVar = discord.Embed(title="Random " + quote["category"]+ " Joke\n", description = quote["setup"] + '\n\n' + quote["delivery"], color=0xffa500)
@@ -392,8 +394,8 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   
   #get an image of an animal if it is supported  
   @commands.command(help="Get a random animal image", aliases=["an"])
-  async def animal(self, ctx,animal):
-    if animal.lower().startswith("a"):
+  async def animal(self, ctx,animal = None):
+    if animal == None:
       embed = discord.Embed(title = "List of valid animals",color = 0x088f8f).set_image(url = 'https://cdn.discordapp.com/attachments/898257362132008970/906283416666918952/unknown.png')
       await ctx.send(embed=embed)
     
@@ -408,7 +410,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send(embed=embed)
 
       except:
-        embed = discord.Embed(title="Error " ,description = "A valid animal was not given, see \'$animal about\'", colour = 0x088f8f)
+        embed = discord.Embed(title="Error " ,description = "A valid animal was not given, see \'$animal\'", colour = 0x088f8f)
         await ctx.send(embed=embed)
 
   #pull a random meme from a meme api
