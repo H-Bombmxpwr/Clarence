@@ -110,6 +110,5 @@ class Trie:
                 print("Char not found: " + char)
                 return False
             crawler = crawler.children[index]
-        print("=-----------=")
 
         return crawler is not None and crawler.is_end_of_word

@@ -182,7 +182,8 @@ def punish_user(user_id):
         "{} - LANGUAGE!",
         "Hey now {}, watch your mouth.",
         "We don't use that kind of language here, {}.",
-        "{} you can be more creative than that."
+        "{} you can be more creative than that.",
+        "{}, you absolute loser, do better"
     ]
 
     choice = random.choice(responses)

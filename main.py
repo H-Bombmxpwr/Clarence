@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands
 import os
-import random
 from keep_alive import keep_alive
-from Lists_Storage import *
-from functions import *
+from Lists_Storage import thedan,days
 import music,services,games,mod #import the cogs
 from functions import check_carrot,punish_user
 import time
@@ -101,7 +99,7 @@ async def on_message(message):
     emojis = ['🎸','🎹','🎷','🥁', '🎤']
     for emoji in emojis:
       await message.add_reaction(emoji)
-    await message.channel.send("```\nI LOVE STEELY DAN!\n```")
+    await message.channel.send("I LOVE STEELY DAN!")
 
   
   #Carrot agree function

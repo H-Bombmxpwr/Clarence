@@ -3,8 +3,6 @@ import discord
 from discord import Member
 from discord.ext import commands
 import os
-import random
-from replit import db
 import functions
 import requests
 import wolframalpha
@@ -299,8 +297,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   
   # wolfram query
   @commands.command(help = 'Ask a question to a computational intelligence')
-  async def q(self,ctx,):
-      parameter = ctx.message.content.split("$q " ,1)[1]
+  async def q(self,ctx,*,parameter):
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
         app_id = os.getenv('app_id')
