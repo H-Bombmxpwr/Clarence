@@ -6,8 +6,9 @@ from keep_alive import keep_alive
 from Lists_Storage import *
 from functions import *
 import music,services,games,mod #import the cogs
-from functions import check_carrot
+from functions import check_carrot,punish_user
 import time
+from trie import Trie
 
 
 cogs = [music,services,mod,games]
@@ -19,9 +20,36 @@ for i in range(len(cogs)):
   cogs[i].setup(client)
 
 
+trie = Trie()
+table = {
+    "\"": None,
+    "'": None,
+    "-": None,
+    "`": None,
+    "~": None,
+    ",": None,
+    ".": None,
+    ":": None,
+    ";": None,
+    "_": None
+}
+
+
+
+def buildTrie():
+    file = open("words.txt", 'r')
+
+    for line in file:
+        line = line.strip()
+        trie.insert(line)
+
+
 
 @client.event
 async def on_ready():
+  print("Trie is building......")
+  buildTrie()
+  print("Trie is built. Ready to read messages.\n\n")
   print('It is still working probably \n{0.user} do be online'.format(client))
   print('=------------------------------=')
   
@@ -40,20 +68,24 @@ async def on_message(message):
   if message.author == client.user:
     return
 
-  with open('words.txt', 'r') as f:
-    words = f.read()
-    badwords = words.split()
-    f.close()
+  text = message.content.lower()
+  text = text.translate(str.maketrans(table))
+  author_id = message.author.id
 
-
-  msg = message.content.lower()
-  if any(word in msg for word in badwords):
-            await message.channel.send(punish_user(message.author.id))
+  if author_id != 760613233181720647:
+        isClean = True
+        message_word_list = text.split()
+        for word in message_word_list:
+            if trie.search(word):
+                isClean = False
+                break
+        if not isClean:
+            await message.channel.send(punish_user(author_id))
 
 
 
   # thursday!!!
-  if any(word in msg for word in days):
+  if any(word in text for word in days):
     time_zone = -6
     
     if int((int(time.time()) + (time_zone * 3600))/86400) % 7 == 0:
@@ -63,7 +95,7 @@ async def on_message(message):
  
   
   #the dan
-  if any(word in msg for word in thedan):
+  if any(word in text for word in thedan):
     emojis = ['🎸','🎹','🎷','🥁', '🎤']
     for emoji in emojis:
       await message.add_reaction(emoji)
@@ -71,7 +103,7 @@ async def on_message(message):
 
   
   #Carrot agree function
-  if message.author.id == 239605426033786881 and check_carrot(msg) == 1: 
+  if check_carrot(text) == 1: 
     await message.channel.send(message.content + '^')
 
   

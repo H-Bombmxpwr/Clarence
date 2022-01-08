@@ -5,7 +5,6 @@ from structures import Trivia
 from replit import db
 import json
 import random
-import codecs
 import html
 from datetime import date
 from requests import Session
@@ -61,7 +60,6 @@ def get_question2():
   trivia = Trivia(question, category, cor_ans, in_ans)
 
   return trivia
-
 
 
 
@@ -191,6 +189,5 @@ def punish_user(user_id):
     choice = choice.format(user_id)
 
     return choice
-
 
   
