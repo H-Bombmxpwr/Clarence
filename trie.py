@@ -86,7 +86,6 @@ class Trie:
                 self.insert('5'+temp, crawler)
                 self.insert('$'+temp, crawler)
                 self.insert('3'+temp, crawler)
-                self.insert('z'+temp, crawler)
 
             if c == 't':
                 temp = word[(i+1):]
