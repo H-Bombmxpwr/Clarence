@@ -79,22 +79,13 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
                 await ctx.send("❌ " + json["error"])
                 return
 
+        lyrics = json['lyrics']
+        if len(lyrics) > 2048:
+          lyrics = lyrics[:2045] + '...'
 
-        #pager = Pager(
-            #title=json["title"],
-            #thumbnail=json["thumbnail"]["genius"],
-            #timeout=100,
-            #entries=[
-            #    json["lyrics"][i : i + 700] for i in range(0, len(json["lyrics"]), 700)
-            #],
-            #length=1,
-            #colour=self.client.colour,
-        #)
-        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"]), description = "By " + json["author"],color = ctx.author.color).set_thumbnail(url = json["thumbnail"]["genius"])
-        embedVar.add_field(name = "\u200b", value = json["lyrics"],inline = False)
+        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color).set_thumbnail(url = json["thumbnail"]["genius"]).set_footer(text=  'As requested by @' + str(ctx.author.name) ,icon_url = ctx.author.avatar_url)
 
         await ctx.send(embed = embedVar)
-        #await pager.start(ctx)
 
 def setup(client):
     client.add_cog(music(client))

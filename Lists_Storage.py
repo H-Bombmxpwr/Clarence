@@ -1,5 +1,3 @@
-
-
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
 
