@@ -42,6 +42,7 @@ def buildTrie():
     for line in file:
         line = line.strip()
         trie.insert(line)
+    file.close()
 
 
 
@@ -59,8 +60,9 @@ async def on_ready():
 @client.event 
 async def on_command_error(ctx, error): #detects if a command is valid
     if isinstance(error, commands.CommandNotFound): 
-        em = discord.Embed(title=f"Error", description=f"Command \'" + ctx.message.content + "   \' not found. Use $about or $help for a list of commands", color=0xff0000) 
+        em = discord.Embed(title=f"Error", description=f"Command \'" + ctx.message.content + "   \' not found. \nUse $about or $help for a list of commands", color=0xff0000) 
         await ctx.send(embed=em)
+
 
 
 @client.event

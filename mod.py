@@ -149,7 +149,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
     if parameter.lower() == "remove":
       
-      if chg not in lines:
+      if chg not in lines and chg.strip() not in lines:
         await ctx.send(change + " is not in the text file")
 
       else:
