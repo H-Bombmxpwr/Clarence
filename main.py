@@ -47,7 +47,7 @@ def buildTrie():
 @client.event
 async def on_ready():
   print("Trie is building......")
-  buildTrie()
+  #buildTrie()
   print("Trie is built. Ready to read messages.\n")
   print('{0.user} is back online'.format(client))
   print('=------------------------------=')
@@ -103,7 +103,7 @@ async def on_message(message):
 
   
   #Carrot agree function
-  if check_carrot(text) == 1: 
+  if check_carrot(text,message) == 1: 
     await message.channel.send(message.content + '^')
 
   

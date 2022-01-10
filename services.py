@@ -14,6 +14,7 @@ import embed_storage
 from structures import Trivia
 from urllib.parse import quote
 from pyfiglet import Figlet
+import random
 
 
 
@@ -86,19 +87,19 @@ class local(commands.Cog, description = 'Local commands within the bot'):
 
   #ping a user a bunch of times
   @commands.command(help = 'Ping a user x number of times')
-  async def ping(self, ctx, member : discord.Member,iterate):
+  async def bug(self, ctx, member : discord.Member,iterate):
     try:
       id = int(member.id)
       if int(iterate) > 30:
         await ctx.send("Woah thats a little `TOO` cruel...")
       elif id == 877014219499925515:
-        await ctx.send("You better not try to ping me")
+        await ctx.send("You better not try to bug me")
     
       elif id == 239605426033786881:
-        await ctx.send("I could never ping Hunter like that \nYou are gonna have to do it yourself")
+        await ctx.send("I could never ping my creator like that")
       else:
         for x in range(1,int(iterate) + 1):
-          await ctx.send('Pong <@' + str(id) + '> ' + str(x) + '!\n')
+          await ctx.send('Hey <@' + str(id) + '> ' + str(x) + '!\n')
     except:
       await ctx.send("Error: Invalid syntax")
 
@@ -125,37 +126,17 @@ class local(commands.Cog, description = 'Local commands within the bot'):
 
     await ctx.send(embed=embed)
 
+
+  #simple dice rolling command
+  @commands.command(help = "rolls a die")
+  async def dice(self,ctx):
+    await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
         
-    
-  
-  #set the status of the bot
-  @commands.command(help = 'Set the status of the bot')
-  async def status(self,ctx, status,*, text):
-    if ctx.author.id == 239605426033786881:
-      if status.lower() == 'playing':
-      # Setting `Playing ` status
-        await self.client.change_presence(activity=discord.Game(name=text))
-        await ctx.send("Status changed to: \'Playing " + text + "\'")
-      
-      elif status.lower() == 'listening':
-        # Setting `Listening ` status
-        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=text))
-        await ctx.send("Status changed to: \'Listening to " + text + "\'")
-
-      elif status.lower() == 'watching':
-        # Setting `Watching ` status
-        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=text))
-        await ctx.send("Status changed to: \'Watching " + text + "\'")
-      
-      else:
-        await ctx.send("Invalid actvity sent")
-
-    else:
-      await ctx.send('You do not have permission to change the bots status')
 
 
 
-  
+  # END LOCAL CLASS/COG 
+  # START API CLASS
 
 
 class api(commands.Cog, description = 'Commands that call an outside api to return information'):

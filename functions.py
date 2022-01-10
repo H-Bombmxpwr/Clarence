@@ -12,11 +12,15 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 
 
-def check_carrot(string):
+def check_carrot(string,message):
   for i in range(0,len(string)):
     if string[i] != '^':
       return 0
+  
+  if message.author.bot == True:
+    return 0
   return 1
+
 
 def get_insult():
   response = requests.get("https://evilinsult.com/generate_insult.php?lang=en&type=json")

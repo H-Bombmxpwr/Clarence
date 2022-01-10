@@ -127,7 +127,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
   #manage profanity text file
-  @commands.command(help = "Manage the words the bot filters\n parameter = add/remove")
+  @commands.command(help = "Manage the words the bot's filter\n parameter = add/remove")
   async def filter(self,ctx, parameter,*, change):
    if ctx.author.id ==  239605426033786881:
     with open("words.txt", "r") as f:
@@ -163,7 +163,35 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
       await ctx.send("You do not have permission to change the text file")
 
 
+  #get the latency of the bot
+  @commands.command(help = 'Find the latency of the bot')
+  async def ping(self,ctx):
+    await ctx.channel.send(f" `{round(self.client.latency * 1000)}` ms")
 
+  #set the status of the bot
+  @commands.command(help = 'Set the status of the bot')
+  async def status(self,ctx, status,*, text):
+    if ctx.author.id == 239605426033786881:
+      if status.lower() == 'playing':
+      # Setting `Playing ` status
+        await self.client.change_presence(activity=discord.Game(name=text))
+        await ctx.send("Status changed to: \'`Playing " + text + "\'`")
+      
+      elif status.lower() == 'listening':
+        # Setting `Listening ` status
+        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=text))
+        await ctx.send("Status changed to: \'`Listening to " + text + "\'`")
+
+      elif status.lower() == 'watching':
+        # Setting `Watching ` status
+        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=text))
+        await ctx.send("Status changed to: \'`Watching " + text + "\'`")
+      
+      else:
+        await ctx.send("Invalid actvity sent")
+
+    else:
+      await ctx.send('You do not have permission to change the bots status')
       
 
     
