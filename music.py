@@ -21,7 +21,7 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
     @commands.command(help = 'Join a voice channel')
     async def join(self,ctx):
         if ctx.author.voice is None:
-            await ctx.send("```You're not in a voice channel!\n Join one first pleb```")
+            await ctx.send("```You're not in a voice channel!\nJoin one first pleb```")
         voice_channel = ctx.author.voice.channel
         print(type(voice_channel))
         if ctx.voice_client is None:
