@@ -72,7 +72,9 @@ async def on_message(message):
   text = text.translate(str.maketrans(table))
   author_id = message.author.id
 
-  if author_id != 239605426033786881: #profanity filter
+ 
+ #profanity filter
+  if author_id != 239605426033786881: 
         isClean = True
         message_word_list = text.split()
         for word in message_word_list:
@@ -91,7 +93,7 @@ async def on_message(message):
     if int((int(time.time()) + (time_zone * 3600))/86400) % 7 == 0:
       await message.channel.send("```\nIt's Thursday, Happy Thursday!\n    \nhttp://isitthursday.org/\n```")
     else:
-      await message.channel.send("```\nIt's not Thursday\n    \nYou bozo\n```")
+      await message.channel.send("```\nIt's not Thursday in the North American Central Time Zone\n    \nYou bozo\n```")
  
   
   #the dan
@@ -99,7 +101,7 @@ async def on_message(message):
     emojis = ['🎸','🎹','🎷','🥁', '🎤']
     for emoji in emojis:
       await message.add_reaction(emoji)
-    await message.channel.send("I LOVE STEELY DAN!")
+    await message.reply("I LOVE STEELY DAN!")
 
   
   #Carrot agree function
