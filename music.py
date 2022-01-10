@@ -14,12 +14,7 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
     async def music(self,ctx):
       embedVar = discord.Embed(title="Music Commands", descripion="", color=0xff0080).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_of_YouTube_%282015-2017%29.svg/2560px-Logo_of_YouTube_%282015-2017%29.svg.png")
 
-      embedVar.add_field(name= "`$join`", value = "The bot will join a voice channel if the user who called the bot is in a channel\n", inline = False)
-      embedVar.add_field(name = "`$play: ` <YouTube Video Link>", value = "Will play any video off of YouTube if given a link\n", inline = False) 
-      embedVar.add_field(name = "`$pause` & `$resume`", value = "Pause and Resume the player\n", inline = False)
-      embedVar.add_field(name = "`$disconnect`", value = "Disconnects the player from the given voice channel\n", inline = False)
-      embedVar.add_field(name = "`$lyrics: `", value = "Pulls the lyrics to a queried song\n", inline = False)
-      embedVar.add_field(name = "`$music`", value = "Brings up a list of commands for the music player\n", inline = False)
+      embedVar.add_field(name = "\u200b" ,value= "`      join: ` The bot will join the current voice channel\n `      play: ` + <YouTube Video Link> plays a song\n `     music: ` Brings up a list of music commands\n`     pause: ` Pause the player\n`    lyrics: `Pulls the lyrics to a queried song\n `    resume: `  Resume the player\n`disconnect: ` Disconnects the bot from the voice channel\n", inline = False)
       await ctx.send(embed=embedVar)
 
     
