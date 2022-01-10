@@ -47,7 +47,7 @@ def buildTrie():
 @client.event
 async def on_ready():
   print("Trie is building......")
-  #buildTrie()
+  buildTrie()
   print("Trie is built. Ready to read messages.\n")
   print('{0.user} is back online'.format(client))
   print('=------------------------------=')
