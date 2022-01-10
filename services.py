@@ -160,14 +160,14 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
         embedVar = discord.Embed(title= "Error", description = "You have not answered a trivia question and are not in the database, use `trivia multiple: ` to answer a question", color=0x8b0000)
         await ctx.send(embed=embedVar)
       else:
-        embedVar = discord.Embed(title = 'Stats for @' + str(ctx.author.name), description = 'Tracked statistics for the interactive trivia',color=0x8b0000).set_footer(icon_url = ctx.author.avatar_url, text = "As of " + str(date.today()))
+        embedVar = discord.Embed(title = 'Stats for ' + str(ctx.author.name), description = 'Tracked statistics for the interactive trivia',color=0x8b0000).set_footer(icon_url = ctx.author.avatar_url, text = "As of " + str(date.today()))
         embedVar.add_field(name = "Number of correct", value = stats[1],inline = False)
         embedVar.add_field(name = "Total attempts", value = stats[2], inline = False)
         embedVar.add_field(name = 'Percent correct',value = str(round((stats[1]/stats[2])*100,2)) + '%', inline = False)
         await ctx.send(embed = embedVar)
     
     if parameter.lower().startswith('m'):
-      embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + info.category, color = 0x8b0000 ).set_footer(text=  '@' + str(ctx.author.name) + ', Send the correct answer below' ,icon_url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
+      embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + info.category, color = 0x8b0000 ).set_footer(text= str(ctx.author.name) + ', Send the correct answer below' ,icon_url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
       embedVar.add_field(name = info.question, value = "\na. " + answers[0] + "\nb. " + answers[1] + "\nc. " + answers[2] + "\nd. " + answers[3] + "\n", inline = False)
       await ctx.send(embed = embedVar)
 
