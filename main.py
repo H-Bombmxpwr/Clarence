@@ -33,7 +33,6 @@ table = {
 }
 
 
-
 def buildTrie():
     file = open("storage/words.txt", 'r')
 
