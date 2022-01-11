@@ -11,7 +11,6 @@ from typing import Optional
 from datetime import date
 import asyncio
 import storage.embed_storage
-from functionality.structures import Trivia
 from urllib.parse import quote
 from pyfiglet import Figlet
 import random
@@ -260,12 +259,16 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
         await ctx.send("Sorry you don't have permission to look at Hunter's timeline")
   
   
+
+
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
   async def wikipedia(self, ctx, *query):
         thequery = " ".join(query)
         link = wikipedia.page(thequery)
         await ctx.send(link.url)
+
+
 
   # lichess queries
   @commands.command(help = 'Interact with lichess.org')
@@ -282,6 +285,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
 
   
   
+
   
   # wolfram query
   @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
@@ -353,11 +357,14 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send(embed=embedVar)
 
 
+
   @commands.command(help = 'Coin market cap queries')
   async def coin(self,ctx):
     #quote = functions.coin_market_cap()
     #print(quote)
-    await ctx.send('Crypto function coming soon')
+    await ctx.send('Crypto function coming soon\nIn the mean time, have a coin flip: '+ random.choice(["`Heads`", "`Tails`"]))
+
+
 
   #xkcd comic random
   @commands.command(help="Get the latest/random xkcd comic")
