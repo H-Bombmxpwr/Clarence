@@ -1,15 +1,15 @@
 import discord
 from discord.ext import commands
 import os
-from keep_alive import keep_alive
-from Lists_Storage import thedan,days
-import music,services,games,mod #import the cogs
-from functions import check_carrot,punish_user
+from functionality.keep_alive import keep_alive
+from storage.Lists_Storage import thedan,days
+import cogs.music,cogs.services,cogs.games,cogs.mod #import the cogs
+from functionality.functions import check_carrot,punish_user
 import time
-from trie import Trie
+from functionality.trie import Trie
 
 
-cogs = [music,services,mod,games]
+cogs = [cogs.music,cogs.services,cogs.mod,cogs.games]
 
 client = commands.Bot(command_prefix='$',intents = discord.Intents.all())
 
@@ -35,7 +35,7 @@ table = {
 
 
 def buildTrie():
-    file = open("words.txt", 'r')
+    file = open("storage/words.txt", 'r')
 
     for line in file:
         line = line.strip()

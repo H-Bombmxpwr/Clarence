@@ -1,4 +1,4 @@
-from structures import TrieNode
+from functionality.structures import TrieNode
 
 
 class Trie:

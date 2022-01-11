@@ -1,7 +1,7 @@
 import requests
 import os
 import discord
-from structures import Trivia
+from functionality.structures import Trivia
 from replit import db
 import json
 import random

@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
-import functions
-from structures import FizzBuzz
+import functionality.functions
+from functionality.structures import FizzBuzz
 from datetime import date
 import requests
 
@@ -25,7 +25,7 @@ class games(commands.Cog,description = "Games to play with the bot!"):
         
         if msg.content.lower() == 'q':
           check = 1
-          functions.update_fizzbuzz(ctx,count)
+          functionality.functions.update_fizzbuzz(ctx,count)
           await ctx.send("```FizzBuzz canceled by player```")
           return
 
@@ -37,14 +37,14 @@ class games(commands.Cog,description = "Games to play with the bot!"):
         else:
           await msg.add_reaction('❌')
           await ctx.send('```' + str(msg.content) + ' is incorrect, the correct answer was ' + current.solve(varint) + '```')
-          functions.update_fizzbuzz(ctx,count)
+          functionality.functions.update_fizzbuzz(ctx,count)
           return
 
     if iterate.startswith('r'):
       await ctx.send('``` FizzBuzzz is a simple game\n If a number is divisible by 3, send fizz\n If a number is divisible by 5, send buzz\n If is it divisible by both, send fizzbuzz\n Else, send the original number\n\n i.e. 1,2,fizz,4,buzz,fizz....```')
 
     if iterate.startswith('s'):
-      stats = functions.get_fizzbuzz_stats(ctx)
+      stats = functionality.functions.get_fizzbuzz_stats(ctx)
       if stats[0] == 0:
         ctx.send("You have not played fizzbuzz yet, use $fizzbuzz to play")
       else:

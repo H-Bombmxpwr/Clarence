@@ -4,7 +4,7 @@ from discord import Member
 from discord.utils import get
 from datetime import date
 import asyncio
-import functions
+import functionality.functions
 import os
 
 class moderation(commands.Cog, description = 'Moderation commands that require specific permissions to use'):
@@ -112,7 +112,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
   async def database(self,ctx,arg):
     if ctx.author.id == 239605426033786881:
       if arg.lower() == "trivia":
-        embedVar = functions.get_stats(ctx)
+        embedVar = functionality.functions.get_stats(ctx)
         await ctx.send(embed = embedVar)
       
       if arg.lower() == "servers":
@@ -130,7 +130,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
   @commands.command(help = "Manage the words the bot's filter\n parameter = add/remove")
   async def filter(self,ctx, parameter,*, change):
    if ctx.author.id ==  239605426033786881:
-    with open("words.txt", "r") as f:
+    with open("storage/words.txt", "r") as f:
         lines = f.readlines()
         f.close()
     
@@ -142,7 +142,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(change + " is already in the text file")
 
       else:
-        with open('words.txt', 'a') as f:
+        with open('storage/words.txt', 'a') as f:
           f.write('\n'+ change)
           f.close()
         await ctx.send(change + " was added to the text file")
@@ -153,7 +153,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(change + " is not in the text file")
 
       else:
-        with open("words.txt", "w") as f:
+        with open("storage/words.txt", "w") as f:
           for line in lines:
             if line.strip("\n") != change:
               f.write(line)

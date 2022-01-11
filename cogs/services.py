@@ -3,15 +3,15 @@ import discord
 from discord import Member
 from discord.ext import commands
 import os
-import functions
+import functionality.functions
 import requests
 import wolframalpha
 import xkcd
 from typing import Optional
 from datetime import date
 import asyncio
-import embed_storage
-from structures import Trivia
+import storage.embed_storage
+from functionality.structures import Trivia
 from urllib.parse import quote
 from pyfiglet import Figlet
 import random
@@ -27,7 +27,7 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   # About Page
   @commands.command(help = 'The about information for the bot')
   async def about(self,ctx):
-    embeds = embed_storage.make_about()
+    embeds = storage.embed_storage.make_about()
     pages = 6
     cur_page = 1
     msg = await ctx.send(embed = embeds[0])
@@ -147,7 +147,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   #interactive trivia
   @commands.command(help = 'Interactive triva, waits for a reponse from the user', aliases = ["tr"])
   async def trivia(self,ctx,parameter = None):
-    info = functions.get_question2()
+    info = functionality.functions.get_question2()
     answers = info.getAnswerList()
 
     if parameter == None:
@@ -155,7 +155,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send(embed=embedVar)
 
     if parameter.lower().startswith('s'):
-      stats = functions.get_trivia_stats(ctx)
+      stats = functionality.functions.get_trivia_stats(ctx)
       if stats[0] == 0:
         embedVar = discord.Embed(title= "Error", description = "You have not answered a trivia question and are not in the database, use `trivia multiple: ` to answer a question", color=0x8b0000)
         await ctx.send(embed=embedVar)
@@ -193,7 +193,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send("Incorrect! The correct answer was " + answers[local])
           temp = 0
 
-        functions.update_score(ctx,temp)
+        functionality.functions.update_score(ctx,temp)
       except:
           await ctx.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
 
@@ -315,7 +315,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   @commands.command(help = 'Get an insult with an insult api', aliases = ['i'])
   async def insult(self,ctx):
     try:
-      quote = functions.get_insult()
+      quote = functionality.functions.get_insult()
       embedVar = discord.Embed(title="Random Insult", description = quote, color=0xff0000)
       await ctx.send(embed=embedVar)
     except:
@@ -327,7 +327,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   @commands.command(help = 'Get a compliment using a compliment api', aliases = ['c'])
   async def compliment(self,ctx):
     try:
-      quote = functions.get_compliment()
+      quote = functionality.functions.get_compliment()
       embedVar = discord.Embed(title="Random Compliment", description = quote, color=0x89cff0)
       await ctx.send(embed=embedVar)
     except:
@@ -340,7 +340,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   @commands.command(help = 'Get a joke using a joke api', aliases = ['j'])
   async def joke(self,ctx):
     try:
-      quote = functions.get_joke()
+      quote = functionality.functions.get_joke()
       embedVar = discord.Embed(title="Random " + quote["category"]+ " Joke\n", description = quote["setup"] + '\n\n' + quote["delivery"], color=0xffa500)
       await ctx.send(embed=embedVar)
     except:
