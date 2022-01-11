@@ -13,7 +13,7 @@ import asyncio
 import storage.embed_storage
 from urllib.parse import quote
 from pyfiglet import Figlet
-import random
+import random,secrets
 import wikipedia
 
 
@@ -130,7 +130,17 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   @commands.command(help = "rolls a die")
   async def dice(self,ctx):
     await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
-        
+  
+
+  @commands.command(help = 'generate a random hash')
+  async def hash(self,ctx, bits = None):
+    if bits == None:
+      await ctx.send('Please send an integer number of bits')
+    else:
+      try:
+        await ctx.send(bin(secrets.randbits(int(bits))))
+      except:
+        await ctx.send('An invalid input was given, try again')
 
 
 
