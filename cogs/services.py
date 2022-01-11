@@ -15,7 +15,7 @@ from functionality.structures import Trivia
 from urllib.parse import quote
 from pyfiglet import Figlet
 import random
-
+import wikipedia
 
 
 
@@ -260,7 +260,12 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
         await ctx.send("Sorry you don't have permission to look at Hunter's timeline")
   
   
-
+  #search wikepedia
+  @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
+  async def wikipedia(self, ctx, *query):
+        thequery = " ".join(query)
+        link = wikipedia.page(thequery)
+        await ctx.send(link.url)
 
   # lichess queries
   @commands.command(help = 'Interact with lichess.org')
