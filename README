@@ -1,4 +1,4 @@
 This is a discord bot that does a whole assortment of different tasks. It is still a work in progress but as of 1/1/2022 it interacts with 12 apis, has a few moderation commands, has 
 an assortment of local commands, has some games to play within the chat, and is able to play music within a voice channel. Use the $help command to see all commands, or $about to 
 see a neater spread of the commands. The word.txt text file is full of over 1000 swear words from an online source, so if you are sensitive to that I would recommend not opening it.
-The profanity filter is all implmented locally and is done using a search tree algorithm that can be found in trie.py and implmented in the client event on_message() of main.py. 
+The profanity filter is all implmented locally and is done using a search tree algorithm that can be found in trie.py and implmented in the client event on_message() of main.py.
