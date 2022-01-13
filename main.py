@@ -81,7 +81,7 @@ async def on_message(message):
                 isClean = False
                 break
         if not isClean:
-            await message.channel.send(punish_user(author_id))
+            await message.channel.send(punish_user(author_id,word))
 
 
 
@@ -90,7 +90,7 @@ async def on_message(message):
     time_zone = -6
     
     if int((int(time.time()) + (time_zone * 3600))/86400) % 7 == 0:
-      await message.channel.send("```\nIt's Thursday, Happy Thursday!\n    \nhttp://isitthursday.org/\n```")
+      await message.channel.send("```\nIt's Thursday in the North American Central Time Zone, Happy Thursday!\n    \nhttp://isitthursday.org/\n```")
     else:
       await message.channel.send("```\nIt's not Thursday in the North American Central Time Zone\n    \nYou bozo\n```")
  
@@ -108,6 +108,13 @@ async def on_message(message):
     await message.channel.send(message.content + '^')
 
   
+  #mystery function
+  if text == os.getenv("cursed_thing"):
+    emoji = '😦'
+    await message.add_reaction(emoji)
+    await message.channel.send("Why the actual heck do you know what a " + text + " is??")
+
+    
   await client.process_commands(message)
 
 

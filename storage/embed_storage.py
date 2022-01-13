@@ -18,7 +18,7 @@ def make_about():
 
   embedVar3 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color).set_footer(text = "Page 3/6 - Made by: H-Bombmxpwr#2243",icon_url = os.getenv('icon'))
 
-  embedVar3.add_field(name = "Local Commands", value = " `     bug: ` to spam a user x number of times\n`    hash: ` generate a specific length bit hash\n `    help: ` will return more info for every command\n  `    ping: ` Get the latency of the bot\n`   ascii: ` + a < 16 string will print a ascii string of the text\n`userinfo: ` return info of a server member\n")
+  embedVar3.add_field(name = "Local Commands", value = " `     bug: ` to spam a user x number of times\n`    bits: ` convert decimal/hex/binary/ascii\n `    help: ` will return more info for every command\n  `    ping: ` Get the latency of the bot\n`   ascii: ` + a < 16 string will print a ascii string of the text\n`userinfo: ` return info of a server member\n")
 
   
   embedVar4 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color).set_footer(text = "Page 4/6 - Made by: H-Bombmxpwr#2243",icon_url = os.getenv('icon'))

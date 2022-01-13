@@ -177,22 +177,26 @@ def get_fizzbuzz_stats(ctx):
   return stats
   
 
-def punish_user(user_id):
+def punish_user(user_id,word):
     user_id = '<@' + str(user_id) + '>'
-    responses = [
-        "You kiss your mother with that mouth, {}?",
-        "That's some colorful language, {}.",
-        "Come on now, {}. Did you really need to say that?",
-        "{} - LANGUAGE!",
-        "Hey now {}, watch your mouth.",
-        "We don't use that kind of language here, {}.",
-        "{} you can be more creative than that.",
-        "{}, you absolute loser, do better",
-        
-    ]
+    censor = word[0]
 
+    for l in range(1,len(word)):
+      censor =  censor + '\*'
+    
+    responses = [
+      f"{user_id}, I think you meant to say {censor}",
+      f"{censor} you too, {user_id}",
+      f"Woah that should be {censor} in this Christian server,{user_id}",
+      f"{user_id}...{user_id}...{user_id} cmon now, the least you could do is {censor}",
+      f"{user_id}, leave something to the imagination, like {censor}",
+      f"At least I have the dignity to say {censor}, {user_id}",
+      f" You can come up with something more creative than {censor}, {user_id}",
+      f"{censor} is what your mom said last night, {user_id}"]
+
+      
+    
     choice = random.choice(responses)
-    choice = choice.format(user_id)
 
     return choice
 

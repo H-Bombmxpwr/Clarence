@@ -13,7 +13,7 @@ import asyncio
 import storage.embed_storage
 from urllib.parse import quote
 from pyfiglet import Figlet
-import random,secrets
+import random
 import wikipedia
 
 
@@ -132,15 +132,28 @@ class local(commands.Cog, description = 'Local commands within the bot'):
     await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
   
 
-  @commands.command(help = 'generate a random hash')
-  async def hash(self,ctx, bits = None):
-    if bits == None:
-      await ctx.send('Please send an integer number of bits')
+  @commands.command(help = 'convert between bits/hex/decimal')
+  async def bits(self,ctx, typ = None,input = None):
+    if typ == None:
+      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`,`binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+    elif input == None:
+      await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
     else:
+     if typ.startswith('d'):
+      
       try:
-        await ctx.send(bin(secrets.randbits(int(bits))))
+        decimal = int(input)
+        try:
+          asci = str(chr(decimal))
+        except:
+          asci = "n/a"
+        hexa = str(hex(decimal))
+        bits = str(bin(decimal))
+        
+        await ctx.send("Binary: `" + bits + "`\nHex: `" + hexa + "`\nDecimal: `" + str(decimal) + "`\nAscii: `" + asci + "`")
       except:
-        await ctx.send('An invalid input was given, try again')
+        await ctx.send('An unknown error occurred, make sure the sent number is an integer')
+
 
 
 

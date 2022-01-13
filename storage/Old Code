@@ -1,3 +1,27 @@
+  responses = [
+        "You kiss your mother with that mouth, {}?",
+        "That's some colorful language, {}.",
+        "Come on now, {}. Did you really need to say that?",
+        "{} - LANGUAGE!",
+        "Hey now {}, watch your mouth.",
+        "We don't use that kind of language here, {}.",
+        "{} you can be more creative than that.",
+        "{}, you absolute loser, do better",
+        
+    ]
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   # wolfram query
   #if message.content.startswith("$q"):
    # value = message.content.split("$q ",1)[1]
