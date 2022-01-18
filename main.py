@@ -114,7 +114,6 @@ async def on_message(message):
     await message.add_reaction(emoji)
     await message.channel.send("Why the actual heck do you know what a " + text + " is??")
 
-    
   await client.process_commands(message)
 
 

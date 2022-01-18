@@ -3,11 +3,13 @@ import os
 
 
 
+
 #The embeds for the about page of the bot
 def make_about():
 
   color = 0x808080
-  embedVar1 = discord.Embed(title="Smrt Bot", description="[Invite Smrt Bot](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color).set_footer(text = "Page 1/6 - Made by: H-Bombmxpwr#2243",icon_url = os.getenv('icon'))
+  
+  embedVar1 = discord.Embed(title="Smrt Bot", description="[Invite Smrt Bot](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
   embedVar1.set_image(url = 'https://static.wikia.nocookie.net/simpsons/images/2/2c/Homer_Goes_to_College_41.JPG/revision/latest?cb=20130715173527')
 
   embedVar1.add_field(name= "About", value = 'The Bot is [open sourced](https://github.com/H-Bombmxpwr/Hunter-Bot) on GitHub\n\n=-= `Commands` =-=\n`•Page 2: ` API Commands\n`•Page 3: ` Local Commands\n`•Page 4: ` Music Commands\n`•Page 5: ` Moderation Commands\n`•Page 6: ` Games',inline = False)

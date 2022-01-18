@@ -27,6 +27,9 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   @commands.command(help = 'The about information for the bot')
   async def about(self,ctx):
     embeds = storage.embed_storage.make_about()
+    #add in the current prefix
+    embeds[0].set_footer(text = "Page 1/6 - Made by: H-Bombmxpwr#2243\n The current prefix is \"" + self.client.command_prefix + '\"',icon_url = os.getenv('icon'))
+    
     pages = 6
     cur_page = 1
     msg = await ctx.send(embed = embeds[0])
@@ -428,6 +431,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
       except:
         embed = discord.Embed(title="Error " ,description = "A valid animal was not given, see \'$animal\'", colour = 0x088f8f)
         await ctx.send(embed=embed)
+
 
   #pull a random meme from a meme api
   @commands.command(help = "get a random meme",aliases = ["m"])
