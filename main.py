@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import os
 from functionality.keep_alive import keep_alive
-from storage.Lists_Storage import thedan,days,conor_words
+from storage.Lists_Storage import thedan,days
 import cogs.music,cogs.services,cogs.games,cogs.mod #import the cogs
 from functionality.functions import check_carrot,punish_user
 import time
@@ -113,11 +113,6 @@ async def on_message(message):
     emoji = '😦'
     await message.add_reaction(emoji)
     await message.channel.send("Why the actual heck do you know what a " + text + " is??")
-
-
-  if any(word in text for word in conor_words) and author_id == 700155317148713001:
-    await message.channel.send("You have a strange obsession with the male genitalia, <@" + str(author_id) +">\n\n Not gonna say its weird, but........." )
-    await message.channel.send("https://64.media.tumblr.com/e2c389c20807db8a731397e5db2d206a/tumblr_opm93lnOub1woh6eso1_540.png")
 
   await client.process_commands(message)
 
