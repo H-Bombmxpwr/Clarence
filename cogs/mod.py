@@ -35,6 +35,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(embed=embed)
 
 
+
   @commands.command(help = 'Unmutes a user')
   async def unmute(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -50,6 +51,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
     else:
         embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
         await ctx.send(embed=embed)
+
 
 
 
@@ -74,6 +76,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
     else:
         embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
         await ctx.send(embed=embed)
+
 
 
   @commands.command(help = 'removes the admin role')
@@ -107,6 +110,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
 
+
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases')
   async def database(self,ctx,arg):
@@ -117,9 +121,10 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
       
       if arg.lower() == "servers":
         activeservers = self.client.guilds
-        embedVar = discord.Embed(title = "Current servers",description = "List of servers the bot is in",color = 0x6a0dad).set_footer(text = 'As of ' + str(date.today()), icon_url = os.getenv('icon'))
+        guild_list = "`Active Servers: `\n\n"
         for guild in activeservers:
-          embedVar.add_field(name = guild.name, value = 'Members: ' + str(guild.member_count),inline = False)
+          guild_list = guild_list + str(guild) + '\n'
+        embedVar = discord.Embed(title = "Smrt Bot",description = guild_list,color = 0x6a0dad).set_footer(text = 'As of ' + str(date.today()), icon_url = os.getenv('icon'))
         await ctx.send(embed = embedVar)
             
     else:
