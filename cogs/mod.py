@@ -156,7 +156,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
 
-class Owner(commands.Cog, description = 'Commands for only the bot creator'):
+class owner(commands.Cog, description = 'Commands for only the bot creator'):
 
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases')
@@ -249,4 +249,4 @@ class Owner(commands.Cog, description = 'Commands for only the bot creator'):
 
 def setup(client):
     client.add_cog(moderation(client))
-    client.add_cog(Owner(client))
+    client.add_cog(owner(client))
