@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.errors import Forbidden
+import os
 
 
 
@@ -121,7 +122,7 @@ class Help(commands.Cog):
           commands_desc += f'`{command.name}: `  {command.help}\n'
 
 
-      embedVar = discord.Embed(title = "Complete list of commands", description = commands_desc, color = 0x280137)
+      embedVar = discord.Embed(title = "Complete list of commands", description = commands_desc, color = 0x280137).set_footer(icon_url = os.getenv('icon'), text = "Smrt Bot#8444")
       await ctx.send(embed=embedVar)
 
 
