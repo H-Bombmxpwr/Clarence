@@ -164,7 +164,7 @@ class Owner(commands.Cog):
   Commands for only the bot creator
   """
   #search through databases of the bot
-  @commands.command(help = 'database commands,  used to view the Bot databases')
+  @commands.command(help = 'database commands,  used to view the Bot databases',hidden = True)
   async def database(self,ctx,arg):
     if ctx.author.id == 239605426033786881:
       if arg.lower() == "trivia":
@@ -184,7 +184,7 @@ class Owner(commands.Cog):
 
 
   #manage profanity text file
-  @commands.command(help = "Manage the words the bot's filter\n parameter = add/remove")
+  @commands.command(help = "Manage the words the bot's filter\n parameter = add/remove",hidden = True)
   async def filter(self,ctx, parameter,*, change):
    if ctx.author.id ==  239605426033786881:
     with open("storage/words.txt", "r") as f:
@@ -226,7 +226,7 @@ class Owner(commands.Cog):
 
 
   #set the status of the bot
-  @commands.command(help = 'Set the status of the bot')
+  @commands.command(help = 'Set the status of the bot',hidden = True)
   async def status(self,ctx, status,*, text):
     if ctx.author.id == 239605426033786881:
       if status.lower() == 'playing':
