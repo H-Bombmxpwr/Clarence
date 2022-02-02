@@ -7,9 +7,33 @@ import asyncio
 import functionality.functions
 import os
 
+
 class moderation(commands.Cog, description = 'Moderation commands that require specific permissions to use'):
   def __init__(self,client):
       self.client = client
+
+  #move roles around in positon
+  @commands.command(help = "Change the hierarchy of roles")
+  async def moverole(self,ctx, role: discord.Role, pos: int):
+    all_roles = await ctx.guild.fetch_roles()
+    num_roles = len(all_roles)
+    print(f'The server has {num_roles} roles.')
+    try:
+        await role.edit(position=pos)
+        await ctx.send("Role moved.")
+    except discord.Forbidden:
+        await ctx.send("You do not have permission to do that")
+    except discord.HTTPException:
+        await ctx.send("Failed to move role")
+    except discord.InvalidArgument:
+        await ctx.send("Invalid argument")
+
+
+
+  #get the latency of the bot
+  @commands.command(help = 'Find the latency of the bot')
+  async def ping(self,ctx):
+    await ctx.channel.send(f" `{round(self.client.latency * 1000)}` ms")
 
   @commands.command(help = "List the guild roles")
   async def roles(self,ctx):
@@ -127,6 +151,8 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
 
+class Owner(commands.Cog, description = 'Commands for only the bot creator'):
+
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases')
   async def database(self,ctx,arg):
@@ -184,10 +210,10 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
       await ctx.send("You do not have permission to change the text file")
 
 
-  #get the latency of the bot
-  @commands.command(help = 'Find the latency of the bot')
-  async def ping(self,ctx):
-    await ctx.channel.send(f" `{round(self.client.latency * 1000)}` ms")
+
+  
+
+
 
   #set the status of the bot
   @commands.command(help = 'Set the status of the bot')
@@ -214,22 +240,8 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
     else:
       await ctx.send('You do not have permission to change the bots status')
 
-  @commands.command(help = "Change the hierarchy of roles")
-  async def moverole(self,ctx, role: discord.Role, pos: int):
-    all_roles = await ctx.guild.fetch_roles()
-    num_roles = len(all_roles)
-    print(f'The server has {num_roles} roles.')
-    try:
-        await role.edit(position=pos)
-        await ctx.send("Role moved.")
-    except discord.Forbidden:
-        await ctx.send("You do not have permission to do that")
-    except discord.HTTPException:
-        await ctx.send("Failed to move role")
-    except discord.InvalidArgument:
-        await ctx.send("Invalid argument")
-
 
 
 def setup(client):
     client.add_cog(moderation(client))
+    client.add_cog(Owner(client))
