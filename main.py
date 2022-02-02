@@ -113,6 +113,11 @@ async def on_message(message):
     emoji = '😦'
     await message.add_reaction(emoji)
     await message.channel.send("Why the actual heck do you know what a " + text + " is??")
+  
+  #vegetable carrot function????
+  if text == "carrot":
+      await message.add_reaction('🥕')
+      await message.reply("you just got carroted!!1!!1!")
 
   await client.process_commands(message)
 
