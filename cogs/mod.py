@@ -35,16 +35,20 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
   async def ping(self,ctx):
     await ctx.channel.send(f" `{round(self.client.latency * 1000)}` ms")
 
+
+  #list the roles in the server
   @commands.command(help = "List the guild roles")
   async def roles(self,ctx):
     roles = "`Current Roles: `\n"
     for role in ctx.guild.roles:
       roles = roles + str(role) + "\n"
 
+    roles = roles + "\n`Total roles: `" + str(len(ctx.guild.roles))
     embedVar = discord.Embed(title = "Roles in Server", description = roles, inline = False, color = 0xffffff)
     await ctx.send(embed= embedVar)  
 
 
+  #mute a user from all channels
   @commands.command(help = "Mute a user from sending messages")
   async def mute(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -75,7 +79,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(embed=embed)
 
 
-
+  #unmute a user
   @commands.command(help = 'Unmutes a user')
   async def unmute(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -94,7 +98,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
 
-
+  #gives the administrator role
   @commands.command(help = 'gives a user the administrator role')
   async def giveadmin(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -118,7 +122,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(embed=embed)
 
 
-
+  #removes the administrator role
   @commands.command(help = 'removes the admin role')
   async def removeadmin(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -136,6 +140,7 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
         await ctx.send(embed=embed)
 
 
+  #prune x number of members
   @commands.command(help = 'delete x number of messages, regardless of sender',aliases = ['cl'])
   async def clean(self,ctx,limit :int):
     if ctx.message.author.guild_permissions.administrator or ctx.author.id == 239605426033786881:
