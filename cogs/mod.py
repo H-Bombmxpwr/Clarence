@@ -11,7 +11,16 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
   def __init__(self,client):
       self.client = client
 
-    
+  @commands.command(help = "List the guild roles")
+  async def roles(self,ctx):
+    roles = "`Current Roles: `\n"
+    for role in ctx.guild.roles:
+      roles = roles + str(role) + "\n"
+
+    embedVar = discord.Embed(title = "Roles in Server", description = roles, inline = False, color = 0xffffff)
+    await ctx.send(embed= embedVar)  
+
+
   @commands.command(help = "Mute a user from sending messages")
   async def mute(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
@@ -19,10 +28,17 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
       if get(ctx.guild.roles, name="Muted"):
         print("role exits")
       else:
-        perms = discord.Permissions(send_messages = False, read_messages_history = True, connect = False,read_messages = False)
-        await ctx.guild.create_role(name="Muted", colour=discord.Colour(0x800000), permissions=perms)
+        
+        perms = discord.Permissions(send_messages = False, read_message_history = True, connect = False,read_messages = True)
+
+        muted = await ctx.guild.create_role(name="Muted", colour=discord.Colour(0x800000), permissions=perms)
+        
+        for channel in ctx.guild.channels:
+          await channel.set_permissions(muted, send_messages=False, read_messages=True, read_message_history=True,connect = False)
+        
         await ctx.send('Mute Role created!')
       #gives the muted role to the selected member
+      
       try:
           add_role= discord.utils.get(ctx.guild.roles, name='Muted')
           await member.add_roles(add_role)      
@@ -197,9 +213,21 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
     else:
       await ctx.send('You do not have permission to change the bots status')
-      
 
-    
+  @commands.command(help = "Change the hierarchy of roles")
+  async def moverole(self,ctx, role: discord.Role, pos: int):
+    all_roles = await ctx.guild.fetch_roles()
+    num_roles = len(all_roles)
+    print(f'The server has {num_roles} roles.')
+    try:
+        await role.edit(position=pos)
+        await ctx.send("Role moved.")
+    except discord.Forbidden:
+        await ctx.send("You do not have permission to do that")
+    except discord.HTTPException:
+        await ctx.send("Failed to move role")
+    except discord.InvalidArgument:
+        await ctx.send("Invalid argument")
 
 
 

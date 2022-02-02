@@ -46,7 +46,7 @@ def buildTrie():
 @client.event
 async def on_ready():
   print("Trie is building......")
-  buildTrie()
+  #buildTrie()
   print("Trie is built. Ready to read messages.\n")
   print('{0.user} is back online'.format(client))
   print('=------------------------------=')
@@ -90,7 +90,8 @@ async def on_message(message):
     time_zone = -6
     
     if int((int(time.time()) + (time_zone * 3600))/86400) % 7 == 0:
-      await message.channel.send("```\nIt's Thursday in the North American Central Time Zone, Happy Thursday!\n    \nhttp://isitthursday.org/\n```")
+      await message.channel.send("```\nIt's Thursday in the North American Central Time Zone, Happy Thursday!```")  
+      await message.channel.send('http://isitthursday.org/')
     else:
       await message.channel.send("```\nIt's not Thursday in the North American Central Time Zone\n    \nYou bozo\n```")
  
