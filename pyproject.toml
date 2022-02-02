@@ -20,6 +20,7 @@ pyfiglet = "^0.8.post1"
 utils = "^1.0.1"
 pip = "^21.3.1"
 wikipedia = "^1.4.0"
+youtube-search = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
 

@@ -3,7 +3,8 @@ from discord.ext import commands
 import youtube_dl
 import requests
 from contextlib import suppress
-#from utils import Pager
+from youtube_search import YoutubeSearch
+import json
 
 
 class music(commands.Cog, description = 'Play Music on a voice channel and grab lyrics from a song'):
@@ -14,30 +15,45 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
     async def music(self,ctx):
       embedVar = discord.Embed(title="Music Commands", descripion="", color=0xff0080).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_of_YouTube_%282015-2017%29.svg/2560px-Logo_of_YouTube_%282015-2017%29.svg.png")
 
-      embedVar.add_field(name = "\u200b" ,value= "`      join: ` The bot will join the current voice channel\n `      play: ` + <YouTube Video Link> plays a song\n `     music: ` Brings up a list of music commands\n`     pause: ` Pause the player\n`    lyrics: `Pulls the lyrics to a queried song\n `    resume: `  Resume the player\n`disconnect: ` Disconnects the bot from the voice channel\n", inline = False)
+      embedVar.add_field(name = "\u200b" ,value= "`      join: ` The bot will join the current voice channel\n `      play: ` + <song query> plays a song\n `     music: ` Brings up a list of music commands\n`     pause: ` Pause the player\n`    lyrics: `Pulls the lyrics to a queried song\n `    resume: `  Resume the player\n`disconnect: ` Disconnects the bot from the voice channel\n", inline = False)
       await ctx.send(embed=embedVar)
 
     
     @commands.command(help = 'Join a voice channel')
     async def join(self,ctx):
         if ctx.author.voice is None:
-            await ctx.send("```You're not in a voice channel!\nJoin one first pleb```")
+            await ctx.send("You're not in a voice channel!\nJoin one first pleb")
         voice_channel = ctx.author.voice.channel
-        print(type(voice_channel))
+      
         if ctx.voice_client is None:
             await voice_channel.connect()
-            await ctx.send("```Joined: " + str(voice_channel) + '```')
+            await ctx.send("Joined: " + str(voice_channel))
         else:
             await ctx.voice_client.move_to(voice_channel)
-            await ctx.send("```Joined: " + str(voice_channel) + '```')
-
+  
+   
     @commands.command(help = 'Leave a voice channel', aliases = ['dis'])
     async def disconnect(self,ctx):
         await ctx.voice_client.disconnect()
-        await ctx.send("```Cya!```")
+        await ctx.send("Cya!")
 
     @commands.command(help = 'Play a song')
-    async def play(self,ctx,url):
+    async def play(self,ctx,*,song:str):
+        #get the bot to join the player if it isnt alredy in it
+        await ctx.invoke(self.client.get_command('join'))
+        
+        #search the song/ check if a url was sent
+        if str(song).find("https://www.youtube.com") == -1:
+          yt = YoutubeSearch(str(song), max_results=1).to_json()
+          song_id = str(json.loads(yt)['videos'][0]['id'])
+          url = "https://www.youtube.com/watch?v=" + song_id
+          if url == None:
+            await ctx.send("Song not found")
+            return
+        else:
+          url = str(song)
+
+        #plays the url generated above
         ctx.voice_client.stop()
         FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         YDL_OPTIONS = {'format':"bestaudio"}
@@ -48,17 +64,17 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
             url2 = info['formats'][0]['url']
             source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
             vc.play(source)
-            await ctx.send("```Now playing: " + info.get('title', None)+'```')
+            await ctx.send("Now playing: " + info.get('title', None) + '\n' + url)
     
     @commands.command(help = 'Pause the current song',aliases = ['pa'])
     async def pause(self,ctx):
-        await ctx.send("```Paused ⏸```")
+        await ctx.send("Paused ⏸")
         await ctx.voice_client.pause()
         
     
     @commands.command(help = 'Resume the current song', aliases = ['res'])
     async def resume(self,ctx):
-        await ctx.send("```Resumed ▶️```")
+        await ctx.send("Resumed ▶️")
         await ctx.voice_client.resume()
 
 

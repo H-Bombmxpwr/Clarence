@@ -482,10 +482,21 @@ category = "main"
 optional = false
 python-versions = "*"
 
+[[package]]
+name = "youtube-search"
+version = "2.1.0"
+description = "Perform YouTube video searches without the API"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+requests = "*"
+
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3afaf39e301c65c0964503bf8df5cb402fba3ca10a91953ec8ba1667d57c2e9e"
+content-hash = "cbaef95fe8331e51207370fc2bc5ab734906df105dea9bd83fc54e4cf3e5bed9"
 
 [metadata.files]
 agent-admin = [
@@ -893,4 +904,8 @@ yarl = [
 youtube-dl = [
     {file = "youtube_dl-2021.6.6-py2.py3-none-any.whl", hash = "sha256:263e04d53fb8ba3dfbd246ad09b7d388e896c132a20cc770c26ee7684de050ac"},
     {file = "youtube_dl-2021.6.6.tar.gz", hash = "sha256:cb2d3ee002158ede783e97a82c95f3817594df54367ea6a77ce5ceea4772f0ab"},
+]
+youtube-search = [
+    {file = "youtube-search-2.1.0.tar.gz", hash = "sha256:1541120273996fa433698b2e57b73296dfb8e90536211f29ea997dcf161b66fe"},
+    {file = "youtube_search-2.1.0-py3-none-any.whl", hash = "sha256:73a96176d0969f9c266039df41d48aca4ef1d2604b565baf1ed995c0a63468b5"},
 ]
