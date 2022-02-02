@@ -32,7 +32,7 @@ class music(commands.Cog, description = 'Play Music on a voice channel and grab 
             await ctx.voice_client.move_to(voice_channel)
   
    
-    @commands.command(help = 'Leave a voice channel', aliases = ['dis'])
+    @commands.command(help = 'Leave a voice channel', aliases = ['dis','leave'])
     async def disconnect(self,ctx):
         await ctx.voice_client.disconnect()
         await ctx.send("Cya!")
