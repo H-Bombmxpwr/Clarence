@@ -443,6 +443,7 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send(embed=embed)
 
 
+  
   #sends most common gif based on query
   @commands.command(help="Search for GIFs (filtered) on Tenor")
   async def gif(self, ctx, *, query):
