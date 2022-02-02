@@ -5,8 +5,10 @@ from functionality.structures import FizzBuzz
 from datetime import date
 import requests
 
-class games(commands.Cog,description = "Games to play with the bot!"):
-  
+class Games(commands.Cog):
+  """ 
+  Games to play with the bot
+  """
   def __init__(self,client):
       self.client = client
 
@@ -85,4 +87,4 @@ class games(commands.Cog,description = "Games to play with the bot!"):
 
 
 def setup(client):
-    client.add_cog(games(client))
+    client.add_cog(Games(client))

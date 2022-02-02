@@ -8,7 +8,10 @@ import functionality.functions
 import os
 
 
-class moderation(commands.Cog, description = 'Moderation commands that require specific permissions to use'):
+class Moderation(commands.Cog):
+  """ 
+  Moderation commands that require specific permissions to use
+  """
   def __init__(self,client):
       self.client = client
 
@@ -156,8 +159,10 @@ class moderation(commands.Cog, description = 'Moderation commands that require s
 
 
 
-class owner(commands.Cog, description = 'Commands for only the bot creator'):
-
+class Owner(commands.Cog):
+  """ 
+  Commands for only the bot creator
+  """
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases')
   async def database(self,ctx,arg):
@@ -248,5 +253,5 @@ class owner(commands.Cog, description = 'Commands for only the bot creator'):
 
 
 def setup(client):
-    client.add_cog(moderation(client))
-    client.add_cog(owner(client))
+    client.add_cog(Moderation(client))
+    client.add_cog(Owner(client))

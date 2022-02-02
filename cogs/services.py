@@ -18,7 +18,10 @@ import wikipedia
 
 
 
-class local(commands.Cog, description = 'Local commands within the bot'):
+class Local(commands.Cog, description = 'Local commands within the bot'):
+  """ 
+  Group of commands executed locally
+  """
   def __init__(self,client):
       self.client = client
 
@@ -164,13 +167,16 @@ class local(commands.Cog, description = 'Local commands within the bot'):
   # START API CLASS
 
 
-class api(commands.Cog, description = 'Commands that call an outside api to return information'):
+class Api(commands.Cog, description = 'Commands that call an outside api to return information'):
+  """ 
+  Group of commands executed through external api's
+  """
   def __init__(self,client):
       self.client = client
 
 
   #interactive trivia
-  @commands.command(help = 'Interactive triva, waits for a reponse from the user', aliases = ["tr"])
+  @commands.command(help = "Interactive trivia",aliases = ["tr"])
   async def trivia(self,ctx,parameter = None):
     info = functionality.functions.get_question2()
     answers = info.getAnswerList()
@@ -464,5 +470,5 @@ class api(commands.Cog, description = 'Commands that call an outside api to retu
   
 
 def setup(client):
-    client.add_cog(local(client))
-    client.add_cog(api(client))
+    client.add_cog(Local(client))
+    client.add_cog(Api(client))

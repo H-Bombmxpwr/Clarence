@@ -3,16 +3,15 @@ from discord.ext import commands
 import os
 from functionality.keep_alive import keep_alive
 from storage.Lists_Storage import thedan,days
-import cogs.music,cogs.services,cogs.games,cogs.mod #import the cogs
+import cogs.music,cogs.services,cogs.games,cogs.mod,cogs.help #import the cogs
 from functionality.functions import check_carrot,punish_user
 import time
 from functionality.trie import Trie
 
 
-cogs = [cogs.music,cogs.services,cogs.mod,cogs.games]
+cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help]
 
 client = commands.Bot(command_prefix='$',intents = discord.Intents.all())
-
 
 for i in range(len(cogs)):
   cogs[i].setup(client)
