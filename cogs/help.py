@@ -44,7 +44,7 @@ class Help(commands.Cog):
                 owner = owner_name
 
             # starting to build embed
-            emb = discord.Embed(title='Commands and modules', color=0x808080,
+            emb = discord.Embed(title='Commands and modules', color=0x280137,
                                 description=f'Use `{prefix}help <module>` to gain more information about that module ')
 
             # iterating trough cogs, gathering descriptions
@@ -83,7 +83,7 @@ class Help(commands.Cog):
 
                     # making title - getting description from doc-string below class
                     emb = discord.Embed(title=f'{cog} - Commands', description=self.bot.cogs[cog].__doc__,
-                                        color=discord.Color.green())
+                                        color=0x280137)
 
                     # getting commands from cog
                     for command in self.bot.get_cog(cog).get_commands():
@@ -98,13 +98,13 @@ class Help(commands.Cog):
             else:
                 emb = discord.Embed(title="Module error!",
                                     description=f"There is no module by that name, modules are groups of commands",
-                                    color=discord.Color.blue())
+                                    color=discord.Color.red())
 
         # too many cogs requested - only one at a time allowed
         elif len(input) > 1:
             emb = discord.Embed(title="Module Error!",
                                 description="Please request only one module at once",
-                                color=discord.Color.green())
+                                color=discord.Color.red())
 
         else:
             emb = discord.Embed(title="Error",
