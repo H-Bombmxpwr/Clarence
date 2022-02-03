@@ -328,17 +328,7 @@ Old bits function, will add back once find a better way to make It
         # sending reply embed using our own function defined above
         await send_embed(ctx, emb)
 
-    @commands.command(help = 'List all commands of the bot in one page',aliases = ['fl'])
-    async def fulllist(self,ctx):
-
-      commands_desc = ''
-      for command in self.bot.walk_commands():
-        if not command.hidden:
-          commands_desc += f'`{command.name}: `  {command.help}\n'
-
-
-      embedVar = discord.Embed(title = "Complete list of commands", description = commands_desc, color = 0x280137).set_footer(icon_url = os.getenv('icon'), text = "Smrt Bot#8444")
-      await ctx.send(embed=embedVar)
+    
 
 
   async def send_embed(ctx, embed):
