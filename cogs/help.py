@@ -32,7 +32,7 @@ class Help(commands.Cog):
 
       embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `" + self.bot.command_prefix + "help` and `" + self.bot.command_prefix + "list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Smrt-Bot) on GitHub",color = color)
   
-      embedVar1.add_field(name = "Basic information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
+      embedVar1.add_field(name = "Basic Information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
 
       embedVar1.add_field(name = "Other Contributers", value = "`    conradburns#6918:` Edited and refined the text file\n`ThatchyMean1487#3395:` Drew the bot icon\n`      1awesomet#5223:` Quality assurance and responses\n`       Quiggles#2281:` Thursday modular equation",inline = False)
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
