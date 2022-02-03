@@ -110,7 +110,7 @@ class Moderation(commands.Cog):
         print("role exits")
       else:
         perms = discord.Permissions(administrator = True)
-        await ctx.guild.create_role(name="Admin", colour=discord.Colour(0x6a0dad), permissions=perms, hoist = True)
+        await ctx.guild.create_role(name="Admin", colour=discord.Colour(0x280137), permissions=perms, hoist = True)
         await ctx.send('Admin Role created!')
       #gives the muted role to the selected member
       try:

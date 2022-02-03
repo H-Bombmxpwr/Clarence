@@ -193,7 +193,8 @@ def punish_user(user_id,word):
       f"At least I have the dignity to say {censor}, {user_id}",
       f" You can come up with something more creative than {censor}, {user_id}",
       f"{censor} is what your mom said last night, {user_id}",
-      f"{user_id}, let me write {censor} down so I can take this energy to yo MOMS house"]
+      f"{user_id}, let me write {censor} down so I can take this energy to yo MOMS house",
+      f"GG {user_id}, nice one. I'll have to remember {censor} for the next time you wanna liquid fart all over this chat"]
 
       
     

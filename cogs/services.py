@@ -26,12 +26,13 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
       self.client = client
 
 
-  # About Page
-  @commands.command(help = 'The about information for the bot')
-  async def about(self,ctx):
-    embeds = storage.embed_storage.make_about()
+  #List of Commands
+  @commands.command(help = 'List of commands for the bot')
+  async def list(self,ctx):
+    embeds = storage.embed_storage.make_list()
     #add in the current prefix
-    embeds[0].set_footer(text = "Page 1/6 - Made by: H-Bombmxpwr#2243\n The current prefix is \"" + self.client.command_prefix + '\"',icon_url = os.getenv('icon'))
+    for i in range(len(embeds)):
+      embeds[i].set_footer(text = "Page " + str(i+1)+ "/6 - The current prefix is \"" + self.client.command_prefix + '\"',icon_url = os.getenv('icon'))
     
     pages = 6
     cur_page = 1
@@ -137,32 +138,6 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   async def dice(self,ctx):
     await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
   
-
-  @commands.command(help = 'convert between bits/hex/decimal')
-  async def bits(self,ctx, typ = None,input = None):
-    if typ == None:
-      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`,`binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
-    elif input == None:
-      await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
-    else:
-     if typ.startswith('d'):
-      
-      try:
-        decimal = int(input)
-        try:
-          asci = str(chr(decimal))
-        except:
-          asci = "n/a"
-        hexa = str(hex(decimal))
-        bits = str(bin(decimal))
-        
-        await ctx.send("Binary: `" + bits + "`\nHex: `" + hexa + "`\nDecimal: `" + str(decimal) + "`\nAscii: `" + asci + "`")
-      except:
-        await ctx.send('An unknown error occurred, make sure the sent number is an integer')
-
-
-
-
   # END LOCAL CLASS/COG 
   # START API CLASS
 

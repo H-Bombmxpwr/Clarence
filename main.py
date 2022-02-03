@@ -17,6 +17,7 @@ for i in range(len(cogs)):
   cogs[i].setup(client)
 
 
+
 trie = Trie()
 table = {
     "\"": None,

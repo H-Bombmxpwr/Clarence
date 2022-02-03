@@ -208,3 +208,31 @@ if message.content.startswith("BONF CURNTANES" or "bonf curntanes"):
     await message.add_reaction(emoji5)
     await message.add_reaction(emoji4)
     await message.channel.send("musty")
+
+
+
+
+Old bits function, will add back once find a better way to make It
+
+#convert between bits/hex/decimal
+  @commands.command(help = 'convert between bits/hex/decimal')
+  async def bits(self,ctx, typ = None,input = None):
+    if typ == None:
+      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`,`binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+    elif input == None:
+      await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+    else:
+     if typ.startswith('d'):
+      
+      try:
+        decimal = int(input)
+        try:
+          asci = str(chr(decimal))
+        except:
+          asci = "n/a"
+        hexa = str(hex(decimal))
+        bits = str(bin(decimal))
+        
+        await ctx.send("Binary: `" + bits + "`\nHex: `" + hexa + "`\nDecimal: `" + str(decimal) + "`\nAscii: `" + asci + "`")
+      except:
+        await ctx.send('An unknown error occurred, make sure the sent number is an integer')
