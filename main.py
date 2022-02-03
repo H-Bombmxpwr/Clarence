@@ -48,7 +48,7 @@ def buildTrie():
 async def on_ready():
   print("Attempting to build trie......")
   built = False
-  #built = buildTrie()
+  built = buildTrie()
   if built:
     print("Trie is built. Profanity filter is on.\n")
   else:
