@@ -42,6 +42,11 @@ class Music(commands.Cog):
 
   @commands.command(help = 'Play a song')
   async def play(self,ctx,*,song:str):
+        
+        with suppress(AttributeError):
+          await ctx.trigger_typing()  
+        
+        
         #get the bot to join the player if it isnt alredy in it
         await ctx.invoke(self.client.get_command('join'))
         
