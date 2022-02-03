@@ -163,6 +163,11 @@ class Owner(commands.Cog):
   """ 
   Commands for only the bot creator
   """
+
+  def __init__(self,client):
+      self.client = client
+
+
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases',hidden = True)
   async def database(self,ctx,arg):
