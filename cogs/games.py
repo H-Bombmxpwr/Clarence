@@ -14,7 +14,7 @@ class Games(commands.Cog):
 
 
   #fizzbuzz game
-  @commands.command(help = "play fizzbuzz")
+  @commands.command(help = "play fizzbuzz",aliases = ['fizz','buzz'])
   async def fizzbuzz(self,ctx, iterate = None):
     if iterate == None:
       check = 0

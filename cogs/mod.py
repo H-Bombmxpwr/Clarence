@@ -16,7 +16,7 @@ class Moderation(commands.Cog):
       self.client = client
 
   #move roles around in positon
-  @commands.command(help = "Change the hierarchy of roles")
+  @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
   async def moverole(self,ctx, role: discord.Role, pos: int):
     all_roles = await ctx.guild.fetch_roles()
     num_roles = len(all_roles)
@@ -102,7 +102,7 @@ class Moderation(commands.Cog):
 
 
   #gives the administrator role
-  @commands.command(help = 'gives a user the administrator role')
+  @commands.command(help = 'gives a user the administrator role',aliases = ['gvad'])
   async def giveadmin(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
       #checking if the muted role exists, and if doesn't makes the muted role
@@ -126,7 +126,7 @@ class Moderation(commands.Cog):
 
 
   #removes the administrator role
-  @commands.command(help = 'removes the admin role')
+  @commands.command(help = 'removes the admin role',aliases = ['rmad'])
   async def removeadmin(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
      try:

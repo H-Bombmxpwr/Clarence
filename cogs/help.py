@@ -39,7 +39,7 @@ class Help(commands.Cog):
       embedVar1.set_image(url = 'https://static.wikia.nocookie.net/simpsons/images/2/2c/Homer_Goes_to_College_41.JPG/revision/latest?cb=20130715173527')
       await ctx.send(embed=embedVar1,view=view)
 
-    @commands.command(help = "Invite the bot")
+    @commands.command(help = "Invite the bot",aliases = ["in"])
     async def invite(self,ctx):
       button = Button(label = "Invite", style = discord.ButtonStyle.primary, url = "https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot")
       view = View()
