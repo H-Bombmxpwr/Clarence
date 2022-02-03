@@ -73,7 +73,7 @@ class Moderation(commands.Cog):
       try:
           add_role= discord.utils.get(ctx.guild.roles, name='Muted')
           await member.add_roles(add_role)      
-          embed=discord.Embed(title="User Muted!", description="**{0}** was muted by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar_url, text = 'muted on ' + str(date.today()))
+          embed=discord.Embed(title="User Muted!", description="**{0}** was muted by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'muted on ' + str(date.today()))
           await ctx.send(embed=embed)
       except:
             await ctx.send("Not able to update role")
@@ -116,7 +116,7 @@ class Moderation(commands.Cog):
       try:
           add_role= discord.utils.get(ctx.guild.roles, name='Admin')
           await member.add_roles(add_role)      
-          embed=discord.Embed(title="New Admin!", description="**{0}** was given admin by **{1}**!".format(member, ctx.message.author), color=0x6a0dad).set_footer(icon_url = member.avatar_url, text = 'given on ' + str(date.today()))
+          embed=discord.Embed(title="New Admin!", description="**{0}** was given admin by **{1}**!".format(member, ctx.message.author), color=0x6a0dad).set_footer(icon_url = member.avatar, text = 'given on ' + str(date.today()))
           await ctx.send(embed=embed)
       except:
             await ctx.send("Not able to give role")

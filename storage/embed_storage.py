@@ -9,17 +9,17 @@ def make_list():
 
   color = 0x280137
   
-  embedVar1 = discord.Embed(title="Smrt Bot", description="[Invite Smrt Bot](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
+  embedVar1 = discord.Embed(title="Smrt Bot", description="Use `fulllist` to get one page of all the commands\n `help <command>` will break down the commands further", color=color)
   
 
-  embedVar1.add_field(name= "Commands", value = '`•Page 2: ` API Commands\n`•Page 3: ` Local Commands\n`•Page 4: ` Music Commands\n`•Page 5: ` Moderation Commands\n`•Page 6: ` Games',inline = False)
+  embedVar1.add_field(name= "Commands", value = '`Page 2: ` API Commands\n`Page 3: ` Local Commands\n`Page 4: ` Music Commands\n`Page 5: ` Moderation Commands\n`Page 6: ` Games',inline = False)
   
   embedVar2 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
   embedVar2.add_field(name = "API Commands", value = "`          gif: ` + a query to pul the top GIF from tenor\n`         joke: ` Generate a (sometimes nsfw) joke\n  `         xkcd: ` to pull the latest/random xkcd comic\n `         meme: ` to generate a random meme\n `        query: ` Answer virtually any question\n`       trivia: ` to play trivia\n `       animal: ` + an animal to pull a picture of a given animal\n`       insult: ` Generate insults\n`      twitter: ` to interact with twitter \n`    wikipedia: ` + a query to get a wikipedia link\n`   compliment: ` Generate compliments \n`lichess daily: ` Grab the lichess daily puzzle\n")
 
   embedVar3 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
 
-  embedVar3.add_field(name = "Local Commands", value = " `     bug: ` to spam a user x number of times\n`    bits: ` convert decimal/hex/binary/ascii\n `    help: ` will return more info for every command\n  `    ping: ` Get the latency of the bot\n`   ascii: ` + a < 16 string will print a ascii string of the text\n`userinfo: ` return info of a server member\n")
+  embedVar3.add_field(name = "Local Commands", value = " `     bug: ` to spam a user x number of times\n`    bits: ` convert decimal/hex/binary/ascii\n `    help: ` will return more info for every command\n`    list: ` List the bot commands\n`    ping: ` Get the latency of the bot\n`   ascii: ` + a < 16 string will print a ascii string of the text\n`  invite: ` Invite the bot\n`userinfo: ` return info of a server member\n")
 
   
   embedVar4 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
@@ -28,7 +28,7 @@ def make_list():
 
   embedVar5 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
 
-  embedVar5.add_field(name = "Moderation Commands" , value =  "`help moderation: ` for a list of moderation commands\n•Moderation commands require special permissions to use")
+  embedVar5.add_field(name = "Moderation Commands" , value =  "`help Moderation: ` for a list of moderation commands\n•Moderation commands require special permissions to use")
 
   embedVar6 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
 

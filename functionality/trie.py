@@ -107,7 +107,7 @@ class Trie:
         for char in word:
             index = self._char_to_index(char)
             if not crawler.children[index]:
-                print("Char not found: " + char)
+                #print("Char not found: " + char)
                 return False
             crawler = crawler.children[index]
 

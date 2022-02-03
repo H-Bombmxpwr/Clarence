@@ -40,14 +40,20 @@ def buildTrie():
         line = line.strip()
         trie.insert(line)
     file.close()
+    return True
 
 
 
 @client.event
 async def on_ready():
-  print("Trie is building......")
-  buildTrie()
-  print("Trie is built. Ready to read messages.\n")
+  print("Attempting to build trie......")
+  built = False
+  built = buildTrie()
+  if built:
+    print("Trie is built. Profanity filter is on.\n")
+  else:
+    print("Trie was not built, profanity filter is off\n")
+  
   print('{0.user} is back online'.format(client))
   print('=------------------------------=')
   
@@ -57,7 +63,7 @@ async def on_ready():
 @client.event 
 async def on_command_error(ctx, error): #detects if a command is valid
     if isinstance(error, commands.CommandNotFound): 
-        em = discord.Embed(title=f"Error", description=f"Command \'" + ctx.message.content + "   \' not found. \nUse `about: ` or `help: ` for a list of commands", color=0xff0000) 
+        em = discord.Embed(title=f"Error", description=f"Command \'" + ctx.message.content + "   \' not found. \nUse `list: ` or `help: ` for a list of commands", color=0xff0000) 
         await ctx.send(embed=em)
 
 

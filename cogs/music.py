@@ -16,9 +16,7 @@ class Music(commands.Cog):
 
   @commands.command(help = 'Info for the music commands')
   async def music(self,ctx):
-      embedVar = discord.Embed(title="Music Commands", descripion="", color=0xff0080).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_of_YouTube_%282015-2017%29.svg/2560px-Logo_of_YouTube_%282015-2017%29.svg.png")
-
-      embedVar.add_field(name = "\u200b" ,value= "`      join: ` The bot will join the current voice channel\n `      play: ` + <song query> plays a song\n `     music: ` Brings up a list of music commands\n`     pause: ` Pause the player\n`    lyrics: `Pulls the lyrics to a queried song\n `    resume: `  Resume the player\n`disconnect: ` Disconnects the bot from the voice channel\n", inline = False)
+      embedVar = discord.Embed(title="Music Commands", description = "`      join: ` The bot will join the current voice channel\n `      play: ` + <song query> plays a song\n `     music: ` Brings up a list of music commands\n`     pause: ` Pause the player\n`    lyrics: `Pulls the lyrics to a queried song\n `    resume: `  Resume the player\n`disconnect: ` Disconnects the bot from the voice channel\n", color=0xff0080).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Logo_of_YouTube_%282015-2017%29.svg/2560px-Logo_of_YouTube_%282015-2017%29.svg.png")
       await ctx.send(embed=embedVar)
 
     
@@ -102,9 +100,12 @@ class Music(commands.Cog):
         lyrics = json['lyrics']
         if len(lyrics) > 2048:
           lyrics = lyrics[:2045] + '...'
-
-        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color).set_thumbnail(url = json["thumbnail"]["genius"]).set_footer(text=  'Requested by ' + str(ctx.author.name) ,icon_url = ctx.author.avatar_url)
-
+        print("here")
+        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
+        print("here2")
+        embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
+        print("here3")
+        embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
         await ctx.send(embed = embedVar)
 
 def setup(client):

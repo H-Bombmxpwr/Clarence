@@ -50,7 +50,7 @@ class Games(commands.Cog):
       if stats[0] == 0:
         ctx.send("You have not played fizzbuzz yet, use $fizzbuzz to play")
       else:
-        embedVar = discord.Embed(title = 'Stats for @' + str(ctx.author.name), description = 'Tracked statistics for fizzbuzz',color=0x32CD32).set_footer(icon_url = ctx.author.avatar_url, text = "As of " + str(date.today()))
+        embedVar = discord.Embed(title = 'Stats for @' + str(ctx.author.name), description = 'Tracked statistics for fizzbuzz',color=0x32CD32).set_footer(icon_url = ctx.author.avatar, text = "As of " + str(date.today()))
         embedVar.add_field(name = "Highest number achieved", value = stats[0],inline = False)
         await ctx.send(embed = embedVar)
 

@@ -27,7 +27,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
 
   #List of Commands
-  @commands.command(help = 'List of commands for the bot')
+  @commands.command(help = 'List of commands for the bot',aliases = ["l"])
   async def list(self,ctx):
     embeds = storage.embed_storage.make_list()
     #add in the current prefix
@@ -116,7 +116,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
     target = target or ctx.author
 
     embed = discord.Embed(title="User information",color=target.color)
-    embed.set_image(url=target.avatar_url)
+    embed.set_image(url=target.avatar)
     fields = [("Name", str(target), True),
     ("ID", target.id, True),
 		("Bot?", target.bot, True),
@@ -166,7 +166,7 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         embedVar = discord.Embed(title= "Error", description = "You have not answered a trivia question and are not in the database, use `trivia multiple: ` to answer a question", color=0x8b0000)
         await ctx.send(embed=embedVar)
       else:
-        embedVar = discord.Embed(title = 'Stats for ' + str(ctx.author.name), description = 'Tracked statistics for the interactive trivia',color=0x8b0000).set_footer(icon_url = ctx.author.avatar_url, text = "As of " + str(date.today()))
+        embedVar = discord.Embed(title = 'Stats for ' + str(ctx.author.name), description = 'Tracked statistics for the interactive trivia',color=0x8b0000).set_footer(icon_url = ctx.author.avatar, text = "As of " + str(date.today()))
         embedVar.add_field(name = "Number of correct", value = stats[1],inline = False)
         embedVar.add_field(name = "Total attempts", value = stats[2], inline = False)
         embedVar.add_field(name = 'Percent correct',value = str(round((stats[1]/stats[2])*100,2)) + '%', inline = False)
