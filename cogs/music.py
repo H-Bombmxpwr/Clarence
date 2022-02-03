@@ -43,10 +43,6 @@ class Music(commands.Cog):
   @commands.command(help = 'Play a song')
   async def play(self,ctx,*,song:str):
         
-        with suppress(AttributeError):
-          await ctx.trigger_typing()  
-        
-        
         #get the bot to join the player if it isnt alredy in it
         await ctx.invoke(self.client.get_command('join'))
         
@@ -61,6 +57,9 @@ class Music(commands.Cog):
         else:
           url = str(song)
 
+        with suppress(AttributeError):
+          await ctx.trigger_typing()  
+        
         #plays the url generated above
         ctx.voice_client.stop()
         FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}

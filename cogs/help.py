@@ -119,6 +119,7 @@ class Help(commands.Cog):
 
       commands_desc = ''
       for command in self.bot.walk_commands():
+        if not command.hidden:
           commands_desc += f'`{command.name}: `  {command.help}\n'
 
 
