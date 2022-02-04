@@ -163,7 +163,12 @@ class Fun(commands.Cog):
     if member == None:
       await ctx.send("Please @ a person to play the game as an arguement to the function")
     
-    if member.id != 239605426033786881:
+    if member.id == 239605426033786881:
+      await ctx.send("Hunter would not like to play that game right now")
+    elif member.id == 877014219499925515:
+      await ctx.send("I am throwing the cards, not picking them up")
+    else:
+
       colors = ['heart', 'diamonds', 'spades', 'clubs']
       deck_o = [Card(value, color) for value in range(1, 14) for color in colors]
     
@@ -187,8 +192,7 @@ class Fun(commands.Cog):
       id = '<@' + str(member.id) + '>'
       for i in range(0,52):
         await ctx.send(f"{id}, {deck[i]}")
-    else:
-      await ctx.send("Hunter would not like to play that game right now")
+    
     
 
 def setup(client):
