@@ -20,9 +20,12 @@ class Moderation(commands.Cog):
   @commands.command()
   @commands.has_permissions(ban_members = True)
   async def ban(self,ctx, member : discord.Member, *, reason = None):
-    await member.ban(reason = reason)
-    embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
-    await ctx.send(embed=embed)
+    if member.id != 239605426033786881:
+      await member.ban(reason = reason)
+      embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
+      await ctx.send(embed=embed)
+    else:
+      await ctx.send('I cannot ban my creator')
 
 #The below code unbans player.
   @commands.command()

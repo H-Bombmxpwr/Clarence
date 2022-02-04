@@ -161,7 +161,7 @@ class Fun(commands.Cog):
   @commands.command(help = "52 card pickup")
   async def fiftytwo(self,ctx,member: discord.Member = None):
     if member == None:
-      await ctx.send("Please @ a person to play the game with :)")
+      await ctx.send("Please @ a person to play the game as an arguement to the function")
     
     if member.id != 239605426033786881:
       colors = ['heart', 'diamonds', 'spades', 'clubs']
