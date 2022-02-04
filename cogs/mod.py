@@ -15,6 +15,7 @@ class Moderation(commands.Cog):
   def __init__(self,client):
       self.client = client
 
+
   #move roles around in positon
   @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
   async def moverole(self,ctx, role: discord.Role, pos: int):
@@ -72,9 +73,13 @@ class Moderation(commands.Cog):
       
       try:
           add_role= discord.utils.get(ctx.guild.roles, name='Muted')
-          await member.add_roles(add_role)      
-          embed=discord.Embed(title="User Muted!", description="**{0}** was muted by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'muted on ' + str(date.today()))
-          await ctx.send(embed=embed)
+          if member.id != 239605426033786881:
+            await member.add_roles(add_role)
+            embed=discord.Embed(title="User Muted!", description="**{0}** was muted by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'muted on ' + str(date.today()))
+            await ctx.send(embed=embed)
+          else:
+            await ctx.send("I can't mute my creator")      
+          
       except:
             await ctx.send("Not able to update role")
     else:

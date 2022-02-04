@@ -11,7 +11,9 @@ from functionality.trie import Trie
 
 cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help]
 
-client = commands.Bot(command_prefix='$',intents = discord.Intents.all())
+
+client = commands.Bot(command_prefix="$",intents = discord.Intents.all())
+
 
 for i in range(len(cogs)):
   cogs[i].setup(client)
@@ -48,7 +50,7 @@ def buildTrie():
 async def on_ready():
   print("Attempting to build trie......")
   built = False
-  built = buildTrie()
+  #built = buildTrie()
   if built:
     print("Trie is built. Profanity filter is on.\n")
   else:
