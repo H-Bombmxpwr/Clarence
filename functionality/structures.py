@@ -49,3 +49,9 @@ class TrieNode:
     def __init__(self):
         self.children = [None] * self._MAX_SIZE
         self.is_end_of_word = False
+
+
+class Card:
+    def __init__(self, value, color):
+        self.value = value
+        self.color = color

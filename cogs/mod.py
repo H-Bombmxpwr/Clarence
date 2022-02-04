@@ -16,6 +16,42 @@ class Moderation(commands.Cog):
       self.client = client
 
 
+  #ban a user
+  @commands.command()
+  @commands.has_permissions(ban_members = True)
+  async def ban(self,ctx, member : discord.Member, *, reason = None):
+    await member.ban(reason = reason)
+    embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
+    await ctx.send(embed=embed)
+
+#The below code unbans player.
+  @commands.command()
+  @commands.has_permissions(administrator = True)
+  async def unban(self,ctx, *, member):
+    banned_users = await ctx.guild.bans()
+    print(banned_users)
+    member_name, member_discriminator = member.split("#")
+
+    for ban_entry in banned_users:
+        user = ban_entry.user
+
+        if (user.name, user.discriminator) == (member_name, member_discriminator):
+            await ctx.guild.unban(user)
+            await ctx.send(f'Unbanned {user.mention}')
+            return
+
+  #generate a list of banned members
+  @commands.command(help = "List of banned users from the guild")
+  async def banlist(self,ctx):
+    banned_users = await ctx.guild.bans()
+    banned_list = ''
+    for ban_entry in banned_users:
+        user = ban_entry.user
+        banned_list = banned_list + str(user) + '\n'
+
+    await ctx.send(embed = discord.Embed(title = 'Banned Users: ', description = banned_list, color = 0x800000))
+
+
   #move roles around in positon
   @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
   async def moverole(self,ctx, role: discord.Role, pos: int):

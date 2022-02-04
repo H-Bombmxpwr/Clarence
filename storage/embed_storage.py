@@ -12,7 +12,7 @@ def make_list():
   embedVar1 = discord.Embed(title="Smrt Bot", description="Use `fulllist` to get one page of all the commands\n `help <command>` will break down the commands further", color=color)
   
 
-  embedVar1.add_field(name= "Commands", value = '`Page 2: ` API Commands\n`Page 3: ` Local Commands\n`Page 4: ` Music Commands\n`Page 5: ` Moderation Commands\n`Page 6: ` Games',inline = False)
+  embedVar1.add_field(name= "Commands", value = '`Page 2: ` API Commands\n`Page 3: ` Local Commands\n`Page 4: ` Music Commands\n`Page 5: ` Moderation Commands\n`Page 6: ` Fun Commands',inline = False)
   
   embedVar2 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
   embedVar2.add_field(name = "API Commands", value = "`          gif: ` + a query to pul the top GIF from tenor\n`         joke: ` Generate a (sometimes nsfw) joke\n  `         xkcd: ` to pull the latest/random xkcd comic\n `         meme: ` to generate a random meme\n `        query: ` Answer virtually any question\n`       trivia: ` to play trivia\n `       animal: ` + an animal to pull a picture of a given animal\n`       insult: ` Generate insults\n`      twitter: ` to interact with twitter \n`    wikipedia: ` + a query to get a wikipedia link\n`   compliment: ` Generate compliments \n`lichess daily: ` Grab the lichess daily puzzle\n")
@@ -32,7 +32,7 @@ def make_list():
 
   embedVar6 = discord.Embed(title="Smrt Bot", description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
 
-  embedVar6.add_field(name = "Games" , value =  '`fizzbuzz: ` to play fizzbuzz\n -- `fizzbuzz rules` to get the rules of the game', inline = False)
+  embedVar6.add_field(name = "Fun" , value =  '`    bored:` give you something to do while bored\n `   ratio: ` ratio a worthy foe\n` collatz: ` run the collatz conjecture\n`fizzbuzz: ` play fizzbuzz\n`fiftytwo: ` play 52 card pickup', inline = False)
 
   embeds = [embedVar1,embedVar2,embedVar3,embedVar4,embedVar5,embedVar6]
 

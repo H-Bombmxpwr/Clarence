@@ -100,11 +100,11 @@ class Music(commands.Cog):
         lyrics = json['lyrics']
         if len(lyrics) > 2048:
           lyrics = lyrics[:2045] + '...'
-        print("here")
+        
         embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
-        print("here2")
+        
         embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
-        print("here3")
+        
         embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
         await ctx.send(embed = embedVar)
 

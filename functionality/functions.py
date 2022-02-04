@@ -202,4 +202,19 @@ def punish_user(user_id,word):
 
     return choice
 
+
+def collatz(n):
+    c = 0
+    if (n<0):
+        n = -1*n
+    while n > 1:
+        c = c + 1
+        if (n % 2):
+            # n is odd
+            n = 3 * n + 1
+        else:
+            # n is even
+            n = n // 2
+    return c
+
   
