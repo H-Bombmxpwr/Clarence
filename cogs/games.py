@@ -110,7 +110,7 @@ class Fun(commands.Cog):
   @commands.command(help = "Run the Collatz Conjecture")
   async def collatz(self,ctx,num:int = None):
     if num == None:
-      await ctx.send("Please send a postive integer")
+      await ctx.send("Please send a postive integer as an argument")
     else:
       try:
         c = functionality.functions.collatz(num)
@@ -120,7 +120,10 @@ class Fun(commands.Cog):
 
   #counting game
   @commands.command(help = "count to passed integer")
-  async def count(self,ctx,endpoint: int):
+  async def count(self,ctx,endpoint: int = None):
+    if endpoint == None:
+      await ctx.send("Please send an integer arguement to count to")
+    else:
       count = 1
       funny = 0
       await ctx.send(f"You are now counting to {endpoint}. HAHAHAHA, better start counting")
@@ -167,6 +170,8 @@ class Fun(commands.Cog):
       await ctx.send("Hunter would not like to play that game right now")
     elif member.id == 877014219499925515:
       await ctx.send("I am throwing the cards, not picking them up")
+    elif member.id == ctx.author.id:
+      await ctx.send("Who would want to play this game with themselves?")
     else:
 
       colors = ['heart', 'diamonds', 'spades', 'clubs']

@@ -17,7 +17,7 @@ class Moderation(commands.Cog):
 
 
   #ban a user
-  @commands.command()
+  @commands.command(help = "Ban a user")
   @commands.has_permissions(ban_members = True)
   async def ban(self,ctx, member : discord.Member, *, reason = None):
     if member.id != 239605426033786881:
@@ -28,7 +28,7 @@ class Moderation(commands.Cog):
       await ctx.send('I cannot ban my creator')
 
 #The below code unbans player.
-  @commands.command()
+  @commands.command(help = "Unban a user")
   @commands.has_permissions(administrator = True)
   async def unban(self,ctx, *, member):
     banned_users = await ctx.guild.bans()
