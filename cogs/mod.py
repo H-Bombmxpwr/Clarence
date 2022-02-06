@@ -160,12 +160,12 @@ class Moderation(commands.Cog):
       try:
           add_role= discord.utils.get(ctx.guild.roles, name='Admin')
           await member.add_roles(add_role)      
-          embed=discord.Embed(title="New Admin!", description="**{0}** was given admin by **{1}**!".format(member, ctx.message.author), color=0x6a0dad).set_footer(icon_url = member.avatar, text = 'given on ' + str(date.today()))
+          embed=discord.Embed(title="New Admin!", description="**{0}** was given admin by **{1}**!".format(member, ctx.message.author), color=0x280137).set_footer(icon_url = member.avatar, text = 'given on ' + str(date.today()))
           await ctx.send(embed=embed)
       except:
             await ctx.send("Not able to give role")
     else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
+        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0x280137)
         await ctx.send(embed=embed)
 
 
@@ -176,14 +176,14 @@ class Moderation(commands.Cog):
      try:
       role = get(ctx.guild.roles, name='Admin')
       await member.remove_roles(role)
-      embed=discord.Embed(title="Admin Removed!", description="**{0}** was stripped of admin by **{1}**!".format(member, ctx.message.author), color=0x6a0dad)
+      embed=discord.Embed(title="Admin Removed!", description="**{0}** was stripped of admin by **{1}**!".format(member, ctx.message.author), color=0x280137)
       await ctx.send(embed=embed)
      except:
-      embed=discord.Embed(title="Admin Removal Error", description="The admin role was not able to be removed", color=0x6a0dad)
+      embed=discord.Embed(title="Admin Removal Error", description="The admin role was not able to be removed", color=0x280137)
       await ctx.send(embed=embed)
     
     else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
+        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0x280137)
         await ctx.send(embed=embed)
 
 
