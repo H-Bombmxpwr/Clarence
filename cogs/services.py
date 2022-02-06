@@ -75,7 +75,15 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   
   
 
-  # creates ASCII Art
+  @commands.command(help = "Hello!", aliases = ["hi"])
+  async def hello(self,ctx):
+    user = "<@" + str(ctx.author.id) + ">"
+    responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!"]
+    await ctx.send(f"{random.choice(responses)} {user}")
+
+
+
+  #creates ASCII Art
   @commands.command(help="Return text in ASCII art", aliases=["figlet"])
   @commands.cooldown(1, 3, commands.BucketType.user)
   async def ascii(self, ctx, *, text):
