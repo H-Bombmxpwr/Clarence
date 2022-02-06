@@ -28,6 +28,14 @@ def get_insult():
   quote = html.unescape(json_request["insult"])
   return quote
 
+
+def get_color(para,color):
+  url =  "https://www.thecolorapi.com/id?" + str(para) + "=" + str(color)
+  response = requests.get(url)
+  json_request = response.json()
+  print(json_request)
+
+
 def get_compliment():
   response = requests.get("https://8768zwfurd.execute-api.us-east-1.amazonaws.com/v1/compliments")
   json_request = response.json()

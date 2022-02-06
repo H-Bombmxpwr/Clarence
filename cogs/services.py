@@ -300,6 +300,13 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
   
   
+  #color function
+  @commands.command(help = "Get any color")
+  async def color(self,ctx,para = None ,color = None):
+    color, image = functionality.functions.get_color(para,color)
+    await ctx.send("Color function in the works, check back later")
+    
+    
 
   
   # wolfram query
