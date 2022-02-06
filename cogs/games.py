@@ -174,7 +174,7 @@ class Fun(commands.Cog):
       await ctx.send("Who would want to play this game with themselves?")
     else:
 
-      colors = ['heart', 'diamonds', 'spades', 'clubs']
+      colors = ['hearts', 'diamonds', 'spades', 'clubs']
       deck_o = [Card(value, color) for value in range(1, 14) for color in colors]
     
       #random.shuffle(deck)
