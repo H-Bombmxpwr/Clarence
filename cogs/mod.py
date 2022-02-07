@@ -3,7 +3,6 @@ from discord.ext import commands,tasks
 from discord import Member
 from discord.utils import get
 from datetime import date
-import asyncio
 import functionality.functions
 import os
 
