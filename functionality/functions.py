@@ -35,6 +35,13 @@ def get_color(para,color):
   json_request = response.json()
   print(json_request)
 
+def get_pickup():
+  url = "https://getpickuplines.herokuapp.com/lines/random"
+  response = requests.get(url)
+  json_request = response.json()
+  quote = html.unescape(json_request["line"])
+  return quote
+
 
 def get_compliment():
   response = requests.get("https://8768zwfurd.execute-api.us-east-1.amazonaws.com/v1/compliments")

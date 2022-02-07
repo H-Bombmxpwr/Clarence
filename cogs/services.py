@@ -365,7 +365,17 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       embedVar = discord.Embed(title="Error", description = "The compliment API is currently down, try again later", color=0xff0000)
       await ctx.send(embed=embedVar)
 
-
+  #get pickup line
+  @commands.command(help = "Get a ranom pickup line")
+  async def pickup(self,ctx):
+    
+    try:
+      quote = functionality.functions.get_pickup()
+      embedVar = discord.Embed(title="Random Pickup Line", description = quote, color=0xFF69B4)
+      await ctx.send(embed=embedVar)
+    except:
+      embedVar = discord.Embed(title="Error", description = "The pickup line API is currently down, try again later", color=0xFF69B4)
+      await ctx.send(embed=embedVar)
 
   #get joke
   @commands.command(help = 'Get a joke using a joke api', aliases = ['j'])
