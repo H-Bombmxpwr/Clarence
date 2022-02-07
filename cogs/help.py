@@ -36,7 +36,7 @@ class Help(commands.Cog):
 
       embedVar1.add_field(name = "Other Contributers", value = "`    conradburns#6918:` Edited and refined the text file\n`ThatchyMean1487#3395:` Drew the bot icon\n`      1awesomet#5223:` Quality assurance and responses\n`       Quiggles#2281:` Thursday modular equation",inline = False)
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
-      embedVar1.set_image(url = 'https://static.wikia.nocookie.net/simpsons/images/2/2c/Homer_Goes_to_College_41.JPG/revision/latest?cb=20130715173527')
+      #embedVar1.set_image(url = 'https://cdn.discordapp.com/attachments/877073514446880779/935409192112644106/the_dogs_dark.png')
       await ctx.send(embed=embedVar1,view=view)
 
     @commands.command(help = "Invite the bot",aliases = ["in"])
