@@ -15,6 +15,7 @@ from urllib.parse import quote
 from pyfiglet import Figlet
 import random
 import wikipedia
+from discord.ui import Button,View
 
 
 
@@ -278,10 +279,25 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
-  async def wikipedia(self, ctx, *query):
-        thequery = " ".join(query)
-        link = wikipedia.page(thequery)
-        await ctx.send(link.url)
+  async def wikipedia(self, ctx, *, query = None):
+
+    if query == None:
+      await ctx.send("Please attach something to search for to this function")
+    else:
+      thequery = str(query)
+      try: 
+        if wikipedia.suggest(thequery) != None:
+          thequery = wikipedia.suggest(thequery)
+        
+        link = wikipedia.page(thequery) #get the page object
+        button = Button(label = link.original_title, style = discord.ButtonStyle.primary, url = link.url) #create link button
+        view = View()
+        embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=2), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png")
+
+        view.add_item(button)
+        await ctx.send(embed=embed,view=view)
+      except:
+        await ctx.semd("Something failed with you query, try rewording and sending again")
 
 
 
