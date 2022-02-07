@@ -82,12 +82,12 @@ class Moderation(commands.Cog):
   #list the roles in the server
   @commands.command(help = "List the guild roles")
   async def roles(self,ctx):
-    roles = "`Current Roles: `\n"
+    roles = ""
     for role in ctx.guild.roles:
       roles = roles + str(role) + "\n"
 
-    roles = roles + "\n`Total roles: ` \n" + str(len(ctx.guild.roles))
-    embedVar = discord.Embed(title = "Roles in Server", description = roles, inline = False, color = 0xffffff)
+    embedVar = discord.Embed(title = "Active Role", description = roles, color = ctx.author.color)
+    embedVar.add_field(name = "Total Roles", value = len(ctx.guild.roles), inline = False)
     await ctx.send(embed= embedVar)  
 
 
