@@ -86,7 +86,7 @@ class Moderation(commands.Cog):
     for role in ctx.guild.roles:
       roles = roles + str(role) + "\n"
 
-    embedVar = discord.Embed(title = "Active Role", description = roles, color = ctx.author.color)
+    embedVar = discord.Embed(title = "Active Roles", description = roles, color = ctx.author.color)
     embedVar.add_field(name = "Total Roles", value = len(ctx.guild.roles), inline = False)
     await ctx.send(embed= embedVar)  
 
