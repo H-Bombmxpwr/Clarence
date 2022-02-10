@@ -10,6 +10,7 @@ from storage.Lists_Storage import emojis
 import random
 
 
+
 class Fun(commands.Cog):
   """ 
   Games to play with the bot
@@ -161,7 +162,7 @@ class Fun(commands.Cog):
       await ctx.send(embed=embed)
 
   
-  @commands.command(help = "52 card pickup")
+  @commands.command(help = "52 card pickup",hidden = True)
   async def fiftytwo(self,ctx,member: discord.Member = None):
     if member == None:
       await ctx.send("Please @ a person to play the game as an arguement to the function")

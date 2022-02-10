@@ -12,7 +12,7 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
   
-    @commands.command(help = "About Smrt Bot")
+    @commands.command(help = "About Clarence")
     async def about(self,ctx):
       
       servers  =str(len(self.bot.guilds))
@@ -30,11 +30,11 @@ class Help(commands.Cog):
       except AttributeError as e:
                 owner = "H-Bombmxpwr#2243"
 
-      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `" + self.bot.command_prefix + "help` and `" + self.bot.command_prefix + "list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Smrt-Bot) on GitHub",color = color)
+      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `" + self.bot.command_prefix + "help` and `" + self.bot.command_prefix + "list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
   
       embedVar1.add_field(name = "Basic Information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
 
-      embedVar1.add_field(name = "Other Contributers", value = "`    conradburns#6918:` Edited and refined the text file\n`ThatchyMean1487#3395:` Drew the bot icon\n`      1awesomet#5223:` Quality assurance and responses\n`       Quiggles#2281:` Thursday modular equation",inline = False)
+      embedVar1.add_field(name = "Other Contributers", value = "`     conradburns#6918:` Edited and refined the text file\n` ThatchyMean1487#3395:` Drew the bot icon\n`       1awesomet#5223:` Quality assurance and responses\n`        Quiggles#2281:` Thursday modular equation\n`Viciouspenguin01#9167:` Being an inspirational bully ",inline = False)
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
       embedVar1.set_image(url = 'https://cdn.discordapp.com/attachments/877073514446880779/935409192112644106/the_dogs_dark.png')
       await ctx.send(embed=embedVar1,view=view)
@@ -58,7 +58,14 @@ class Help(commands.Cog):
 
       embedVar = discord.Embed(title = "Complete list of commands", description = commands_desc, color = 0x280137).set_footer(icon_url = os.getenv('icon'), text = "Clarence#8444")
       await ctx.send(embed=embedVar)
-      
+
+
+class NewHelpName(commands.MinimalHelpCommand): #creating a new help command
+    async def send_pages(self):
+        destination = self.get_destination()
+        for page in self.paginator.pages:
+            emby = discord.Embed(description=page,color = 0x000080)
+            await destination.send(embed=emby)
 
 
 def setup(bot):

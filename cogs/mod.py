@@ -224,7 +224,7 @@ class Owner(commands.Cog):
         guild_list = "`Active Servers: `\n\n"
         for guild in activeservers:
           guild_list = guild_list + str(guild) + '\n'
-        embedVar = discord.Embed(title = "Smrt Bot",description = guild_list,color = 0x6a0dad).set_footer(text = 'As of ' + str(date.today()), icon_url = os.getenv('icon'))
+        embedVar = discord.Embed(title = "Clarence",description = guild_list,color = 0x6a0dad).set_footer(text = 'As of ' + str(date.today()), icon_url = os.getenv('icon'))
         await ctx.send(embed = embedVar)
             
     else:

@@ -16,6 +16,8 @@ from pyfiglet import Figlet
 import random
 import wikipedia
 from discord.ui import Button,View
+from contextlib import suppress
+from functionality.structures import Bits
 
 
 
@@ -81,6 +83,28 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
     user = "<@" + str(ctx.author.id) + ">"
     responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!"]
     await ctx.send(f"{random.choice(responses)} {user}")
+
+
+  #binary/hex/decimal conversions
+  @commands.command(help = "Binary/Hex/Decimal/Ascii converter")
+  async def bits(self,ctx,typ:str = None,input = None):
+    
+    if typ == None:
+      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`,`binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+    elif input == None:
+      await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+    
+    else:
+      Bit = Bits(typ,input)
+      decimal = Bit.to_decimal(typ[0],input)
+      if decimal == None:
+        await ctx.send("That is not a valid value for that type")
+        return
+      decimal,ascii,hexa,binary = Bit.from_decimal(decimal)
+      await ctx.send("Binary: `" + str(binary) + "`\nHex: `" + str(hexa) + "`\nDecimal: `" + str(decimal) + "`\nAscii: `" + str(ascii) + "`")
+      
+
+    
 
 
 
@@ -285,6 +309,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send("Please attach something to search for to this function")
     else:
       thequery = str(query)
+      with suppress(AttributeError):
+            await ctx.trigger_typing()
       try: 
         if wikipedia.suggest(thequery) != None:
           thequery = wikipedia.suggest(thequery)

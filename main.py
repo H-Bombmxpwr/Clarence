@@ -3,16 +3,18 @@ from discord.ext import commands
 import os
 from functionality.keep_alive import keep_alive
 from storage.Lists_Storage import thedan,days
-import cogs.music,cogs.services,cogs.games,cogs.mod,cogs.help #import the cogs
+import cogs.music,cogs.services,cogs.games,cogs.mod,cogs.help,cogs.flight #import the cogs
 from functionality.functions import check_carrot,punish_user
+from cogs.help import NewHelpName
 import time
 from functionality.trie import Trie
 
 
-cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help]
+cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help,cogs.flight]
 
 
 client = commands.Bot(command_prefix="$",intents = discord.Intents.all())
+client.help_command = NewHelpName()
 
 
 for i in range(len(cogs)):
@@ -50,7 +52,7 @@ def buildTrie():
 async def on_ready():
   print("Attempting to build trie......")
   built = False
-  built = buildTrie()
+  #built = buildTrie()
   if built:
     print("Trie is built. Profanity filter is on.\n")
   else:
@@ -113,8 +115,8 @@ async def on_message(message):
 
   
   #Carrot agree function
-  if check_carrot(text,message) == 1: 
-    await message.channel.send(message.content + '^')
+  #if check_carrot(text,message) == 1: 
+   # await message.channel.send(message.content + '^')
 
   
   #mystery function

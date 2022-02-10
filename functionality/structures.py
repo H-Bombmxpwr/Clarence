@@ -1,6 +1,6 @@
 import random
 
-#class for interactive trivia in services
+#class to support trivia command
 class Trivia:
   def __init__(self, question, category, correctAnswer, incorrectAnswers):
     self.question = question
@@ -24,7 +24,7 @@ class Trivia:
     return answers
 
 
-#class to solve fizzbuzz in games
+#class to support the  fizzbuzz command
 class FizzBuzz:
   def __init__(self, number):
     self.number = number
@@ -42,7 +42,7 @@ class FizzBuzz:
     return value
 
 
-
+#class to support the profanity filter trie
 class TrieNode:
     _MAX_SIZE = 40
 
@@ -50,8 +50,56 @@ class TrieNode:
         self.children = [None] * self._MAX_SIZE
         self.is_end_of_word = False
 
-
+#class to support the fiftytwo command
 class Card:
     def __init__(self, value, color):
         self.value = value
         self.color = color
+
+
+
+#class to support the bits command
+class Bits:
+  
+  def __init__(self,typ,value):
+    self.value = value
+    self.type = typ
+
+  def to_decimal(self,typ,value):
+    try:
+      if typ == "d":
+        value = int(value)
+      elif typ == "h":
+        value = int(value,16)
+      elif typ == "a":
+        value = ord(value)
+      elif typ == "b":
+        value = int(value,2)
+      else:
+        value = None
+      return value
+    except:
+      return None
+
+  def from_decimal(self,decimal):
+    decimal = int(decimal)
+    try:
+      ascii = chr(decimal)
+    except:
+      ascii = "N/A"
+    hexa = hex(decimal).replace("0x","").upper()
+    binary = bin(decimal).replace("0b","")
+    return decimal,ascii,hexa,binary
+    
+
+
+
+
+  
+
+  
+    
+
+
+
+
