@@ -90,13 +90,13 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   async def bits(self,ctx,typ:str = None,input = None):
     
     if typ == None:
-      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`,`binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`, or `binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
     elif input == None:
       await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
     
     else:
       Bit = Bits(typ,input)
-      decimal = Bit.to_decimal(typ[0],input)
+      decimal = Bit.to_decimal(typ[0].lower(),input)
       if decimal == None:
         await ctx.send("That is not a valid value for that type")
         return

@@ -17,7 +17,7 @@ class Flight(commands.Cog):
     await ctx.send("https://lumiere-a.akamaihd.net/v1/images/p_planes_19869_cdb69e0c.jpeg")
     await ctx.send("https://m.media-amazon.com/images/I/51G21JUHiCL._SX342_.jpg")
 
-
+  
 
 
 
