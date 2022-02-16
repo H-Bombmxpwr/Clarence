@@ -7,13 +7,20 @@ import cogs.music,cogs.services,cogs.games,cogs.mod,cogs.help,cogs.flight #impor
 from functionality.functions import check_carrot,punish_user
 from cogs.help import NewHelpName
 import time
+import json
 from functionality.trie import Trie
 
 
 cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help,cogs.flight]
 
+def get_prefix(client,message):  #grab server prefix
+  with open("storage/prefixes.json","r") as f:
+    prefixes = json.load(f)
 
-client = commands.Bot(command_prefix="$",intents = discord.Intents.all())
+  return prefixes[str(message.guild.id)]
+
+
+client = commands.Bot(command_prefix= get_prefix ,intents = discord.Intents.all())
 client.help_command = NewHelpName()
 
 
@@ -63,7 +70,28 @@ async def on_ready():
   
 
 
+@client.event
+async def on_guild_join(guild): #add default prefix to the json file
+  with open("storage/prefixes.json","r") as f:
+    prefixes = json.load(f)
 
+  prefixes[str(guild.id)] = "$"
+  
+  with open("storage/prefixes.json","w") as f:
+    json.dump(prefixes,f, indent = 4)
+
+
+@client.event
+async def on_guild_remove(guild):  #remove prefix if bot is kicked
+  with open("storage/prefixes.json","r") as f:
+    prefixes = json.load(f)
+
+  prefixes.pop(str(guild.id))
+
+  with open("storage/prefixes.json","w") as f:
+    json.dump(prefixes,f, indent = 4)
+
+    
 @client.event 
 async def on_command_error(ctx, error): #detects if a command is valid
     if isinstance(error, commands.CommandNotFound): 

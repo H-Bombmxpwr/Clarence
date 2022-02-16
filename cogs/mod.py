@@ -5,6 +5,7 @@ from discord.utils import get
 from datetime import date
 import functionality.functions
 import os
+import json
 
 
 class Moderation(commands.Cog):
@@ -144,6 +145,22 @@ class Moderation(commands.Cog):
 
 
 
+
+
+  #change the server prefix
+  @commands.command(help = "Change Server Prefix")
+  @commands.has_permissions(administrator = True)
+  async def changeprefix(self,ctx,prefix):
+    with open("storage/prefixes.json","r") as f:
+      prefixes = json.load(f)
+
+    prefixes[str(ctx.guild.id)] = prefix
+  
+    with open("storage/prefixes.json","w") as f:
+      json.dump(prefixes,f, indent = 4)
+
+    await ctx.send(f"Prefix changed to: `{prefix}`")
+  
   #gives the administrator role
   @commands.command(help = 'gives a user the administrator role',aliases = ['gvad'])
   async def giveadmin(self,ctx, member: discord.Member):

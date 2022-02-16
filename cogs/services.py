@@ -33,9 +33,6 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   @commands.command(help = 'List of commands for the bot',aliases = ["l"])
   async def list(self,ctx):
     embeds = storage.embed_storage.make_list()
-    #add in the current prefix
-    for i in range(len(embeds)):
-      embeds[i].set_footer(text = "Page " + str(i+1)+ "/6 - The current prefix is \"" + self.client.command_prefix + '\"',icon_url = os.getenv('icon'))
     
     pages = 6
     cur_page = 1
@@ -90,9 +87,9 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   async def bits(self,ctx,typ:str = None,input = None):
     
     if typ == None:
-      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`, or `binary`\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`, or `binary`\ni.e `bits decimal 35`')
     elif input == None:
-      await ctx.send('Please add a value to convert\ni.e `'+ self.client.command_prefix + 'bits decimal 35`')
+      await ctx.send('Please add a value to convert\ni.e `bits decimal 35`')
     
     else:
       Bit = Bits(typ,input)

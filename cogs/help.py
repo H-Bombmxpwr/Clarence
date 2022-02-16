@@ -30,7 +30,7 @@ class Help(commands.Cog):
       except AttributeError as e:
                 owner = "H-Bombmxpwr#2243"
 
-      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `" + self.bot.command_prefix + "help` and `" + self.bot.command_prefix + "list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
+      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `help` and `list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
   
       embedVar1.add_field(name = "Basic Information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
 
