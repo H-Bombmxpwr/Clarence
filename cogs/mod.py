@@ -32,7 +32,6 @@ class Moderation(commands.Cog):
   @commands.has_permissions(administrator = True)
   async def unban(self,ctx, *, member):
     banned_users = await ctx.guild.bans()
-    print(banned_users)
     member_name, member_discriminator = member.split("#")
 
     for ban_entry in banned_users:
@@ -150,16 +149,19 @@ class Moderation(commands.Cog):
   #change the server prefix
   @commands.command(help = "Change Server Prefix")
   @commands.has_permissions(administrator = True)
-  async def prefix(self,ctx,prefix):
-    with open("storage/prefixes.json","r") as f:
-      prefixes = json.load(f)
+  async def prefix(self,ctx,prefix = None):
+    if prefix == None:
+      await ctx.send("Please send a new prefix\n i.e. `prefix $`")
+    else:
+      with open("storage/prefixes.json","r") as f:
+        prefixes = json.load(f)
 
-    prefixes[str(ctx.guild.id)] = prefix
+      prefixes[str(ctx.guild.id)] = prefix
   
-    with open("storage/prefixes.json","w") as f:
-      json.dump(prefixes,f, indent = 4)
+      with open("storage/prefixes.json","w") as f:
+        json.dump(prefixes,f, indent = 4)
 
-    await ctx.send(f"Prefix changed to: `{prefix}`")
+      await ctx.send(f"Prefix changed to: `{prefix}`")
   
   #gives the administrator role
   @commands.command(help = 'gives a user the administrator role',aliases = ['gvad'])
