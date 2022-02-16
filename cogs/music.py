@@ -43,6 +43,7 @@ class Music(commands.Cog):
 
         if song == None:
           await ctx.send("Please send the title of a song to play")
+          return
         #get the bot to join the player if it isnt already in it
         await ctx.invoke(self.client.get_command('join'))
         
