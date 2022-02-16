@@ -39,9 +39,11 @@ class Music(commands.Cog):
         await ctx.send("Cya!")
 
   @commands.command(help = 'Play a song')
-  async def play(self,ctx,*,song:str):
-        
-        #get the bot to join the player if it isnt alredy in it
+  async def play(self,ctx,*,song:str = None):
+
+        if song == None:
+          await ctx.send("Please send the title of a song to play")
+        #get the bot to join the player if it isnt already in it
         await ctx.invoke(self.client.get_command('join'))
         
         #search the song/ check if a url was sent

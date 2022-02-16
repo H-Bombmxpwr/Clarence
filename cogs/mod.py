@@ -150,7 +150,7 @@ class Moderation(commands.Cog):
   #change the server prefix
   @commands.command(help = "Change Server Prefix")
   @commands.has_permissions(administrator = True)
-  async def changeprefix(self,ctx,prefix):
+  async def prefix(self,ctx,prefix):
     with open("storage/prefixes.json","r") as f:
       prefixes = json.load(f)
 
