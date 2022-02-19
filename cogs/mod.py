@@ -22,7 +22,7 @@ class Moderation(commands.Cog):
   async def ban(self,ctx, member : discord.Member, *, reason = None):
     if member.id != 239605426033786881:
       await member.ban(reason = reason)
-      embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
+      embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**! with reason: **{2}**".format(member, ctx.message.author,reason), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
       await ctx.send(embed=embed)
     else:
       await ctx.send('I cannot ban my creator')
@@ -43,7 +43,9 @@ class Moderation(commands.Cog):
             return
 
   #generate a list of banned members
+  
   @commands.command(help = "List of banned users from the guild")
+  @commands.has_permissions(ban_members = True)
   async def banlist(self,ctx):
     banned_users = await ctx.guild.bans()
     banned_list = ''
@@ -217,6 +219,20 @@ class Moderation(commands.Cog):
         await ctx.message.delete()
     else:
        await ctx.send("Either you or the bot does not have the necessary permissions to perform this task")
+
+  
+  @commands.command(help = "kick a user")
+  async def kick(self,ctx,member: discord.Member, *, reason = None):
+   if ctx.message.author.guild_permissions.kick_members or ctx.author.id == 239605426033786881:    
+    try:
+        await member.kick(reason = reason)
+        embed=discord.Embed(title="User kicked!", description="**{0}** was kicked by **{1}**! with reason: **{2}**".format(member, ctx.message.author,reason), color=0x800000).set_footer(icon_url = member.avatar, text = 'kicked on ' + str(date.today()))
+        await ctx.send(embed=embed)
+    except:
+        await ctx.send("There was a syntax error, please try again")
+   else:
+     await ctx.send("You do not have permission to kici people")
+    
 
 
 
