@@ -1,15 +1,15 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands,tasks
 import os
 from functionality.keep_alive import keep_alive
-from storage.Lists_Storage import thedan,days
+from storage.Lists_Storage import thedan,days,status
 import cogs.music,cogs.services,cogs.games,cogs.mod,cogs.help,cogs.flight #import the cogs
 from functionality.functions import check_carrot,punish_user
 from cogs.help import NewHelpName
 import time
 import json
 from functionality.trie import Trie
-
+from itertools import cycle
 
 cogs = [cogs.music,cogs.services,cogs.mod,cogs.games,cogs.help,cogs.flight]
 
@@ -23,6 +23,7 @@ def get_prefix(client,message):  #grab server prefix
 
 client = commands.Bot(command_prefix= get_prefix ,intents = discord.Intents.all())
 client.help_command = NewHelpName()
+status_i = cycle(status)
 
 
 for i in range(len(cogs)):
@@ -56,8 +57,11 @@ def buildTrie():
 
 
 
+
+
 @client.event
 async def on_ready():
+  change_status.start()
   print("Attempting to build trie......")
   built = False
   #built = buildTrie()
@@ -69,8 +73,13 @@ async def on_ready():
   print('{0.user} is back online'.format(client))
   print('=------------------------------=')
   
+  
 
+@tasks.loop(minutes = 3)
+async def change_status():
+  await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=next(status_i)))
 
+  
 @client.event
 async def on_guild_join(guild): #add default prefix to the json file
   with open("storage/prefixes.json","r") as f:
@@ -80,6 +89,7 @@ async def on_guild_join(guild): #add default prefix to the json file
   
   with open("storage/prefixes.json","w") as f:
     json.dump(prefixes,f, indent = 4)
+
 
 
 @client.event
