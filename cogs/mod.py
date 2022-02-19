@@ -220,7 +220,8 @@ class Moderation(commands.Cog):
     else:
        await ctx.send("Either you or the bot does not have the necessary permissions to perform this task")
 
-  
+
+  #kick a user
   @commands.command(help = "kick a user")
   async def kick(self,ctx,member: discord.Member, *, reason = None):
    if ctx.message.author.guild_permissions.kick_members or ctx.author.id == 239605426033786881:    
