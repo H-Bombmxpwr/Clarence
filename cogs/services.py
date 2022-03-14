@@ -74,7 +74,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
             # ending the loop if user doesn't react after x seconds
   
   
-
+    #hello command
   @commands.command(help = "Hello!", aliases = ["hi"])
   async def hello(self,ctx):
     user = "<@" + str(ctx.author.id) + ">"
@@ -132,7 +132,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
         await ctx.send("You better not try to bug me")
     
       elif id == 239605426033786881:
-        await ctx.send("I could never ping my creator like that")
+        await ctx.send("I could never bug my creator like that")
       else:
         for x in range(1,int(iterate) + 1):
           await ctx.send('Hey <@' + str(id) + '> ' + str(x) + '!\n')
@@ -169,6 +169,8 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
     await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
   
   # END LOCAL CLASS/COG 
+  
+    
   # START API CLASS
 
 
@@ -350,17 +352,18 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   
   # wolfram query
   @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
-  async def query(self,ctx,*,parameter):
+  async def query(self,ctx,*,parameter = None):
+    if  parameter == None:
+      await ctx.send("Please send something to query as an arguement to the command")
+    else:
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
         app_id = os.getenv('app_id')
         client1 = wolframalpha.Client(app_id)
         res = client1.query(parameter)
+        print(res)
         answer = next(res.results)['subpod']['img']['@src']
         answertxt = next(res.results).text
-      
-        #embedVar = discord.Embed(title = "Computational Intelligence", desciption ="Input of computational intelligence", color = 0xdc143c ).set_image(url = input).set_thumbnail(url = wolf_url)
-        #embedVar.add_field(name = "Input: ", value = parameter,inline = False)
       
 
         embedVar = discord.Embed(title = "Computational Intelligence", description ="Input/Output", color = 0xdc143c ).set_image(url = answer).set_thumbnail(url = wolf_url)

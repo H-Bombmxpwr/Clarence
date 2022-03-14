@@ -199,7 +199,19 @@ class Fun(commands.Cog):
       for i in range(0,52):
         await ctx.send(f"{id}, {deck[i]}")
     
-    
+
+  #send a random quote from 2070 paradigm shift
+  @commands.command(help = "2070 Paradigm Shift")
+  async def paradigm(self,ctx,link = None):
+    if link != None:
+      await ctx.send("Enjoy this 20 minutes of amazing source material")
+      await ctx.send("https://www.youtube.com/watch?v=SmicRDpS5Gk")
+    else:
+      with open("storage/paradigm.txt", "r") as f:
+        lines = f.readlines()
+        f.close()
+      quote = random.choice(lines)
+      await ctx.send(quote)
 
 def setup(client):
     client.add_cog(Fun(client))
