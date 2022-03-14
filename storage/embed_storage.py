@@ -31,7 +31,7 @@ def make_list():
 
   embedVar6 = discord.Embed(title=name, description="[Invite](https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot)", color=color)
 
-  embedVar6.add_field(name = "Fun" , value =  '`    bored:` give you something to do while bored\n `   count: ` play a counting game\n`   ratio: ` ratio a worthy foe\n` collatz: ` run the collatz conjecture\n`fizzbuzz: ` play fizzbuzz\n`fiftytwo: ` play 52 card pickup', inline = False)
+  embedVar6.add_field(name = "Fun" , value =  '`    bored:` give you something to do while bored\n `   count: ` play a counting game\n`   ratio: ` ratio a worthy foe\n` collatz: ` run the collatz conjecture\n`fizzbuzz: ` play fizzbuzz\n`paradigm: ` random quote from 2070 paradigm shift\n`fiftytwo: ` play 52 card pickup', inline = False)
 
   embeds = [embedVar1,embedVar2,embedVar3,embedVar4,embedVar5,embedVar6]
 

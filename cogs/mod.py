@@ -336,6 +336,6 @@ class Owner(commands.Cog):
 
 
 
-def setup(client):
-    client.add_cog(Moderation(client))
-    client.add_cog(Owner(client))
+async def setup(client):
+    await client.add_cog(Moderation(client))
+    await client.add_cog(Owner(client))

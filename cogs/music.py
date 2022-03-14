@@ -111,5 +111,7 @@ class Music(commands.Cog):
         embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
         await ctx.send(embed = embedVar)
 
-def setup(client):
-    client.add_cog(Music(client))
+
+
+async def setup(client):
+   await client.add_cog(Music(client))

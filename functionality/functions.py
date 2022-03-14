@@ -232,4 +232,11 @@ def collatz(n):
             n = n // 2
     return c
 
-  
+
+def fix_lines(lines):
+  def check_valid(element):
+      if element == "\n":
+        return False
+      return True
+  new_lines = filter(check_valid, lines)
+  return new_lines

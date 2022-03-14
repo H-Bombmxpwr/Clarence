@@ -3,18 +3,13 @@ from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
 from storage.Lists_Storage import thedan, days, status
-import cogs.music, cogs.services, cogs.games, cogs.mod, cogs.help, cogs.flight  #import the cogs
 from functionality.functions import check_carrot, punish_user
 from cogs.help import NewHelpName
 import time
 import json
 from functionality.trie import Trie
 from itertools import cycle
-
-cogs = [
-    cogs.music, cogs.services, cogs.mod, cogs.games, cogs.help, cogs.flight
-]
-
+import asyncio
 
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
@@ -26,9 +21,6 @@ def get_prefix(client, message):  #grab server prefix
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
 client.help_command = NewHelpName()
 status_i = cycle(status)
-
-for i in range(len(cogs)):
-    cogs[i].setup(client)
 
 trie = Trie()
 table = {
@@ -53,6 +45,19 @@ def buildTrie():
         trie.insert(line)
     file.close()
     return True
+
+
+
+
+@client.event
+async def on_command_error(ctx, error):  #detects if a command is valid
+    if isinstance(error, commands.CommandNotFound):
+        em = discord.Embed(
+            title=f"Error",
+            description=f"Command \'" + ctx.message.content +
+            "   \' not found. \nUse `list: ` or `help: ` for a list of commands",
+            color=0xff0000)
+        await ctx.send(embed=em)
 
 
 @client.event
@@ -97,16 +102,6 @@ async def on_guild_remove(guild):  #remove prefix if bot is kicked
     with open("storage/prefixes.json", "w") as f:
         json.dump(prefixes, f, indent=4)
 
-
-@client.event
-async def on_command_error(ctx, error):  #detects if a command is valid
-    if isinstance(error, commands.CommandNotFound):
-        em = discord.Embed(
-            title=f"Error",
-            description=f"Command \'" + ctx.message.content +
-            "   \' not found. \nUse `list: ` or `help: ` for a list of commands",
-            color=0xff0000)
-        await ctx.send(embed=em)
 
 
 @client.event
@@ -160,9 +155,20 @@ async def on_message(message):
         await message.add_reaction(emoji)
         await message.channel.send("Why the actual heck do you know what a " +
                                    text + " is??")
-
+  
     await client.process_commands(message)
+
+async def main():
+    async with client:
+          await client.load_extension('cogs.music')
+          await client.load_extension('cogs.services')
+          await client.load_extension('cogs.mod')
+          await client.load_extension('cogs.games')
+          await client.load_extension('cogs.help')
+          await client.load_extension('cogs.flight')
+          await client.start(os.getenv('token'))
+
 
 
 keep_alive()
-client.run(os.getenv('token'))
+asyncio.run(main())

@@ -511,6 +511,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
   
 
-def setup(client):
-    client.add_cog(Local(client))
-    client.add_cog(Api(client))
+async def setup(client):
+    await client.add_cog(Local(client))
+    await client.add_cog(Api(client))
