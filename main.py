@@ -113,6 +113,10 @@ async def on_message(message):
     text = text.translate(str.maketrans(table))
     author_id = message.author.id
 
+    #sends the prefix if the useer forgets what it is
+    if text == "prefix":
+      await message.channel.send("This server prefix is `" + str(get_prefix(client,message)) + "`")
+    
     #profanity filter
     if author_id != 239605426033786881:
         isClean = True
@@ -140,9 +144,6 @@ async def on_message(message):
 
     #the dan
     if any(word in text for word in thedan):
-        emojis = ['🎸', ' 🎹', '🎷 ', '🥁', '🎤']
-        for emoji in emojis:
-            await message.add_reaction(emoji)
         await message.reply("I LOVE STEELY DAN!")
 
     #Carrot agree function
