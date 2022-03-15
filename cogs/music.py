@@ -89,7 +89,7 @@ class Music(commands.Cog):
         await ctx.voice_client.resume()
 
 
-  @commands.command(help="Get lyrics for a song", aliases=["ly"])
+  @commands.command(help="Get lyrics for a song, send without a song arguement when playing a song in the voice channel to get the current songs lyrics", aliases=["ly"])
   async def lyrics(self, ctx, *, song = None):
         if song == None and ctx.voice_client.is_connected():
           json = requests.get(f"https://some-random-api.ml/lyrics?title={self.client.song}").json()
