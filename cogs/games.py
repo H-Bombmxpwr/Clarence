@@ -201,7 +201,7 @@ class Fun(commands.Cog):
     
 
   #send a random quote from 2070 paradigm shift
-  @commands.command(help = "2070 Paradigm Shift, send $paradigm source to get the source video")
+  @commands.command(help = "2070 Paradigm Shift, send '$paradigm source' to get the source video")
   async def paradigm(self,ctx,link = None):
     if link != None:
       await ctx.send("Enjoy this 20 minutes of amazing source material")
