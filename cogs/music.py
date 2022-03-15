@@ -73,6 +73,7 @@ class Music(commands.Cog):
             source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
             vc.play(source)
             await ctx.send("Now playing: " + info.get('title', None) + '\n' + url)
+            self.client.song = str(info.get('title',None))
         except:
           await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
     
@@ -89,11 +90,17 @@ class Music(commands.Cog):
 
 
   @commands.command(help="Get lyrics for a song", aliases=["ly"])
-  async def lyrics(self, ctx, *, song):
+  async def lyrics(self, ctx, *, song = None):
+        if song == None and ctx.voice_client.is_connected():
+          json = requests.get(f"https://some-random-api.ml/lyrics?title={self.client.song}").json()
+        elif song == None:
+          await ctx.send("Please send a song to get lyrics for")
+        else:
+          json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
         with suppress(AttributeError):
             await ctx.trigger_typing()
 
-        json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
+        
 
         with suppress(KeyError):
             if json["error"]:
