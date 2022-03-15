@@ -46,7 +46,7 @@ class Music(commands.Cog):
           return
         #get the bot to join the player if it isnt already in it
         await ctx.invoke(self.client.get_command('join'))
-        
+        self.client.song = str(song)
         #search the song/ check if a url was sent
         if str(song).find("https://www.youtube.com") == -1:
           yt = YoutubeSearch(str(song), max_results=1).to_json()
@@ -73,7 +73,7 @@ class Music(commands.Cog):
             source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
             vc.play(source)
             await ctx.send("Now playing: " + info.get('title', None) + '\n' + url)
-            self.client.song = str(info.get('title',None))
+            
         except:
           await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
     
