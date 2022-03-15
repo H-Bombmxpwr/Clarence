@@ -205,7 +205,7 @@ class Fun(commands.Cog):
   async def paradigm(self,ctx,link = None):
     if link != None:
       await ctx.send("Enjoy this 20 minutes of amazing source material")
-      await ctx.send("https://www.youtube.com/watch?v=SmicRDpS5Gk")
+      await ctx.send("https://www.youtube.com/watch?v=KTJn_DBTnrY&t=191s")
     else:
         with open("storage/paradigm.txt", "r") as f:
           lines = f.readlines()
