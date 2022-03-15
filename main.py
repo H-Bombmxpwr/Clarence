@@ -115,7 +115,7 @@ async def on_message(message):
 
     #sends the prefix if the useer forgets what it is
     if text == "prefix":
-      await message.channel.send("This server prefix is `" + str(get_prefix(client,message)) + "`")
+      await message.channel.send("This server's prefix is `" + str(get_prefix(client,message)) + "`")
     
     #profanity filter
     if author_id != 239605426033786881:
