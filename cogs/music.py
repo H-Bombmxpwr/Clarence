@@ -139,7 +139,6 @@ class Music(commands.Cog):
             vc.is_playing()
             self.titles[guild_id] = [title]
             await ctx.send("Now playing: " + title + '\n' + url)
-            print(self.titles)
         else:
           if guild_id in self.qu:
             self.qu[guild_id].append(source)
@@ -182,7 +181,7 @@ class Music(commands.Cog):
       embedVar = discord.Embed(title = "Current Queue: ",description = songs,color = 0x800000)
       await ctx.send(embed = embedVar)
 
-    #get lyrics for the current song or any song
+  #get lyrics for the current song or any song
   @commands.command(help="Get lyrics for a song, send without a song arguement when playing a song in the voice channel to get the current songs lyrics", aliases=["ly"])
   async def lyrics(self, ctx, *, song = None):
         if song == None and ctx.voice_client.is_connected():
@@ -191,6 +190,7 @@ class Music(commands.Cog):
           await ctx.send("Please send a song to get lyrics for")
         else:
           json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
+          await ctx.send("past json")
         with suppress(AttributeError):
             await ctx.trigger_typing()
 
