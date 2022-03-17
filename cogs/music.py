@@ -90,6 +90,7 @@ class Music(commands.Cog):
     vc.play(source)
     guild_id = ctx.message.guild.id
     self.qu[guild_id] = [source]
+    self.titles[guild_id] = [info.get('title',None)]
     await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
 
     
