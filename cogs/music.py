@@ -126,15 +126,19 @@ class Music(commands.Cog):
           await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
           return
 
-        
-        #checking if add to the queue or play the song instantly
+        guild_id = ctx.message.guild.id
 
-        print(self.qu)
-        if len(self.qu) == 0:
-          self.start_playing(vc, source)
-          await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
+        if not vc.is_playing():
+          async with ctx.typing():
+            vc.play(source, after=lambda x=None: self.queue(ctx, guild_id))
+            vc.is_playing()
+            await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
         else:
-          self.qu[len(self.qu)] = source
+          if guild_id in self.qu:
+            self.qu[guild_id].append(source)
+          else:
+            self.qu[guild_id] = [source]
+
           await ctx.send(str(info.get('title',None)) + " was added to the queue")
         
 
@@ -182,21 +186,11 @@ class Music(commands.Cog):
         embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
         await ctx.send(embed = embedVar)
 
-
-  def start_playing(self,vc,source):
-      print("got into player")
-      self.qu[0] = source
-    
-      i = 0
-      while i <  len(self.qu):
-        try:
-          vc.play(self.qu[i], after=lambda e: print('Player error: %s' % e) if e else None)
-
-        except:
-          pass
-          i += 1
-      print("Exited the loop with queue of:")
-      print(self.qu)
+  def queue(self,ctx, id):
+    if len(self.qu) > 0 and self.qu[id] != []:
+        voice = ctx.guild.voice_client
+        audio = self.qu[id].pop(0)
+        voice.play(audio, after=lambda x=None: self.queue(ctx, ctx.message.guild.id))
 
 
 async def setup(client):
