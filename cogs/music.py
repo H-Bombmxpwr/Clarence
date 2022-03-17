@@ -14,6 +14,7 @@ class Music(commands.Cog):
   def __init__(self, client):
         self.client = client
         self.qu = {}
+        self.titles = {}
 
   @commands.command(help = 'Info for the music commands')
   async def music(self,ctx):
@@ -36,12 +37,14 @@ class Music(commands.Cog):
   @commands.command(help = "Clear the queue",aliases = ['cq'])
   async def clearqueue(self,ctx):
     self.qu = {}
+    self.titles = {}
     await ctx.send("The queue has been cleared")
   
   @commands.command(help = 'Leave a voice channel', aliases = ['dis','leave'])
   async def disconnect(self,ctx):
         await ctx.voice_client.disconnect()
         self.qu = {}
+        self.titles = {}
         ctx.voice_client.cleanup()
         await ctx.send("Cya!")
         
@@ -55,6 +58,7 @@ class Music(commands.Cog):
     await ctx.invoke(self.client.get_command('join'))
     self.client.song = str(song)
     self.qu = {}
+    self.titles = {}
     #search the song/ check if a url was sent
     if str(song).find("https://www.youtube.com") == -1:
           yt = YoutubeSearch(str(song), max_results=1).to_json()
@@ -84,7 +88,8 @@ class Music(commands.Cog):
       return
     vc.stop()
     vc.play(source)
-    self.qu[0] = source
+    guild_id = ctx.message.guild.id
+    self.qu[guild_id] = [source]
     await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
 
     
@@ -127,18 +132,21 @@ class Music(commands.Cog):
           return
 
         guild_id = ctx.message.guild.id
-
+        title = str(info.get('title',None))
         if not vc.is_playing():
           async with ctx.typing():
-            vc.play(source, after=lambda x=None: self.queue(ctx, guild_id))
+            vc.play(source, after=lambda x=None: self.queuel(ctx, guild_id))
             vc.is_playing()
-            await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
+            self.titles[guild_id] = [title]
+            await ctx.send("Now playing: " + title + '\n' + url)
+            print(self.titles)
         else:
           if guild_id in self.qu:
             self.qu[guild_id].append(source)
           else:
             self.qu[guild_id] = [source]
-
+            
+          self.titles[guild_id].append(title)
           await ctx.send(str(info.get('title',None)) + " was added to the queue")
         
 
@@ -155,6 +163,24 @@ class Music(commands.Cog):
         await ctx.send("Resumed ▶️")
         await ctx.voice_client.resume()
 
+
+  #displays the current queue, pretty rouhg code and will need some work in the future
+  @commands.command(help = "Display the current queue",aliases = ['qu'])
+  async def queue(self,ctx):
+    guild_id = ctx.message.guild.id
+    if len(self.qu) == 0:
+      await ctx.send("There is no queue, play a some songs first!")
+    else:
+      list_titles = self.titles[guild_id]
+      songs = ""
+      for i in range(len(list_titles)):
+        songs = songs + "`" + str(i+1) + ".`" +  list_titles[i]
+        if i == 0:
+          songs = songs + "(now playing) \n\n"
+        else:
+          songs = songs + '\n\n'
+      embedVar = discord.Embed(title = "Current Queue: ",description = songs,color = 0x800000)
+      await ctx.send(embed = embedVar)
 
     #get lyrics for the current song or any song
   @commands.command(help="Get lyrics for a song, send without a song arguement when playing a song in the voice channel to get the current songs lyrics", aliases=["ly"])
@@ -186,11 +212,11 @@ class Music(commands.Cog):
         embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
         await ctx.send(embed = embedVar)
 
-  def queue(self,ctx, id):
+  def queuel(self,ctx, id):
     if len(self.qu) > 0 and self.qu[id] != []:
         voice = ctx.guild.voice_client
         audio = self.qu[id].pop(0)
-        voice.play(audio, after=lambda x=None: self.queue(ctx, ctx.message.guild.id))
+        voice.play(audio, after=lambda x=None: self.queuel(ctx, ctx.message.guild.id))
 
 
 async def setup(client):
