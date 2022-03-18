@@ -36,9 +36,14 @@ class Music(commands.Cog):
   
   @commands.command(help = "Clear the queue",aliases = ['cq'])
   async def clearqueue(self,ctx):
-    self.qu = {}
-    self.titles = {}
-    await ctx.send("The queue has been cleared")
+    vc = ctx.voice_client
+    guild_id = ctx.message.guild.id
+    if vc.is_playing() and len(self.qu[guild_id]) > 1:
+      self.qu[guild_id] = [self.qu[guild_id].pop(0)]
+      self.titles[guild_id] = [self.titles[guild_id].pop(0)]
+      await ctx.send("The queue has been cleared")
+    else:
+      await ctx.send("There is nothing queued, play some songs first")
   
   @commands.command(help = 'Leave a voice channel', aliases = ['dis','leave'])
   async def disconnect(self,ctx):
@@ -176,7 +181,7 @@ class Music(commands.Cog):
       for i in range(len(list_titles)):
         songs = songs + "`" + str(i+1) + ".`" +  list_titles[i]
         if i == 0:
-          songs = songs + "(now playing) \n\n"
+          songs = songs + "`(now playing)` \n\n"
         else:
           songs = songs + '\n\n'
       embedVar = discord.Embed(title = "Current Queue: ",description = songs,color = 0x800000)
@@ -191,7 +196,7 @@ class Music(commands.Cog):
           await ctx.send("Please send a song to get lyrics for")
         else:
           json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
-          await ctx.send("past json")
+          
         with suppress(AttributeError):
             await ctx.trigger_typing()
 
@@ -217,6 +222,7 @@ class Music(commands.Cog):
     if len(self.qu) > 0 and self.qu[id] != []:
         voice = ctx.guild.voice_client
         audio = self.qu[id].pop(0)
+        self.titles[id].pop(0)
         voice.play(audio, after=lambda x=None: self.queuel(ctx, ctx.message.guild.id))
 
 
