@@ -356,6 +356,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     if  parameter == None:
       await ctx.send("Please send something to query as an arguement to the command")
     else:
+      with suppress(AttributeError):
+            await ctx.trigger_typing()
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
         app_id = os.getenv('app_id')
@@ -387,6 +389,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   # get insult
   @commands.command(help = 'Get an insult with an insult api', aliases = ['i'])
   async def insult(self,ctx):
+    with suppress(AttributeError):
+            await ctx.trigger_typing()
     try:
       quote = functionality.functions.get_insult()
       embedVar = discord.Embed(title="Random Insult", description = quote, color=0xff0000)
@@ -399,6 +403,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   #get compliment
   @commands.command(help = 'Get a compliment using a compliment api', aliases = ['c'])
   async def compliment(self,ctx):
+    with suppress(AttributeError):
+            await ctx.trigger_typing()
     try:
       quote = functionality.functions.get_compliment()
       embedVar = discord.Embed(title="Random Compliment", description = quote, color=0x89cff0)
@@ -422,6 +428,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   #get joke
   @commands.command(help = 'Get a joke using a joke api', aliases = ['j'])
   async def joke(self,ctx):
+    with suppress(AttributeError):
+            await ctx.trigger_typing()
     try:
       quote = functionality.functions.get_joke()
       embedVar = discord.Embed(title="Random " + quote["category"]+ " Joke\n", description = quote["setup"] + '\n\n' + quote["delivery"], color=0xffa500)
@@ -484,10 +492,11 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   #pull a random meme from a meme api
   @commands.command(help = "get a random meme",aliases = ["m"])
   async def meme(self,ctx):
+          with suppress(AttributeError):
+            await ctx.trigger_typing()
           json = requests.get("https://some-random-api.ml/meme").json()
           embed = discord.Embed(title="Random meme", colour=0xb00b69)
           embed.set_image(url=json["image"])
-          embed.set_footer(text = json["caption"])
           await ctx.send(embed=embed)
 
 
@@ -495,6 +504,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   #sends most common gif based on query
   @commands.command(help="Search for GIFs (filtered) on Tenor")
   async def gif(self, ctx, *, query):
+        with suppress(AttributeError):
+            await ctx.trigger_typing()
         json = requests.get(
             f"https://g.tenor.com/v1/search?q={quote(query)}&contentfilter=medium&key={os.environ['TENORKEY']}"
         ).json()
