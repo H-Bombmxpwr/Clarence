@@ -11,6 +11,7 @@ from functionality.trie import Trie
 from itertools import cycle
 import asyncio
 
+
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
         prefixes = json.load(f)
