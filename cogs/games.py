@@ -36,8 +36,9 @@ class Fun(commands.Cog):
       await ctx.send(f"{nfts[str(ctx.author.id)]}")
     else:
       try:
+          instance = nfts[str(ctx.author.id)]
           await ctx.send(f"Your nft, {user}:")
-          await ctx.send(f"{nfts[str(ctx.author.id)]}")
+          await ctx.send(f"{instance}")
       except:
         await ctx.send(f"You do not have an nft on file {user}, please send one using `$nft <your_nft>`")
     
