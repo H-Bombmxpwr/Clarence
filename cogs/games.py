@@ -8,6 +8,7 @@ from discord import NotFound
 from contextlib import suppress
 from storage.Lists_Storage import emojis
 import random
+import json
 
 
 
@@ -18,6 +19,28 @@ class Fun(commands.Cog):
   def __init__(self,client):
       self.client = client
 
+
+
+  @commands.command(help = "do you own an nft with Clarence?")
+  async def nft(self,ctx,*, addition = None):
+    with open("storage/nft.json", "r") as f:
+        nfts = json.load(f)
+
+    user = "<@" + str(ctx.author.id) + ">"
+    if addition != None:
+      nfts[str(ctx.author.id)] = addition
+  
+      with open("storage/nft.json","w") as f:
+        json.dump(nfts,f, indent = 4)
+      await ctx.send(f"Your `NEW` nft, {user}:")
+      await ctx.send(f"{nfts[str(ctx.author.id)]}")
+    else:
+      try:
+          await ctx.send(f"Your nft, {user}:")
+          await ctx.send(f"{nfts[str(ctx.author.id)]}")
+      except:
+        await ctx.send(f"You do not have an nft on file {user}, please send one using `$nft <your_nft>`")
+    
 
   #fizzbuzz game
   @commands.command(help = "play fizzbuzz",aliases = ['fizz','buzz'])
