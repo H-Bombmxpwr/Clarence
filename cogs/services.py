@@ -306,7 +306,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send("Please send a query to generate")
       return
       
-    msg = await ctx.send(f"Generating image for {query}...")
     async with ctx.typing():
       r = requests.post(
       "https://api.deepai.org/api/text2img",
@@ -315,8 +314,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       },
       headers={'api-key': os.getenv('ai')}
       )
-    await msg.edit(content = f"Image for {query}:")
-    await ctx.send(r.json()['output_url'])
+    embedVar = discord.Embed(title = "AI Generation", description = f"prompt: {query}",color = 0xFFFF00).set_image(url = r.json()['output_url'])
+    await ctx.send(embed=embedVar)
 
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
