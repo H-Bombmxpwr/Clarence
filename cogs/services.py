@@ -123,7 +123,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
   #ping a user a bunch of times
   @commands.command(help = 'Ping a user x number of times')
-  async def bug(self, ctx, member : discord.Member,iterate):
+  async def bug(self, ctx, member : discord.Member,iterate,*,message = None):
     try:
       id = int(member.id)
       if int(iterate) > 30:
@@ -135,7 +135,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
         await ctx.send("I could never bug my creator like that")
       else:
         for x in range(1,int(iterate) + 1):
-          await ctx.send('Hey <@' + str(id) + '> ' + str(x) + '!\n')
+          await ctx.send('Hey <@' + str(id) + '> ' + str(message) + ", " + str(x) + '!\n')
     except:
       await ctx.send("Error: Invalid syntax")
 
@@ -297,8 +297,26 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       else:
         await ctx.send("Sorry you don't have permission to look at Hunter's timeline")
   
-  
 
+
+  #ai generation
+  @commands.command(help = "ai image generation")
+  async def ai(self,ctx,*,query = None):
+    if query == None:
+      await ctx.send("Please send a query to generate")
+      return
+      
+    msg = await ctx.send(f"Generating image for {query}...")
+    async with ctx.typing():
+      r = requests.post(
+      "https://api.deepai.org/api/text2img",
+      data={
+        'text': query,
+      },
+      headers={'api-key': os.getenv('ai')}
+      )
+    await msg.edit(content = f"Image for {query}:")
+    await ctx.send(r.json()['output_url'])
 
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
@@ -356,21 +374,18 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     if  parameter == None:
       await ctx.send("Please send something to query as an arguement to the command")
     else:
-      with suppress(AttributeError):
-            await ctx.trigger_typing()
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
         app_id = os.getenv('app_id')
         client1 = wolframalpha.Client(app_id)
         res = client1.query(parameter)
-        print(res)
         answer = next(res.results)['subpod']['img']['@src']
         answertxt = next(res.results).text
       
 
         embedVar = discord.Embed(title = "Computational Intelligence", description ="Input/Output", color = 0xdc143c ).set_image(url = answer).set_thumbnail(url = wolf_url)
         embedVar.add_field(name = "Input: ", value = parameter,inline = False)
-        #embedVar.add_field(name = "Output: ", value = answertxt,inline = False)
+        embedVar.add_field(name = "Output: ", value = answertxt,inline = False)
         msg = await ctx.send(embed = embedVar)
 
         emoji = '♠'
