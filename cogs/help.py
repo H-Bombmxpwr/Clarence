@@ -18,7 +18,7 @@ class Help(commands.Cog):
       servers  =str(len(self.bot.guilds))
       members = str(len(self.bot.users))
       latency = str(round(self.bot.latency * 1000))
-      color = 0x808080
+      color = discord.Color.blurple()
 
       button = Button(label = "Invite", style = discord.ButtonStyle.primary, url = "https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot")
       view = View()

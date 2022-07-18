@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
-from storage.Lists_Storage import thedan, days, status
+from storage.Lists_Storage import thedan, days, status,snarky
 from functionality.functions import check_carrot, punish_user
 from cogs.help import NewHelpName
 import time
@@ -10,7 +10,7 @@ import json
 from functionality.trie import Trie
 from itertools import cycle
 import asyncio
-
+import random
 
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
@@ -157,6 +157,9 @@ async def on_message(message):
         await message.add_reaction(emoji)
         await message.channel.send("Why the actual heck do you know what a " +
                                    text + " is??")
+
+    if message.author.id == 399641399084974101:
+      await message.channel.reply(random.choice(snarky))
   
     await client.process_commands(message)
 
