@@ -159,7 +159,7 @@ async def on_message(message):
                                    text + " is??")
 
     if message.author.id == 399641399084974101:
-      await message.channel.reply(random.choice(snarky))
+      await message.reply(random.choice(snarky))
   
     await client.process_commands(message)
 

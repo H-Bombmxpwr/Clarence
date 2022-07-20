@@ -314,7 +314,9 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       },
       headers={'api-key': os.getenv('ai')}
       )
-    embedVar = discord.Embed(title = "AI Generation", description = f"prompt: {query}",color = 0xFFFF00).set_image(url = r.json()['output_url'])
+      embedVar = discord.Embed(title = "AI Generation", description = f"prompt: {query}",color = 0xFFFF00)
+      embedVar.set_image(url = r.json()['output_url'])
+      embedVar.set_footer(text = f"Requested by {ctx.author.name}", icon_url = ctx.author.avatar)
     await ctx.send(embed=embedVar)
 
   #search wikepedia
