@@ -123,7 +123,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
   #ping a user a bunch of times
   @commands.command(help = 'Ping a user x number of times')
-  async def bug(self, ctx, member : discord.Member,iterate,*,message = None):
+  async def bug(self, ctx, member : discord.Member,iterate,*,message = "we need you"):
     try:
       id = int(member.id)
       if int(iterate) > 30:
@@ -305,19 +305,24 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     if query == None:
       await ctx.send("Please send a query to generate")
       return
-      
-    async with ctx.typing():
-      r = requests.post(
-      "https://api.deepai.org/api/text2img",
-      data={
-        'text': query,
-      },
-      headers={'api-key': os.getenv('ai')}
-      )
-      embedVar = discord.Embed(title = "AI Generation", description = f"prompt: {query}",color = 0xFFFF00)
-      embedVar.set_image(url = r.json()['output_url'])
+
+    try:
+      async with ctx.typing():
+        r = requests.post(
+        "https://api.deepai.org/api/text2img",
+        data={
+          'text': query,
+        },
+        headers={'api-key': os.getenv('ai')}
+        )
+        embedVar = discord.Embed(title = "AI Generation", description = f"prompt: {query}",color = 0xFFFF00)
+        embedVar.set_image(url = r.json()['output_url'])
+        embedVar.set_footer(text = f"Requested by {ctx.author.name}", icon_url = ctx.author.avatar)
+      await ctx.send(embed=embedVar)
+    except:
+      embedVar = discord.Embed(title = "AI Generation",description = "There was an error in generating the given request, please try again.",color = 0xFFFF00)
       embedVar.set_footer(text = f"Requested by {ctx.author.name}", icon_url = ctx.author.avatar)
-    await ctx.send(embed=embedVar)
+      await ctx.send(embed=EmbedVar)
 
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
