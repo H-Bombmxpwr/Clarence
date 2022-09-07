@@ -158,7 +158,7 @@ async def on_message(message):
         await message.channel.send("Why the actual heck do you know what a " +
                                    text + " is??")
 
-    if message.author.id == 399641399084974101:
+    if message.author.id == 399641399084974101 and random.randint(1,25) == 12:
       await message.reply(random.choice(snarky))
   
     await client.process_commands(message)

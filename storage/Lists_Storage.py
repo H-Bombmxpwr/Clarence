@@ -6,4 +6,4 @@ thedan = ["steely dan","Steely dan","the dan","donald and walter","don and walt"
 
 emojis = ['😂','🙌','👍','😁','😎','😵‍💫','🦕','😈','💀','💩','🦄','🎅','🙅‍♀️','🙅‍♂️','🙅','🤦‍♂️','🤦‍♀️','🤦','😮','😥','🦌','🦬','🙎‍♂️','🙎','🙎‍♀️','👩‍🦼','👨‍🦯','🤾‍♂️','💅','🙌','👊','👎','👍','👌','👆','🤏','🧨','🎆','🎈','🎃']
 
-snarky = ["shut up", "could not care less", "the world was better without this","callarse la boca","didn't ask","literally shut up", "oof","yikes man","you have friends?", "keep thine trap shut", "put a sock in it","put a sock in it","let me talk"]
+snarky = ["shut up", "could not care less", "the world was better without this","callarse la boca","didn't ask","literally shut up", "yikes","keep thine trap shut", "put a sock in it","literally no one asked","seriously?","no me importa"]
