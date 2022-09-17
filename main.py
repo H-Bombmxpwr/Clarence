@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
 from storage.Lists_Storage import thedan, days, status,snarky
-from functionality.functions import check_carrot, punish_user
+from functionality.functions import punish_user
 from cogs.help import NewHelpName
 import time
 import json
