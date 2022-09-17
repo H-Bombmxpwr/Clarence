@@ -1,6 +1,6 @@
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
-status = ["Maybe I have a chance!","probably not...","but one can hope!","usually to no avail"]
+status = ["i wish i knew you wanted me"]
 
 thedan = ["steely dan","Steely dan","the dan","donald and walter","don and walt","walt and don","walter and donald"]
 

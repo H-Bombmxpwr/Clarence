@@ -79,7 +79,7 @@ async def on_ready():
 @tasks.loop(minutes=0.25)
 async def change_status():
     await client.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching, name=next(status_i)))
+        type=discord.ActivityType.listening, name=next(status_i)))
 
 
 @client.event
