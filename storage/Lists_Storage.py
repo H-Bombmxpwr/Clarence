@@ -1,6 +1,12 @@
+import requests
+
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
-status = ["i wish i knew you wanted me"]
+#
+song = "bad habit steve lacy"
+load = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
+lyrics = load['lyrics']
+status = lyrics.split("\n")
 
 thedan = ["steely dan","Steely dan","the dan","donald and walter","don and walt","walt and don","walter and donald"]
 

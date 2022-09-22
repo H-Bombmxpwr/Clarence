@@ -76,7 +76,7 @@ async def on_ready():
     print('=------------------------------=')
 
 
-@tasks.loop(minutes=0.25)
+@tasks.loop(seconds=10)
 async def change_status():
     await client.change_presence(activity=discord.Activity(
         type=discord.ActivityType.listening, name=next(status_i)))
