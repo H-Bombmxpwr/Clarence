@@ -2,6 +2,7 @@ import requests
 
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
+friday = ["flat fuck friday","fuck flat friday"]
 #
 song = "bad habit steve lacy"
 load = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()

@@ -54,6 +54,7 @@ class Trie:
                 temp = word[(i+1):]
                 self.insert('('+temp, crawler)
                 self.insert('[' + temp, crawler)
+                self.insert('€' + temp, crawler)
 
             if c == 'e':
                 temp = word[(i+1):]
