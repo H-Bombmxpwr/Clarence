@@ -18,6 +18,7 @@ import wikipedia
 from discord.ui import Button,View
 from contextlib import suppress
 from functionality.structures import Bits
+from storage.Lists_Storage import load as song
 
 
 
@@ -82,7 +83,14 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
     await ctx.send(f"{random.choice(responses)} {user}")
 
 
-  #binary/hex/decimal conversions
+  #check the status of the bot
+  @commands.command(help = 'Set the status of the bot')
+  async def status(self,ctx):
+    embedVar = discord.Embed(title = 'Clarence\'s current status is  ' + str(song["title"] + ", By " + song["author"]),color = ctx.author.color)
+    embedVar.set_thumbnail(url = song["thumbnail"]["genius"])
+    await ctx.send(embed=embedVar)
+    
+    #binary/hex/decimal conversions
   @commands.command(help = "Binary/Hex/Decimal/Ascii converter")
   async def bits(self,ctx,typ:str = None,input = None):
     

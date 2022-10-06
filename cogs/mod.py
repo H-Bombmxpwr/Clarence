@@ -304,38 +304,6 @@ class Owner(commands.Cog):
       await ctx.send("You do not have permission to change the text file")
 
 
-
-  
-
-
-
-  #set the status of the bot
-  @commands.command(help = 'Set the status of the bot',hidden = True)
-  async def status(self,ctx, status,*, text):
-    if ctx.author.id == 239605426033786881:
-      if status.lower() == 'playing':
-      # Setting `Playing ` status
-        await self.client.change_presence(activity=discord.Game(name=text))
-        await ctx.send("Status changed to: \'`Playing " + text + "\'`")
-      
-      elif status.lower() == 'listening':
-        # Setting `Listening ` status
-        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=text))
-        await ctx.send("Status changed to: \'`Listening to " + text + "\'`")
-
-      elif status.lower() == 'watching':
-        # Setting `Watching ` status
-        await self.client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=text))
-        await ctx.send("Status changed to: \'`Watching " + text + "\'`")
-      
-      else:
-        await ctx.send("Invalid actvity sent")
-
-    else:
-      await ctx.send('You do not have permission to change the bots status')
-
-
-
 async def setup(client):
     await client.add_cog(Moderation(client))
     await client.add_cog(Owner(client))

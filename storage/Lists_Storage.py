@@ -3,7 +3,8 @@ import requests
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
 friday = ["flat fuck friday","fuck flat friday"]
-#
+
+#getting the lyrics to be the bots status
 song = "out of my league fitz and the tantrums"
 load = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
 lyrics = load['lyrics']
