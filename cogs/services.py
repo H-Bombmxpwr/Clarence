@@ -349,12 +349,14 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         link = wikipedia.page(thequery) #get the page object
         button = Button(label = link.original_title, style = discord.ButtonStyle.primary, url = link.url) #create link button
         view = View()
-        embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=3), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png")
+        wiki = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png"
+        embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=3), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = wiki)
 
         view.add_item(button)
         await ctx.send(embed=embed,view=view)
       except:
-        await ctx.send("Something failed with you query, try rewording and sending again")
+        embed = discord.Embed(title = "Wikipedia Error", description = "Something failed with your query, try rewording and sending again", color = 0xC0C0C0).set_thumbnail(url = wiki)
+        await ctx.send(embed=embed)
 
 
 
