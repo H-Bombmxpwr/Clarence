@@ -349,12 +349,12 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         link = wikipedia.page(thequery) #get the page object
         button = Button(label = link.original_title, style = discord.ButtonStyle.primary, url = link.url) #create link button
         view = View()
-        embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=2), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png")
+        embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=3), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png")
 
         view.add_item(button)
         await ctx.send(embed=embed,view=view)
       except:
-        await ctx.semd("Something failed with you query, try rewording and sending again")
+        await ctx.send("Something failed with you query, try rewording and sending again")
 
 
 
@@ -390,28 +390,28 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     else:
       wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
       try:
-        app_id = os.getenv('app_id')
-        client1 = wolframalpha.Client(app_id)
-        res = client1.query(parameter)
-        answer = next(res.results)['subpod']['img']['@src']
-        answertxt = next(res.results).text
+        async with ctx.typing():
+          app_id = os.getenv('app_id')
+          client1 = wolframalpha.Client(app_id)
+          res = client1.query(parameter)
+          answer = next(res.results)['subpod']['img']['@src']
+          answertxt = next(res.results).text
       
 
-        embedVar = discord.Embed(title = "Computational Intelligence", description ="Input/Output", color = 0xdc143c ).set_image(url = answer).set_thumbnail(url = wolf_url)
-        embedVar.add_field(name = "Input: ", value = parameter,inline = False)
-        embedVar.add_field(name = "Output: ", value = answertxt,inline = False)
-        msg = await ctx.send(embed = embedVar)
+          embedVar = discord.Embed(title = "Computational Intelligence", description ="Input/Output", color = 0xdc143c ).set_image(url = answer).set_thumbnail(url = wolf_url)
+          embedVar.add_field(name = "Input: ", value = parameter,inline = False)
+          embedVar.add_field(name = "Output: ", value = answertxt,inline = False)
+          msg = await ctx.send(embed = embedVar)
 
-        emoji = '♠'
-        await msg.add_reaction(emoji)
+          emoji = '♠'
+          await msg.add_reaction(emoji)
 
 
 
       except:
-        embedVar = discord.Embed(title = "Computational Intelligence", desciption ="Input/ Output of computational intelligence", color = 0xdc143c).set_thumbnail(url = wolf_url)
-        embedVar.add_field(name = "Error", value = "An error occurred and the bot was unable to process your request \n \n This could be due to many different things. Try rewording the question and sending it again. \n \n It is also possible the bot cannot perform the given request. \n ",inline = False)
-        #embedVar.add_field(name = "Error", value = "I am currently doing work to the Wolfram query function, check back later ",inline = False)
-        await ctx.send(embed = embedVar)
+        async with ctx.typing():
+          embedVar = discord.Embed(title = "Error", description ="An error occurred and the bot was unable to process your request \n \n This could be due to many different things. Try rewording the question and sending it again. \n \n It is also possible the bot cannot perform the given request. \n ", color = 0xdc143c).set_thumbnail(url = wolf_url)
+          await ctx.send(embed = embedVar)
 
 
 
