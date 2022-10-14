@@ -19,6 +19,9 @@ def check_carrot(string,message):
   
   if message.author.bot == True:
     return 0
+  if not message.attachments:
+    return 0
+  
   return 1
 
 
@@ -192,30 +195,30 @@ def get_fizzbuzz_stats(ctx):
   return stats
   
 
-def punish_user(user_id,word):
-    user_id = '<@' + str(user_id) + '>'
-    censor = word[0]
+#def punish_user(user_id,word):
+#    user_id = '<@' + str(user_id) + '>'
+#    censor = word[0]
 
-    for l in range(1,len(word)):
-      censor =  censor + '\*'
+ #   for l in range(1,len(word)):
+ #     censor =  censor + '\*'
     
-    responses = [
-      f"{user_id}, I think you meant to say {censor}",
-      f"{censor} you too, {user_id}",
-      f"Woah that should be {censor} in this Christian server,{user_id}",
-      f"{user_id}...{user_id}...{user_id} cmon now, the least you could do is {censor}",
-      f"{user_id}, leave something to the imagination, like {censor}",
-      f"At least I have the dignity to say {censor}, {user_id}",
-      f" You can come up with something more creative than {censor}, {user_id}",
-      f"{censor} is what your mom said last night, {user_id}",
-      f"{user_id}, let me write {censor} down so I can take this energy to yo MOMS house",
-      f"GG {user_id}, nice one. I'll have to remember {censor} for the next time you wanna liquid fart all over this chat"]
+  #  responses = [
+   #   f"{user_id}, I think you meant to say {censor}",
+    #  f"{censor} you too, {user_id}",
+     # f"Woah that should be {censor} in this Christian server,{user_id}",
+      #f"{user_id}...{user_id}...{user_id} cmon now, the least you could do is {censor}",
+      #f"{user_id}, leave something to the imagination, like {censor}",
+      #f"At least I have the dignity to say {censor}, {user_id}",
+      #f" You can come up with something more creative than {censor}, {user_id}",
+      #f"{censor} is what your mom said last night, {user_id}",
+      #f"{user_id}, let me write {censor} down so I can take this energy to yo MOMS house",
+      #f"GG {user_id}, nice one. I'll have to remember {censor} for the next time you wanna liquid fart all over this chat"]
 
       
     
-    choice = random.choice(responses)
+    #choice = random.choice(responses)
 
-    return choice
+    #return choice
 
 
 def collatz(n):

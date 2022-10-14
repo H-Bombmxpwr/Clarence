@@ -148,6 +148,10 @@ class Fun(commands.Cog):
   async def count(self,ctx,endpoint: int = None):
     if endpoint == None:
       await ctx.send("Please send an integer arguement to count to")
+      return
+    elif endpoint <=0:
+      await ctx.send("You can only count to positive integers")
+      return
     else:
       count = 1
       funny = 0

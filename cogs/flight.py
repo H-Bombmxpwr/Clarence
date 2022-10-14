@@ -19,6 +19,8 @@ class Flight(commands.Cog):
   async def plane(self,ctx):
     response = requests.get(self.url)
     print(response.json())
+    await ctx.send("Plane function coming soon, in the mean time have this:")
+    await ctx.send("https://lumiere-a.akamaihd.net/v1/images/p_planes_19869_cdb69e0c.jpeg")
 
 
   @commands.command(help = "Get info about historic flights")

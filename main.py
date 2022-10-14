@@ -2,15 +2,14 @@ import discord
 from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
-from storage.Lists_Storage import thedan, days, status, snarky, friday
-from functionality.functions import punish_user
+from storage.Lists_Storage import thedan, days, status, friday
 from cogs.help import NewHelpName
 import time
+from functionality.functions import check_carrot
 import json
 from functionality.trie import Trie
 from itertools import cycle
 import asyncio
-import random
 
 
 def get_prefix(client, message):  #grab server prefix
@@ -73,7 +72,7 @@ async def on_ready():
     else:
         print("Trie was not built, profanity filter is off\n")
 
-    print('{0.user} is back online'.format(client))
+    print('{0.user} is online'.format(client))
     print('=------------------------------=')
 
 
@@ -128,7 +127,7 @@ async def on_message(message):
                 isClean = False
                 break
         if not isClean:
-            await message.channel.send(punish_user(author_id, word))
+            await message.add_reaction("😮")
 
     # thursday!!!
     if any(word in text for word in days):
@@ -163,18 +162,8 @@ async def on_message(message):
             )
 
     #Carrot agree function
-    #if check_carrot(text,message) == 1:
-    # await message.channel.send(message.content + '^')
-
-    #mystery function
-    if text == os.getenv("cursed_thing"):
-        emoji = '😦'
-        await message.add_reaction(emoji)
-        await message.channel.send("Why the actual heck do you know what a " +
-                                   text + " is??")
-
-    if message.author.id == 399641399084974101 and random.randint(1, 25) == 12:
-        await message.reply(random.choice(snarky))
+    if check_carrot(text,message) == 1:
+     await message.channel.send(message.content + '^')
 
     await client.process_commands(message)
 

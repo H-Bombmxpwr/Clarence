@@ -84,7 +84,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
 
   #check the status of the bot
-  @commands.command(help = 'Set the status of the bot')
+  @commands.command(help = 'Explains the status of the bot')
   async def status(self,ctx):
     embedVar = discord.Embed(title = 'Clarence\'s current status is  ' + str(song["title"] + ", By " + song["author"]),color = ctx.author.color)
     embedVar.set_thumbnail(url = song["thumbnail"]["genius"])
@@ -130,7 +130,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
 
   #ping a user a bunch of times
-  @commands.command(help = 'Ping a user x number of times')
+  @commands.command(help = 'Ping a user x number of times', aliases  = ["annoy"])
   async def bug(self, ctx, member : discord.Member,iterate,*,message = "we need you"):
     try:
       id = int(member.id)
@@ -176,7 +176,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   async def dice(self,ctx):
     await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
   
-  # END LOCAL CLASS/COG 
+  # END LOCAL CLASS
   
     
   # START API CLASS
