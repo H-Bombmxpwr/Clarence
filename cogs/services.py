@@ -172,9 +172,9 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
 
   #simple dice rolling command
-  @commands.command(help = "rolls a die")
-  async def dice(self,ctx):
-    await ctx.send(f"You rolled a `{random.randrange(1, 6)}`")
+  @commands.command(help = "rolls a die, optional arguement for number of sides")
+  async def dice(self,ctx,sides = 6):
+    await ctx.send(f"You rolled a `{random.randrange(1, sides)}`")
   
   # END LOCAL CLASS
   
