@@ -34,7 +34,7 @@ class Help(commands.Cog):
   
       embedVar1.add_field(name = "Basic Information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
 
-      embedVar1.add_field(name = "Other Contributers", value = "`     conradburns#6918:` Edited and refined the text file\n` ThatchyMean1487#3395:` Drew the bot icon\n`       1awesomet#5223:` Quality assurance and responses\n`        Quiggles#2281:` Thursday modular equation\n`Viciouspenguin01#9167:` Being an inspirational bully ",inline = False)
+      embedVar1.add_field(name = "Other Contributers", value = "`        Quiggles#2281:` Thursday equation and only fan\n`       1awesomet#5223:` Quality assurance and responses\n`     conradburns#6918:` Edited and refined the text file\n` ThatchyMean1487#3395:` Drew the bot icon\n`Viciouspenguin01#9167:` Being an inspirational bully ",inline = False)
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
       await ctx.send(embed=embedVar1,view=view)
 

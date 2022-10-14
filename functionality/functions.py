@@ -14,12 +14,13 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 def check_carrot(string,message):
   for i in range(0,len(string)):
-    if string[i] != '^':
+    if string[i] != '^': #check to see its all ^
       return 0
   
-  if message.author.bot == True:
+  if message.author.bot == True: #make sure it doesn't read itelf
     return 0
-  if not message.attachments:
+    
+  if not (not message.attachments): #make sure its not an image
     return 0
   
   return 1
