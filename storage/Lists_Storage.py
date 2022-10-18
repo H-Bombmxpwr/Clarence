@@ -5,7 +5,7 @@ days = ["Thursday","thursday","thurday","4th day of the week"]
 friday = ["flat fuck friday","fuck flat friday"]
 
 #getting the lyrics to be the bots status
-song = "you keep me waiting snoh aalegra"
+song = "the less i know the better tame impala"
 load = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
 lyrics = load['lyrics']
 status = lyrics.split("\n")
