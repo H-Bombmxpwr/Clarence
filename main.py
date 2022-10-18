@@ -19,6 +19,7 @@ def get_prefix(client, message):  #grab server prefix
     return prefixes[str(message.guild.id)]
 
 
+
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
 client.help_command = NewHelpName()
 client.synced = True

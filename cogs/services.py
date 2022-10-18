@@ -382,8 +382,16 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     await ctx.send("Color function in the works, check back later")
     
     
-
+#helper function for wolfram
+  async def printPod(self,ctx, text, title):
+    
+    text = text.replace("Wolfram|Alpha", "Clarence Calculations")
+    text = text.replace("Wolfram", "Wolf")
+    await ctx.send("__**" + title + ":**__\n" + "`" + text + "`")
   
+  async def printImgPod(self,ctx, img, title):
+    await ctx.send("__**" + title + ":**__\n" + img)
+    
   # wolfram query
   @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
   async def query(self,ctx,*,parameter = None):
@@ -396,20 +404,13 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
           app_id = os.getenv('app_id')
           client1 = wolframalpha.Client(app_id)
           res = client1.query(parameter)
-          answer = next(res.results)['subpod']['img']['@src']
-          answertxt = next(res.results).text
-      
-
-          embedVar = discord.Embed(title = "Computational Intelligence", description ="Input/Output", color = 0xdc143c ).set_image(url = answer).set_thumbnail(url = wolf_url)
-          embedVar.add_field(name = "Input: ", value = parameter,inline = False)
-          embedVar.add_field(name = "Output: ", value = answertxt,inline = False)
-          msg = await ctx.send(embed = embedVar)
-
-          emoji = '♠'
-          await msg.add_reaction(emoji)
-
-
-
+          #answer = next(res.results)['subpod']['img']['@src']
+          #answertxt = next(res.results).text
+          for pod in res.pods:
+            if pod.text:
+              await self.printPod(self,ctx, pod.text, pod.title)
+            elif pod.img:
+              await self.printImgPod(self,ctx, pod.img, pod.title)
       except:
         async with ctx.typing():
           embedVar = discord.Embed(title = "Error", description ="An error occurred and the bot was unable to process your request \n \n This could be due to many different things. Try rewording the question and sending it again. \n \n It is also possible the bot cannot perform the given request. \n ", color = 0xdc143c).set_thumbnail(url = wolf_url)
