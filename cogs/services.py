@@ -395,6 +395,8 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   # wolfram query
   @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
   async def query(self,ctx,*,parameter = None):
+    await ctx.send("This command is under maintenance, come back later :)")
+    return
     if  parameter == None:
       await ctx.send("Please send something to query as an arguement to the command")
     else:

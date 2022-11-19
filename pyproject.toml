@@ -1,26 +1,20 @@
 [tool.poetry]
-name = "repl_python3_Troll-Bot"
+name = "troll-bot"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["HBombmxpwr <<>>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-discord = "^1.7.3"
-replit = "^3.2.4"
-Flask = "^2.0.1"
-wolframalpha = "^5.0.0"
-youtube_dl = "^2021.6.6"
-tweepy = "^4.1.0"
-PyNaCl = "^1.4.0"
-agent-admin = "^0.1.1"
-reactions = "^0.0.1"
+discord = "^2.1.0"
+youtube_dl = "^2021.12.17"
+youtube-search = "^2.1.2"
+PyNaCl = "^1.5.0"
 xkcd = "^2.4.2"
+tweepy = "^4.12.1"
+wolframalpha = "^5.0.0"
 pyfiglet = "^0.8.post1"
-utils = "^1.0.1"
-pip = "^21.3.1"
 wikipedia = "^1.4.0"
-youtube-search = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
 
