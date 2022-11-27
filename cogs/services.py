@@ -128,7 +128,6 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
 
   
 
-
   #ping a user a bunch of times
   @commands.command(help = 'Ping a user x number of times', aliases  = ["annoy"])
   async def bug(self, ctx, member : discord.Member,iterate,*,message = "we need you"):
@@ -422,12 +421,17 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
   # get insult
   @commands.command(help = 'Get an insult with an insult api', aliases = ['i'])
-  async def insult(self,ctx):
+  async def insult(self,ctx,member : discord.Member = None):
     with suppress(AttributeError):
             await ctx.trigger_typing()
     try:
       quote = functionality.functions.get_insult()
-      embedVar = discord.Embed(title="Random Insult", description = quote, color=0xff0000)
+      if member == None:
+        embedVar = discord.Embed(title="Random Insult", description = quote, color=0xff0000)
+      else:
+        id = int(member.id)
+        mention = '<@' + str(id) + '>'
+        embedVar = discord.Embed(title="Random Insult", description = f"{mention}, {quote}", color=0xff0000)
       await ctx.send(embed=embedVar)
     except:
       embedVar = discord.Embed(title="Error", description = "The insult API is currently down, try again later", color=0xff0000)
