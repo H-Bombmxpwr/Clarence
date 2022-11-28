@@ -230,19 +230,19 @@ class Fun(commands.Cog):
 
   #send a random quote from 2070 paradigm shift
   @commands.command(help = "2070 Paradigm Shift, send '$paradigm source' to get the source video")
-  async def paradigm(self,ctx,link = None):
-    if link != None:
-      await ctx.send("Enjoy this 20 minutes of amazing source material")
-      await ctx.send("https://www.youtube.com/watch?v=KTJn_DBTnrY&t=191s")
-    else:
+  async def paradigm(self,ctx,number = 2):
+        if number > 30:
+          ctx.send(f"{number} is a few too many lines, try again with a smaller number")
+          return
         with open("storage/paradigm.txt", "r") as f:
           lines = f.readlines()
           f.close()
         
         pruned_lines = functionality.functions.fix_lines(lines)
         quotes = list(pruned_lines)
-        quote = random.choice(quotes)
-        await ctx.send(quote)
+        for i in range(1,number):
+          quote = random.choice(quotes)
+          await ctx.send(f"{i}: {quote}")
 
 async def setup(client):
     await client.add_cog(Fun(client))
