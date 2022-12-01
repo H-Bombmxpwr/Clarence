@@ -120,15 +120,15 @@ async def on_message(message):
                                    str(get_prefix(client, message)) + "`")
 
     #profanity filter
-    if author_id != 239605426033786881:
-        isClean = True
-        message_word_list = text.split()
-        for word in message_word_list:
-            if trie.search(word):
-                isClean = False
-                break
-        if not isClean:
-            await message.add_reaction("😮")
+    #if author_id != 239605426033786881:
+    #    isClean = True
+    #    message_word_list = text.split()
+    #    for word in message_word_list:
+    #        if trie.search(word):
+    #            isClean = False
+    #            break
+    #    if not isClean:
+    #        await message.add_reaction("😮")
 
     # thursday!!!
     if any(word in text for word in days):

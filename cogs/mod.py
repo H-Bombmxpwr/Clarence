@@ -169,7 +169,7 @@ class Moderation(commands.Cog):
   @commands.command(help = 'gives a user the administrator role',aliases = ['gvad'])
   async def giveadmin(self,ctx, member: discord.Member):
     if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
-      #checking if the muted role exists, and if doesn't makes the muted role
+      #checking if the admin role exists, and if doesn't makes the muted role
       if get(ctx.guild.roles, name="Admin"):
         print("role exits")
       else:
@@ -232,7 +232,7 @@ class Moderation(commands.Cog):
     except:
         await ctx.send("There was a syntax error, please try again")
    else:
-     await ctx.send("You do not have permission to kici people")
+     await ctx.send("You do not have permission to kick people")
     
 
 

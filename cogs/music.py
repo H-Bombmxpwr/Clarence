@@ -159,15 +159,20 @@ class Music(commands.Cog):
   #pause the player
   @commands.command(help = 'Pause the current song',aliases = ['pa'])
   async def pause(self,ctx):
-        await ctx.send("Paused ⏸")
-        await ctx.voice_client.pause()
+        if (ctx.author.voice is not None):
+          await ctx.send("Paused ⏸")
+          await ctx.voice_client.pause()
+        else:
+          await ctx.send("You are not in a voice channel, nice try")
         
   #resume the player
   @commands.command(help = 'Resume the current song', aliases = ['res'])
   async def resume(self,ctx):
-        await ctx.send("Resumed ▶️")
-        await ctx.voice_client.resume()
-
+        if (ctx.author.voice is not None):
+          await ctx.send("Resumed ▶️")
+          await ctx.voice_client.resume()
+        else:
+          await ctx.send("You are not in a voice channel, nice try")
 
   #displays the current queue, pretty rouhg code and will need some work in the future
   @commands.command(help = "Display the current queue",aliases = ['qu'])
