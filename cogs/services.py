@@ -76,7 +76,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   
   
     #hello command
-  @commands.command(help = "Hello!", aliases = ["hi"])
+  @commands.command(help = "Hello!", aliases = ["hi","hey","whatsup","heyy"])
   async def hello(self,ctx):
     user = "<@" + str(ctx.author.id) + ">"
     responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!"]
@@ -87,7 +87,7 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
   @commands.command(help = 'Explains the status of the bot')
   async def status(self,ctx):
     embedVar = discord.Embed(title = 'Clarence\'s current status is  ' + str(song["title"] + ", By " + song["author"]),color = ctx.author.color)
-    embedVar.set_thumbnail(url = song["thumbnail"]["genius"])
+    embedVar.set_image(url = song["thumbnail"]["genius"])
     await ctx.send(embed=embedVar)
     
     #binary/hex/decimal conversions
