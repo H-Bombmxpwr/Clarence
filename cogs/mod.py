@@ -303,7 +303,36 @@ class Owner(commands.Cog):
    else:
       await ctx.send("You do not have permission to change the text file")
 
+  #command to add a server manually to the json file if the bot was offline when added to server
+  @commands.command(help = "add a server prefix to json file if offline when joined",hidden = True)
+  async def addserver(self,ctx,id):
+    if ctx.author.id ==  239605426033786881:
+      with open("storage/prefixes.json", "r") as f:
+          prefixes = json.load(f)
 
+      prefixes[str(id)] = "$"
+
+      with open("storage/prefixes.json", "w") as f:
+          json.dump(prefixes, f, indent=4)
+    else:
+      ctx.send("you do not have permission to use this command")
+
+  #command to manually remove server from prefix json file if bot was offline when added to server
+  @commands.command(help = "add a server prefix to json file if offline when joined",hidden = True)
+  async def removeserver(self,ctx,id):
+    if ctx.author.id ==  239605426033786881:
+      with open("storage/prefixes.json", "r") as f:
+          prefixes = json.load(f)
+
+      prefixes.pop(str(id))
+
+      with open("storage/prefixes.json", "w") as f:
+          json.dump(prefixes, f, indent=4)
+    else:
+      ctx.send("you do not have permission to use this command")
+
+
+      
 async def setup(client):
     await client.add_cog(Moderation(client))
     await client.add_cog(Owner(client))
