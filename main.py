@@ -15,6 +15,7 @@ import asyncio
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
         prefixes = json.load(f)
+      
     return prefixes[str(message.guild.id)]
 
 

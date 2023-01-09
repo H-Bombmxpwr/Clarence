@@ -440,24 +440,35 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   
   #get compliment
   @commands.command(help = 'Get a compliment using a compliment api', aliases = ['c'])
-  async def compliment(self,ctx):
+  async def compliment(self,ctx,member : discord.Member = None):
     with suppress(AttributeError):
             await ctx.trigger_typing()
     try:
       quote = functionality.functions.get_compliment()
-      embedVar = discord.Embed(title="Random Compliment", description = quote, color=0x89cff0)
+      if member == None:
+        embedVar = discord.Embed(title="Random Compliment", description = quote, color=0x89CFF0)
+      else:
+        id = int(member.id)
+        mention = '<@' + str(id) + '>'
+        embedVar = discord.Embed(title="Random Compliment", description = f"{mention}, {quote}", color=0x89CFF0)
       await ctx.send(embed=embedVar)
     except:
-      embedVar = discord.Embed(title="Error", description = "The compliment API is currently down, try again later", color=0xff0000)
+      embedVar = discord.Embed(title="Error", description = "The compliment API is currently down, try again later", color=0x89CFF0)
       await ctx.send(embed=embedVar)
 
   #get pickup line
   @commands.command(help = "Get a ranom pickup line", aliases = ['p'])
-  async def pickup(self,ctx):
-    
+  async def pickup(self,ctx,member : discord.Member = None):
+    with suppress(AttributeError):
+            await ctx.trigger_typing()
     try:
-      quote = functionality.functions.get_pickup()
-      embedVar = discord.Embed(title="Random Pickup Line", description = quote, color=0xFF69B4)
+      if member == None:
+        quote = functionality.functions.get_pickup()
+        embedVar = discord.Embed(title="Random Pickup Line", description = quote, color=0xFF69B4)
+      else:
+        id = int(member.id)
+        mention = '<@' + str(id) + '>'
+        embedVar = discord.Embed(title="Random Pickup Line", description = f"Hey {mention}, {quote}", color=0xFF69B4)
       await ctx.send(embed=embedVar)
     except:
       embedVar = discord.Embed(title="Error", description = "The pickup line API is currently down, try again later", color=0xFF69B4)
