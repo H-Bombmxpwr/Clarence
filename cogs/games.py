@@ -243,6 +243,6 @@ class Fun(commands.Cog):
         for i in range(0,number):
           quote = random.choice(quotes)
           await ctx.send(f"{i+1}: {quote}")
-
+      
 async def setup(client):
     await client.add_cog(Fun(client))
