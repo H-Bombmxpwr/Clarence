@@ -243,6 +243,19 @@ class Fun(commands.Cog):
         for i in range(0,number):
           quote = random.choice(quotes)
           await ctx.send(f"{i+1}: {quote}")
+
+  @commands.command(help = "tell the last person that sent a message to shut up")
+  async def shutup(self, ctx, member: discord.Member = None):
+    sender_id = ctx.author.id
+    if member == None:
+      messages = messages = [message async for message in ctx.guild.get_channel(ctx.channel.id).history(limit=50)]
+      for msg in messages:
+        if msg.author.id != sender_id and msg.author.id != 877014219499925515:
+          await ctx.send("Shutup <@" + str(msg.author.id) + ">")
+          break
+    else:
+      await ctx.send("Shutup <@" + str(member.id) + ">")
       
+        
 async def setup(client):
     await client.add_cog(Fun(client))
