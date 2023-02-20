@@ -457,7 +457,7 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
       await ctx.send(embed=embedVar)
 
   #get pickup line
-  @commands.command(help = "Get a ranom pickup line", aliases = ['p'])
+  @commands.command(help = "Get a random pickup line", aliases = ['p'])
   async def pickup(self,ctx,member : discord.Member = None):
     with suppress(AttributeError):
             await ctx.trigger_typing()

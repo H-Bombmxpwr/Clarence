@@ -113,6 +113,8 @@ async def on_message(message):
     text = message.content.lower()
     text = text.translate(str.maketrans(table))
     author_id = message.author.id
+    time_zone = -6
+    mod_time = int((int(time.time()) + (time_zone * 3600)) / 86400) % 7
 
     #sends the prefix if the useer forgets what it is
     if text == "prefix":
@@ -132,35 +134,45 @@ async def on_message(message):
 
     # thursday!!!
     if any(word in text for word in days):
-        time_zone = -6
 
-        if int((int(time.time()) + (time_zone * 3600)) / 86400) % 7 == 0:
+        if mod_time == 0:
             await message.channel.send(
                 "```\nIt's Thursday in the North American Central Time Zone, Happy Thursday!```"
             )
             await message.channel.send('http://isitthursday.org/')
         else:
-            await message.channel.send(
-                "```\nIt's not Thursday in the North American Central Time Zone\n    \nYou bozo\n```"
-            )
+            await message.add_reaction("❌")
 
     #the dan
     if any(word in text for word in thedan):
         await message.reply("I LOVE STEELY DAN!")
 
+    #flat fuck friday
     if any(word in text for word in friday):
 
-        time_zone = -6
-
-        if int((int(time.time()) + (time_zone * 3600)) / 86400) % 7 == 1:
-            await message.channel.send("HAPPY FLAT FUCK FRIDAY")
-            await message.channel.send(
-                "https://i.kym-cdn.com/entries/icons/original/000/037/038/fffcover.jpg"
-            )
+        if  mod_time == 1:
+            await message.add_reaction("🐊")
         else:
-            await message.channel.send(
-                "```\nIt's not friday in the North American Central Time Zone\n    \nYou bozo\n```"
-            )
+            await message.add_reaction("❌")
+
+    
+    #milkie monday
+    if any(word in text for word in ["milkie monday", "milkiemonday","milky monday","milkymonday"]):
+      
+
+      if mod_time == 4:
+        await message.add_reaction("🥛")
+      else:
+        await message.add_reaction("❌")
+
+    #no clothes tuesday
+    if any(word in text for word in ["no clothes tuesday","noclothestuesday"]):
+      time_zone = -6
+
+      if int((int(time.time()) + (time_zone * 3600)) / 86400) % 7 == 5:
+        await message.add_reaction("🧦")
+      else:
+        await message.add_reaction("❌")
 
     #Carrot agree function
     if check_carrot(text,message) == 1:

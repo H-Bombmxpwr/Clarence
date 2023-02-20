@@ -15,7 +15,7 @@ class Flight(commands.Cog):
       self.client = client
       self.key = os.getenv("aviation_key")
 
-  @commands.command(help = "Planes")
+  @commands.command(help = "Planes", hidden = True)
   async def plane(self,ctx):
     response = requests.get(self.url)
     print(response.json())
@@ -23,7 +23,7 @@ class Flight(commands.Cog):
     await ctx.send("https://lumiere-a.akamaihd.net/v1/images/p_planes_19869_cdb69e0c.jpeg")
 
 
-  @commands.command(help = "Get info about historic flights")
+  @commands.command(help = "Get info about historic flights", hidden = True)
   async def flight(self,ctx):
 
     params = {'access_key': self.key}
