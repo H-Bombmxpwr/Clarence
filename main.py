@@ -135,15 +135,12 @@ async def on_message(message):
 
     # thursday!!!
     if any(word in text for word in days):
-
-        if mod_time == 0:
             button = Button(label = "isitthursday.org", style = discord.ButtonStyle.primary, url = "http://isitthursday.org/")
             view = View()
             view.add_item(button)
-            await message.channel.send("Happy Thursday!", view=view)
+            await message.channel.send("Is it thursday?", view=view)
            
-        else:
-            await message.add_reaction("❌")
+        
 
     #the dan
     if any(word in text for word in thedan):
