@@ -10,6 +10,7 @@ import json
 from functionality.trie import Trie
 from itertools import cycle
 import asyncio
+from discord.ui import Button,View
 
 
 def get_prefix(client, message):  #grab server prefix
@@ -136,10 +137,11 @@ async def on_message(message):
     if any(word in text for word in days):
 
         if mod_time == 0:
-            await message.channel.send(
-                "```\nIt's Thursday in the North American Central Time Zone, Happy Thursday!```"
-            )
-            await message.channel.send('http://isitthursday.org/')
+            button = Button(label = "isitthursday.org", style = discord.ButtonStyle.primary, url = "http://isitthursday.org/")
+            view = View()
+            view.add_item(button)
+            await message.channel.send("Happy Thursday!", view=view)
+           
         else:
             await message.add_reaction("❌")
 
@@ -152,6 +154,8 @@ async def on_message(message):
 
         if  mod_time == 1:
             await message.add_reaction("🐊")
+            embedVar = discord.Embed(title = "FLAT FUCK FRIDAY", description = "Happy Flat Fuck Friday", color = 0x7A7A58).set_image(url = "https://images-ext-1.discordapp.net/external/Aj38ONNQjynkVNpJml4oDYHT7M3BbwQRYmGPN2vc_40/https/i.kym-cdn.com/entries/icons/original/000/037/038/fffcover.jpg?width=1177&height=662")
+            await message.channel.send(embed=embedVar)
         else:
             await message.add_reaction("❌")
 
