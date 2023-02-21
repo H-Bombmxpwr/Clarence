@@ -4,7 +4,7 @@ days = ["Thursday","thursday","thurday","4th day of the week"]
 
 
 #getting the lyrics to be the bots status
-song = "bad religion frank ocean"
+song = "cranes in the sky solange"
 #pf = ProfanityFilter()
 load = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
 lyrics = load['lyrics']

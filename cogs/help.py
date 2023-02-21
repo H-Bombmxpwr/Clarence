@@ -20,14 +20,16 @@ class Help(commands.Cog):
       latency = str(round(self.bot.latency * 1000))
       color = discord.Color.blurple()
 
-      button = Button(label = "Invite", style = discord.ButtonStyle.primary, url = "https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot")
       view = View()
+      button = Button(label = "Invite", style = discord.ButtonStyle.green, url = "https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot")
+      view.add_item(button)
+      button = Button(label = "GitHub", style = discord.ButtonStyle.red, url = "https://github.com/H-Bombmxpwr/Clarence")
       view.add_item(button)
 
       try:
                 owner = ctx.guild.get_member(239605426033786881).mention
 
-      except AttributeError as e:
+      except AttributeError:
                 owner = "H-Bombmxpwr#2243"
 
       embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `help` and `list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
