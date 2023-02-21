@@ -2,9 +2,9 @@ import discord
 from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
-from storage.Lists_Storage import thedan, days, status, friday
+from functionality.days import check_day
+from storage.Lists_Storage import thedan, days, status
 from cogs.help import NewHelpName
-import time
 from functionality.functions import check_carrot
 import json
 from functionality.trie import Trie
@@ -115,7 +115,7 @@ async def on_message(message):
     text = text.translate(str.maketrans(table))
     author_id = message.author.id
     time_zone = -6
-    mod_time = int((int(time.time()) + (time_zone * 3600)) / 86400) % 7
+    
 
     #sends the prefix if the useer forgets what it is
     if text == "prefix":
@@ -133,47 +133,22 @@ async def on_message(message):
     #    if not isClean:
     #        await message.add_reaction("😮")
 
+    #the dan
+    if any(word in text for word in thedan):
+        await message.reply("I LOVE STEELY DAN!")
+
     # thursday!!!
     if any(word in text for word in days):
             button = Button(label = "isitthursday.org", style = discord.ButtonStyle.primary, url = "http://isitthursday.org/")
             view = View()
             view.add_item(button)
             await message.channel.send("Is it thursday?", view=view)
-           
-        
-
-    #the dan
-    if any(word in text for word in thedan):
-        await message.reply("I LOVE STEELY DAN!")
-
-    #flat fuck friday
-    if any(word in text for word in friday):
-
-        if  mod_time == 1:
-            await message.add_reaction("🐊")
-            embedVar = discord.Embed(title = "FLAT FUCK FRIDAY", description = "Happy Flat Fuck Friday", color = 0x7A7A58).set_image(url = "https://images-ext-1.discordapp.net/external/Aj38ONNQjynkVNpJml4oDYHT7M3BbwQRYmGPN2vc_40/https/i.kym-cdn.com/entries/icons/original/000/037/038/fffcover.jpg?width=1177&height=662")
-            await message.channel.send(embed=embedVar)
-        else:
-            await message.add_reaction("❌")
-
     
-    #milkie monday
-    if any(word in text for word in ["milkie monday", "milkiemonday","milky monday","milkymonday"]):
-      
+      # rest of the days
+    emoji = check_day(text)
 
-      if mod_time == 4:
-        await message.add_reaction("🥛")
-      else:
-        await message.add_reaction("❌")
-
-    #no clothes tuesday
-    if any(word in text for word in ["no clothes tuesday","noclothestuesday"]):
-      time_zone = -6
-
-      if int((int(time.time()) + (time_zone * 3600)) / 86400) % 7 == 5:
-        await message.add_reaction("🧦")
-      else:
-        await message.add_reaction("❌")
+    if emoji:
+        await message.add_reaction(emoji)
 
     #Carrot agree function
     if check_carrot(text,message) == 1:

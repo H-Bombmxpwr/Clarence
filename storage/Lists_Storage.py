@@ -2,7 +2,6 @@ import requests
 #from profanity_filter import ProfanityFilter
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
-friday = ["flat fuck friday","fuck flat friday"]
 
 #getting the lyrics to be the bots status
 song = "bad religion frank ocean"
