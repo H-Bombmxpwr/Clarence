@@ -226,6 +226,13 @@ class Fun(commands.Cog):
       id = '<@' + str(member.id) + '>'
       for i in range(0,52):
         await ctx.send(f"{id}, {deck[i]}")
+
+  @commands.command(help = "the picture version")
+  async def fiftytwopic(self,ctx):
+    new_deck = requests.get("https://www.deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1").json()
+    drawn_cards = requests.get("https://www.deckofcardsapi.com/api/deck/" + str(new_deck["deck_id"]) + "/draw/?count=52").json()
+    for card in drawn_cards["cards"]:
+      await ctx.send(card["image"])
     
 
   #send a random quote from 2070 paradigm shift

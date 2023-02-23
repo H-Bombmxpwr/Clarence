@@ -329,7 +329,7 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     except:
       embedVar = discord.Embed(title = "AI Generation",description = "There was an error in generating the given request, please try again.",color = 0xFFFF00)
       embedVar.set_footer(text = f"Requested by {ctx.author.name}", icon_url = ctx.author.avatar)
-      await ctx.send(embed=EmbedVar)
+      await ctx.send(embed=embedVar)
 
   #search wikepedia
   @commands.command(help = 'get a link to a wikipedia article',aliases=["wiki", "w"])
@@ -349,6 +349,7 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         button = Button(label = link.original_title, style = discord.ButtonStyle.primary, url = link.url) #create link button
         view = View()
         wiki = "https://upload.wikimedia.org/wikipedia/commons/6/61/Wikipedia-logo-transparent.png"
+        
         embed = discord.Embed(title = link.title, description = wikipedia.summary(thequery, sentences=3), color = 0xC0C0C0).set_image(url = link.images[0]).set_thumbnail(url = wiki)
 
         view.add_item(button)

@@ -331,6 +331,18 @@ class Owner(commands.Cog):
     else:
       ctx.send("you do not have permission to use this command")
 
+  
+  @commands.command(help = "use clarence to send a dm", hidden = True)
+  async def direct(self,ctx,member: discord.Member,*,message = None):
+    if ctx.author.id ==  239605426033786881:
+      if message == None:
+        await ctx.send("please send a message")
+      else:
+        await ctx.author.send(f"`You sent:` \n{message} \n `to {member.name}`")
+        await member.send(message)
+    else:
+      await ctx.send("You do not have permission to use this command")
+
 
       
 async def setup(client):
