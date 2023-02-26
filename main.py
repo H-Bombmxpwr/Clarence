@@ -150,6 +150,9 @@ async def on_message(message):
     if emoji:
         await message.add_reaction(emoji)
 
+    if message.author.id == 1078785366468853961:
+      await message.add_reaction("❤️")
+
     #Carrot agree function
     if check_carrot(text,message) == 1:
      await message.channel.send(message.content + '^')

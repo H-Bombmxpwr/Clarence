@@ -550,6 +550,15 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
           await ctx.send(embed=embed)
 
 
+  #pull a random quote from a notable figure
+  @commands.command(help = "pull an inspirational quote")
+  async def quote(self, ctx):
+      quote = requests.get("https://api.quotable.io/random").json()
+      embedVar = discord.Embed(title = "As " +  str(quote["author"]) +  " once said:", description = quote["content"], color = 0x66ceff).set_footer(icon_url = "https://cdn.discordapp.com/avatars/1078785366468853961/bdd37313af29fe332ba3a139689c675c.png", text = "Inpsired by Mortimer#5601")
+      await ctx.send(embed=embedVar)
+      
+
+
   
   #sends most common gif based on query
   @commands.command(help="Search for GIFs (filtered) on Tenor")
