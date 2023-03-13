@@ -77,7 +77,6 @@ async def on_ready():
 
     print('{0.user} is online'.format(client))
     print('=------------------------------=')
-    print(status1)
     
 
 

@@ -5,7 +5,8 @@ import requests
 from contextlib import suppress
 from youtube_search import YoutubeSearch
 import json
-
+from profanity_filter import ProfanityFilter
+from discord.ui import Button,View
 
 class Music(commands.Cog):
   """ 
@@ -201,27 +202,34 @@ class Music(commands.Cog):
           await ctx.send("Please send a song to get lyrics for")
         else:
           json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
-          
-        with suppress(AttributeError):
-            await ctx.trigger_typing()
-
-        
 
         with suppress(KeyError):
             if json["error"]:
                 await ctx.send("❌ " + json["error"])
                 return
+        with suppress(AttributeError):
+            await ctx.trigger_typing()
 
+        pf = ProfanityFilter()
         lyrics = json['lyrics']
         if len(lyrics) > 2048:
           lyrics = lyrics[:2045] + '...'
+
         
-        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
+        def make_lyrics_embed(lyrics):
+          embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
         
-        embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
+          embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
         
-        embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
-        await ctx.send(embed = embedVar)
+          embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
+          return embedVar
+
+        view = View()
+        button = Button(label = "Censored", style = discord.ButtonStyle.green)
+        view.add_item(button)
+        button = Button(label = "Uncensored", style = discord.ButtonStyle.red)
+        view.add_item(button)
+        await ctx.send(embed = make_lyrics_embed(lyrics),view=view)
 
   def queuel(self,ctx, id):
     if len(self.qu) > 0 and self.qu[id] != []:
