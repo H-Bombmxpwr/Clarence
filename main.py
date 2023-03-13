@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
 from functionality.days import check_day
-from storage.Lists_Storage import thedan, days, status
+from storage.Lists_Storage import thedan, days, status1
 from cogs.help import NewHelpName
 from functionality.functions import check_carrot
 import json
@@ -11,6 +11,7 @@ from functionality.trie import Trie
 from itertools import cycle
 import asyncio
 from discord.ui import Button,View
+import random
 
 
 def get_prefix(client, message):  #grab server prefix
@@ -24,7 +25,7 @@ def get_prefix(client, message):  #grab server prefix
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
 client.help_command = NewHelpName()
 client.synced = True
-status_i = cycle(status)
+status_i = cycle(status1)
 
 trie = Trie()
 table = {
@@ -76,13 +77,15 @@ async def on_ready():
 
     print('{0.user} is online'.format(client))
     print('=------------------------------=')
+    print(status1)
+    
 
 
 @tasks.loop(seconds=10)
 async def change_status():
     await client.change_presence(activity=discord.Activity(
         type=discord.ActivityType.listening, name=next(status_i)))
-
+      
 
 @client.event
 async def on_guild_join(guild):  #add default prefix to the json file
@@ -151,7 +154,8 @@ async def on_message(message):
         await message.add_reaction(emoji)
 
     if message.author.id == 1078785366468853961:
-      await message.add_reaction("❤️")
+      if random.randint(1,100) < 3:
+        await message.add_reaction("❤️")
 
     #Carrot agree function
     if check_carrot(text,message) == 1:
@@ -168,6 +172,7 @@ async def main():
         await client.load_extension('cogs.games')
         await client.load_extension('cogs.help')
         await client.load_extension('cogs.flight')
+        await client.load_extension('cogs.poker')
         await client.start(os.getenv('token'))
 
 
