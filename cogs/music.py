@@ -225,20 +225,27 @@ class Music(commands.Cog):
           return embedVar
 
         view = View()
-        button_censor = Button(label = "Censored", style = discord.ButtonStyle.green)
+        button_censor = Button(label = "Censored", style = discord.ButtonStyle.green,custom_id = "censor")
         
-        button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red)
-        async def button_callback_1(interaction):
-          await interaction.response.edit_message(embed = make_lyrics_embed(pf.censor(lyrics)))
-        async def button_callback_2(interaction):
-          await interaction.response.edit_message(embed = make_lyrics_embed(lyrics))
+        button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red, custom_id = "uncensor")
         
-        button_censor.callback = button_callback_1()
-        button_uncensor.callback = button_callback_2()
         view.add_item(button_censor)
         view.add_item(button_uncensor)
-        await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
+        def check_button(i: discord.Interaction, button):
+          return i.author == ctx.author and i.message == msg
 
+        msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
+
+        interaction, button = await self.client.wait_for('button_click', check=check_button)
+    
+        if button.custom_id == "censor":
+          await msg.edit(embed = make_lyrics_embed(pf.censor(lyrics), view=view))
+        
+        if button.custom_id == "uncensor":
+          await msg.edit(embed = make_lyrics_embed(lyrics), view=view)
+
+
+                   
   def queuel(self,ctx, id):
     if len(self.qu) > 0 and self.qu[id] != []:
         voice = ctx.guild.voice_client
