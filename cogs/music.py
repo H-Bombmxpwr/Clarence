@@ -211,6 +211,7 @@ class Music(commands.Cog):
             await ctx.trigger_typing()
 
         pf = ProfanityFilter()
+        pf.censor_char = '#'
         lyrics = json['lyrics']
         if len(lyrics) > 2048:
           lyrics = lyrics[:2045] + '...'
@@ -231,13 +232,17 @@ class Music(commands.Cog):
         
         view.add_item(button_censor)
         view.add_item(button_uncensor)
-        def check_button(i: discord.Interaction, button):
-          return i.author == ctx.author and i.message == msg
+        
+        
 
         msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
+        print("pensi")
 
+        def check_button(i: discord.Interaction, button):
+          return i.author == ctx.author and i.message == msg
+        print("lel")
         interaction, button = await self.client.wait_for('button_click', check=check_button)
-    
+        print("here")
         if button.custom_id == "censor":
           await msg.edit(embed = make_lyrics_embed(pf.censor(lyrics), view=view))
         

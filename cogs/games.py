@@ -9,6 +9,8 @@ from contextlib import suppress
 from storage.Lists_Storage import emojis
 import random
 import json
+from PIL import Image
+from typing import Union
 
 
 
@@ -227,14 +229,6 @@ class Fun(commands.Cog):
       for i in range(0,52):
         await ctx.send(f"{id}, {deck[i]}")
 
-  @commands.command(help = "the picture version")
-  async def fiftytwopic(self,ctx):
-    new_deck = requests.get("https://www.deckofcardsapi.com/api/deck/new/shuffle/?deck_count=1").json()
-    drawn_cards = requests.get("https://www.deckofcardsapi.com/api/deck/" + str(new_deck["deck_id"]) + "/draw/?count=52").json()
-    for card in drawn_cards["cards"]:
-      await ctx.send(card["image"])
-    
-
   #send a random quote from 2070 paradigm shift
   @commands.command(help = "2070 Paradigm Shift, send '$paradigm source' to get the source video")
   async def paradigm(self,ctx,number = 1):
@@ -262,6 +256,63 @@ class Fun(commands.Cog):
           break
     else:
       await ctx.send("Shutup <@" + str(member.id) + ">")
+
+
+  @commands.command(help = "emojify an image", aliases = ["em"])
+  async def emojify(self,ctx,url: Union[discord.Member, str], size: int = 21):
+
+    COLORS = {
+    (0, 0, 0): "⬛",
+    (0, 0, 255): "🟦",
+    (255, 0, 0): "🟥",
+    (255, 255, 0): "🟨",
+    #(190, 100, 80):  "🟫",
+    (255, 165, 0): "🟧",
+    #(160, 140, 210): "🟪",
+    (255, 255, 255): "⬜",
+    (0, 255, 0): "🟩",
+    }
+
+
+    def euclidean_distance(c1, c2):
+      r1, g1, b1 = c1
+      r2, g2, b2 = c2
+      d = ((r2 - r1) ** 2 + (g2 - g1) ** 2 + (b2 - b1) ** 2) ** 0.5
+  
+      return d
+
+
+    def find_closest_emoji(color):
+      c = sorted(list(COLORS), key=lambda k: euclidean_distance(color, k))
+      return COLORS[c[0]]
+
+
+    def emojify_image(img, size=21):
+      WIDTH, HEIGHT = (size, size)
+      small_img = img.resize((WIDTH, HEIGHT), Image.NEAREST)
+  
+      emoji = ""
+      small_img = small_img.load()
+      for y in range(HEIGHT):
+          for x in range(WIDTH):
+              emoji += find_closest_emoji(small_img[x, y])
+          emoji += "\n"
+      return emoji
+    
+    if not isinstance(url, str):
+        url = url.display_avatar.url
+
+    def get_emojified_image():
+        r = requests.get(url, stream=True)
+        image = Image.open(r.raw).convert("RGB")
+        res = emojify_image(image, size)
+
+        if size > 14:
+            res = f"```{res}```"
+        return res
+
+    result = await self.client.loop.run_in_executor(None, get_emojified_image)
+    await ctx.send(result)
       
         
 async def setup(client):
