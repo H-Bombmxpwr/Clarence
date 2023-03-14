@@ -196,61 +196,52 @@ class Music(commands.Cog):
   #get lyrics for the current song or any song
   @commands.command(help="Get lyrics for a song, send without a song arguement when playing a song in the voice channel to get the current songs lyrics", aliases=["ly"])
   async def lyrics(self, ctx, *, song = None):
-        if song == None and ctx.voice_client.is_connected():
+    async with ctx.typing():
+      if song == None and ctx.voice_client.is_connected():
           json = requests.get(f"https://some-random-api.ml/lyrics?title={self.client.song}").json()
-        elif song == None:
+      elif song == None:
           await ctx.send("Please send a song to get lyrics for")
-        else:
+      else:
           json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
 
-        with suppress(KeyError):
+      with suppress(KeyError):
             if json["error"]:
                 await ctx.send("❌ " + json["error"])
                 return
-        with suppress(AttributeError):
-            await ctx.trigger_typing()
+      
 
-        pf = ProfanityFilter()
-        pf.censor_char = '#'
-        lyrics = json['lyrics']
-        if len(lyrics) > 2048:
-          lyrics = lyrics[:2045] + '...'
+      pf = ProfanityFilter()
+      pf.censor_char = '#'
+      lyrics = json['lyrics']
+      if len(lyrics) > 2048:
+        lyrics = lyrics[:2045] + '...'
 
-        
-        def make_lyrics_embed(lyrics):
-          embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
-        
-          embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
-        
-          embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
-          return embedVar
+      
+      def make_lyrics_embed(lyrics):
+        embedVar = discord.Embed(title = 'Lyrics for ' + str(json["title"] + ", By " + json["author"]), description = lyrics ,color = ctx.author.color)
+      
+        embedVar.set_thumbnail(url = json["thumbnail"]["genius"])
+      
+        embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
+        return embedVar
 
-        view = View()
-        button_censor = Button(label = "Censored", style = discord.ButtonStyle.green,custom_id = "censor")
-        
-        button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red, custom_id = "uncensor")
-        
-        view.add_item(button_censor)
-        view.add_item(button_uncensor)
-        
-        
+      view = View()
+      button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red, custom_id = "uncensor")
+      
+      view.add_item(button_uncensor)
+      
 
-        msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
-        print("pensi")
+      msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
 
-        def check_button(i: discord.Interaction, button):
-          return i.author == ctx.author and i.message == msg
-        print("lel")
-        interaction, button = await self.client.wait_for('button_click', check=check_button)
-        print("here")
-        if button.custom_id == "censor":
-          await msg.edit(embed = make_lyrics_embed(pf.censor(lyrics), view=view))
-        
-        if button.custom_id == "uncensor":
-          await msg.edit(embed = make_lyrics_embed(lyrics), view=view)
+    res = await self.client.wait_for('interaction', check=lambda interaction: interaction.data["component_type"] == 2 and "custom_id" in interaction.data.keys())
+    print(res)
 
-
-                   
+    for item in view.children:
+      if item.custom_id == res.data["custom_id"]:
+        button_uncensor.disabled = True
+        await msg.edit(embed = make_lyrics_embed(lyrics), view=view)
+        await res.response.defer()
+            
   def queuel(self,ctx, id):
     if len(self.qu) > 0 and self.qu[id] != []:
         voice = ctx.guild.voice_client
