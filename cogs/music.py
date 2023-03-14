@@ -225,11 +225,19 @@ class Music(commands.Cog):
           return embedVar
 
         view = View()
-        button = Button(label = "Censored", style = discord.ButtonStyle.green)
-        view.add_item(button)
-        button = Button(label = "Uncensored", style = discord.ButtonStyle.red)
-        view.add_item(button)
-        await ctx.send(embed = make_lyrics_embed(lyrics),view=view)
+        button_censor = Button(label = "Censored", style = discord.ButtonStyle.green)
+        
+        button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red)
+        async def button_callback_1(interaction):
+          await interaction.response.edit_message(embed = make_lyrics_embed(pf.censor(lyrics)))
+        async def button_callback_2(interaction):
+          await interaction.response.edit_message(embed = make_lyrics_embed(lyrics))
+        
+        button_censor.callback = button_callback_1()
+        button_uncensor.callback = button_callback_2()
+        view.add_item(button_censor)
+        view.add_item(button_uncensor)
+        await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
 
   def queuel(self,ctx, id):
     if len(self.qu) > 0 and self.qu[id] != []:
