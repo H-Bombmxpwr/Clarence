@@ -17,11 +17,11 @@ def check_carrot(string,message):
     if string[i] != '^': #check to see its all ^
       return 0
   
-  if message.author.bot == True: #make sure it doesn't read itelf
-    return 0
+    if message.author.bot == True: #make sure it doesn't read itelf
+      return 0
     
-  if not (not message.attachments): #make sure its not an image
-    return 0
+    if not (not message.attachments): #make sure its not an image
+      return 0
   
   return 1
 

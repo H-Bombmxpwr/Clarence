@@ -234,7 +234,6 @@ class Music(commands.Cog):
       msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
 
     res = await self.client.wait_for('interaction', check=lambda interaction: interaction.data["component_type"] == 2 and "custom_id" in interaction.data.keys())
-    print(res)
 
     for item in view.children:
       if item.custom_id == res.data["custom_id"]:

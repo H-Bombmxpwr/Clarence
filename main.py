@@ -5,7 +5,7 @@ from functionality.keep_alive import keep_alive
 from functionality.days import check_day
 from storage.Lists_Storage import thedan, days, status1
 from cogs.help import NewHelpName
-from functionality.functions import check_carrot
+from functionality.functions import check_carrot, get_insult
 import json
 from functionality.trie import Trie
 from itertools import cycle
@@ -161,6 +161,10 @@ async def on_message(message):
      await message.channel.send(message.content + '^')
 
     await client.process_commands(message)
+
+    if author_id == 450493258095919106:
+      if random.randint(0,100) <= 10:
+        await message.reply(get_insult())
 
 
 async def main():

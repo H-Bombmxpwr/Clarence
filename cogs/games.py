@@ -259,7 +259,7 @@ class Fun(commands.Cog):
 
 
   @commands.command(help = "emojify an image", aliases = ["em"])
-  async def emojify(self,ctx,url: Union[discord.Member, str], size: int = 21):
+  async def emojify(self,ctx,url: Union[discord.Member, str], size: int = 14):
 
     COLORS = {
     (0, 0, 0): "⬛",
@@ -287,7 +287,7 @@ class Fun(commands.Cog):
       return COLORS[c[0]]
 
 
-    def emojify_image(img, size=21):
+    def emojify_image(img, size=14):
       WIDTH, HEIGHT = (size, size)
       small_img = img.resize((WIDTH, HEIGHT), Image.NEAREST)
   
