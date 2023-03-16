@@ -30,7 +30,6 @@ def check_day(text):
         return emoji
 
       # wet Wednesday 
-      #no clothes tuesday
       if any(word in text for word in ["wet wednesday","wetwednesday","wet wedsnday"]):
         if mod_time == 6:
           emoji = "🌊"
