@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
 from functionality.days import check_day
-from storage.Lists_Storage import thedan, days, status1
+from storage.Lists_Storage import thedan, status1
 from cogs.help import NewHelpName
 from functionality.functions import check_carrot, get_insult
 import json
@@ -169,7 +169,7 @@ async def on_message(message):
     if check_carrot(text,message) == 1:
      await message.channel.send(message.content + '^')
 
-    await client.process_commands(message)
+    
 
     #evie insult
     if author_id == 450493258095919106:
@@ -177,8 +177,10 @@ async def on_message(message):
         await message.reply(get_insult())
 
     #defense to attacks towards clarence
-    if any(word in text for word in ["stfu","fuck","fuck you","you suck","shutup"]) and any(word in text for word in ["clarence","bot"]):
+    if any(word in text for word in ["stfu","fuck","fuck you","you suck","shutup", "kill","murder"]) and any(word in text for word in ["clarence","bot"]):
       await message.reply(get_insult())
+
+    await client.process_commands(message)
 
 
 async def main():

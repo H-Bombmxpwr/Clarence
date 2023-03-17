@@ -17,12 +17,12 @@ def check_carrot(string,message):
     if string[i] != '^': #check to see its all ^
       return 0
   
-    if message.author.bot == True: #make sure it doesn't read itelf
-      return 0
-    
-    if not (not message.attachments): #make sure its not an image
-      return 0
+  if message.author.bot == True: #make sure it doesn't read itelf
+    return 0
   
+  if not (not message.attachments): #make sure its not an image
+    return 0
+
   return 1
 
 
@@ -40,10 +40,10 @@ def get_color(para,color):
   print(json_request)
 
 def get_pickup():
-  url = "https://getpickuplines.herokuapp.com/lines/random"
+  url = "https://vinuxd.vercel.app/api/pickup"
   response = requests.get(url)
   json_request = response.json()
-  quote = html.unescape(json_request["line"])
+  quote = json_request["pickup"]
   return quote
 
 
