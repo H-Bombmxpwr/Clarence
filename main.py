@@ -12,6 +12,8 @@ from itertools import cycle
 import asyncio
 from discord.ui import Button,View
 import random
+import time
+import requests
 
 
 def get_prefix(client, message):  #grab server prefix
@@ -117,7 +119,20 @@ async def on_message(message):
     text = text.translate(str.maketrans(table))
     author_id = message.author.id
     time_zone = -6
-    
+    mod_time = int((int(time.time()) + (time_zone * 3600)) / 86400) % 7
+
+    if any(word in text for word in ["thursday","thurday","4th day of the week"]):
+          if  mod_time == 0:
+            button = Button(label = "isitthursday.org", style = discord.ButtonStyle.primary, url = "http://isitthursday.org/")
+            view = View()
+            view.add_item(button)
+            await message.channel.send("Its Thursday!", view=view)
+            await message.channel.send(requests.get("isitthrusday.org"))
+          else:
+            button = Button(label = "yikes", style = discord.ButtonStyle.primary, url = "https://www.merriam-webster.com/dictionary/bozo")
+            view = View()
+            view.add_item(button)
+            await message.channel.send("its not thursday...", view=view)
 
     #sends the prefix if the useer forgets what it is
     if text == "prefix":
@@ -135,20 +150,14 @@ async def on_message(message):
     #    if not isClean:
     #        await message.add_reaction("😮")
 
+      
     #the dan
     if any(word in text for word in thedan):
         await message.reply("I LOVE STEELY DAN!")
 
-    # thursday!!!
-    if any(word in text for word in days):
-            button = Button(label = "isitthursday.org", style = discord.ButtonStyle.primary, url = "http://isitthursday.org/")
-            view = View()
-            view.add_item(button)
-            await message.channel.send("Is it thursday?", view=view)
     
       # rest of the days
     emoji = check_day(text)
-
     if emoji:
         await message.add_reaction(emoji)
 
@@ -162,9 +171,14 @@ async def on_message(message):
 
     await client.process_commands(message)
 
+    #evie insult
     if author_id == 450493258095919106:
       if random.randint(0,100) <= 10:
         await message.reply(get_insult())
+
+    #defense to attacks towards clarence
+    if any(word in text for word in ["stfu","fuck","fuck you","you suck","shutup"]) and any(word in text for word in ["clarence","bot"]):
+      await message.reply(get_insult())
 
 
 async def main():
