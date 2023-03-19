@@ -173,7 +173,7 @@ async def on_message(message):
 
     #evie insult
     if author_id == 450493258095919106:
-      if random.randint(0,100) <= 10:
+      if random.randint(0,100) == 1:
         await message.reply(get_insult())
 
     #defense to attacks towards clarence
