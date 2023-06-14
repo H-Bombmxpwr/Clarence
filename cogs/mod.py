@@ -284,7 +284,6 @@ class Moderation(commands.Cog):
     channel = channel or ctx.channel
     count = 0
     async for _ in channel.history(limit=None):
-        
         count += 1
     await ctx.send("There are {} messages in {}".format(count, channel.mention))
 
@@ -395,13 +394,27 @@ class Owner(commands.Cog):
     else:
       await ctx.send("You do not have permission to use this command")
 
+  #Removes the sent role from the user if they have NOT sent a message in the sent channel
+  @commands.command(help = "count the number of messages in a channel", hidden = True)
+  async def whoops(self,ctx, channel: discord.TextChannel=None,*, role : discord.Role):
+    if ctx.author.id ==  239605426033786881:
+      channel = channel or ctx.channel
+      count = 0
+      wrote = False
+      for member in ctx.guild.members:
+          print("here")
+          wrote = False
+          print(member.name)
+          async for message in channel.history(limit=None):
+            if member.id == message.author.id:
+              wrote = True
+              print(f"{member.name} wrote an intro")
+              break
+          if wrote == False:
+            await member.remove_roles(role)
+            print(f"{member.name} did not write an intro, role removed")
+        
 
-
-
-  
-
-
-      
 async def setup(client):
     await client.add_cog(Moderation(client))
     await client.add_cog(Owner(client))
