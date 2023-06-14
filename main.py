@@ -42,6 +42,8 @@ table = {
     ".": None,
     ":": None,
     ";": None,
+    "*": None,
+    " ": None,
     "_": None
 }
 

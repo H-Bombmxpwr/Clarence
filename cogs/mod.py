@@ -7,6 +7,7 @@ import functionality.functions
 import os
 import json
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv(dotenv_path = 'keys.env')
 
@@ -56,24 +57,6 @@ class Moderation(commands.Cog):
         banned_list = banned_list + str(user) + '\n'
 
     await ctx.send(embed = discord.Embed(title = 'Banned Users: ', description = banned_list, color = 0x800000))
-
-
-  #move roles around in positon
-  @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
-  async def moverole(self,ctx, role: discord.Role, pos: int):
-    all_roles = await ctx.guild.fetch_roles()
-    num_roles = len(all_roles)
-    print(f'The server has {num_roles} roles.')
-    try:
-        await role.edit(position=pos)
-        await ctx.send("Role moved.")
-    except discord.Forbidden:
-        await ctx.send("You do not have permission to do that")
-    except discord.HTTPException:
-        await ctx.send("Failed to move role")
-    except discord.InvalidArgument:
-        await ctx.send("Invalid argument")
-
 
 
   #get the latency of the bot
@@ -209,7 +192,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
 
-  #prune x number of members
+  #prune x number of messages
   @commands.command(help = 'delete x number of messages, regardless of sender',aliases = ['cl'])
   async def clean(self,ctx,limit :int):
     if ctx.message.author.guild_permissions.administrator or ctx.author.id == 239605426033786881:
@@ -235,9 +218,66 @@ class Moderation(commands.Cog):
         await ctx.send("There was a syntax error, please try again")
    else:
      await ctx.send("You do not have permission to kick people")
-    
+  
+  #give a role to everyone
+  @commands.command(help = "Give a certain role to everyone in the server")
+  async def assignall(self, ctx, * , role: discord.Role):
+    count = 0
+    if (not ctx.author.guild_permissions.manage_roles):
+      await ctx.reply("Error: User is missing permission `Manage Roles`")
+      return
+    elif role == None:
+      await ctx.send("Please send a role to apply to everyone")
+      return
+    await ctx.send(f"Attempting to assign all members {role.name}...")
+    msg = await ctx.send(f"Assigned {role.name} to {count} guild members")
+    for member in ctx.guild.members:
+      try:
+        await member.add_roles(role)
+      except:
+        await ctx.send(f"Error: Can not assign {role.name} to {member.name}!\n"
+        f"Potential fix: Try moving my role above {role.name} in the role order\n\n")
+      count = count + 1
+      await msg.edit(content = f"Assigned {role.name} to {count} out of {len(ctx.guild.members)} guild members...")
+    await msg.edit(content = f"DONE: Sucessfully assigned {role.name} to {count} guild members!")
+    #remove a role from everyone
+  @commands.command(help = "Give a certain role to everyone in the server")
+  async def removeall(self, ctx, * , role: discord.Role):
+    count = 0
+    if (not ctx.author.guild_permissions.manage_roles):
+      await ctx.reply("Error: User is missing permission `Manage Roles`")
+      return
+    elif role == None:
+      await ctx.send("Please send a role to remove from everyone")
+      return
+    await ctx.send(f"Attempting to remove {role.name} from all members...")
+    msg = await ctx.send(f"Removed {role.name} from {count} out of {len(ctx.guild.members)} guild members")
+    for member in ctx.guild.members:
+      try:
+        await member.remove_roles(role)
+      except:
+        await ctx.send(f"Error: Can not remove {role.name} from {member.name}!\n"
+        f"Potential fix: Try moving my role above {role.name} in the role order.\n\n")
+      count = count + 1
+      await msg.edit(content = f"Removed {role.name} from {count} guild members...")
+    await msg.edit(content = f"DONE: Sucessfully removed {role.name} from {count} guild members!")
 
 
+  #move roles around in positon
+  @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
+  async def moverole(self,ctx, role: discord.Role, pos: int):
+    all_roles = await ctx.guild.fetch_roles()
+    num_roles = len(all_roles)
+    print(f'The server has {num_roles} roles.')
+    try:
+        await role.edit(position=pos)
+        await ctx.send("Role moved.")
+    except discord.Forbidden:
+        await ctx.send("You do not have permission to do that")
+    except discord.HTTPException:
+        await ctx.send("Failed to move role")
+    except discord.InvalidArgument:
+        await ctx.send("Invalid argument")
 
 
 class Owner(commands.Cog):
@@ -344,6 +384,9 @@ class Owner(commands.Cog):
         await member.send(message)
     else:
       await ctx.send("You do not have permission to use this command")
+
+
+  
 
 
       

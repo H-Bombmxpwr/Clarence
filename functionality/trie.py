@@ -50,6 +50,10 @@ class Trie:
                 self.insert('4'+temp, crawler)
                 self.insert('@'+temp, crawler)
 
+            if c == 'b':
+                temp = word[(i+1):]
+                self.insert('8'+temp, crawler)
+
             if c == 'c':
                 temp = word[(i+1):]
                 self.insert('('+temp, crawler)
@@ -63,6 +67,7 @@ class Trie:
             if c == 'g':
                 temp = word[(i+1):]
                 self.insert('6'+temp, crawler)
+                self.insert('9'+temp, crawler)
 
             if c == 'i':
                 temp = word[(i+1):]
@@ -77,6 +82,7 @@ class Trie:
             if c == 'l':
                 temp = word[(i+1):]
                 self.insert('1'+temp, crawler)
+                self.insert('!'+temp, crawler)
 
             if c == 'o':
                 temp = word[(i+1):]
@@ -91,6 +97,10 @@ class Trie:
             if c == 't':
                 temp = word[(i+1):]
                 self.insert('7'+temp, crawler)
+
+            if c == 'w':
+                temp = word[(i+1):]
+                self.insert('vv'+temp, crawler)
 
             if c == 'z':
                 temp = word[(i+1):]
