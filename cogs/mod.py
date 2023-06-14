@@ -240,6 +240,7 @@ class Moderation(commands.Cog):
       count = count + 1
       await msg.edit(content = f"Assigned {role.name} to {count} out of {len(ctx.guild.members)} guild members...")
     await msg.edit(content = f"DONE: Sucessfully assigned {role.name} to {count} guild members!")
+
     #remove a role from everyone
   @commands.command(help = "Give a certain role to everyone in the server")
   async def removeall(self, ctx, * , role: discord.Role):
@@ -278,6 +279,15 @@ class Moderation(commands.Cog):
         await ctx.send("Failed to move role")
     except discord.InvalidArgument:
         await ctx.send("Invalid argument")
+  @commands.command(help = "count the number of messages in a channel")
+  async def message_count(self,ctx, channel: discord.TextChannel=None):
+    channel = channel or ctx.channel
+    count = 0
+    async for _ in channel.history(limit=None):
+        
+        count += 1
+    await ctx.send("There are {} messages in {}".format(count, channel.mention))
+
 
 
 class Owner(commands.Cog):
@@ -384,6 +394,8 @@ class Owner(commands.Cog):
         await member.send(message)
     else:
       await ctx.send("You do not have permission to use this command")
+
+
 
 
   
