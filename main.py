@@ -14,7 +14,9 @@ from discord.ui import Button,View
 import random
 import time
 import requests
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
@@ -23,7 +25,7 @@ def get_prefix(client, message):  #grab server prefix
     return prefixes[str(message.guild.id)]
 
 
-
+#status1 = ["Hey!", "We back!"]
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
 client.help_command = NewHelpName()
 client.synced = True
@@ -71,7 +73,7 @@ async def on_ready():
     print("Rate Limited = " + str(client.is_ws_ratelimited()))
     change_status.start()
     built = False
-    #built = buildTrie()
+    built = buildTrie()
     if built:
         print("Trie is built. Profanity filter is on.\n")
     else:
@@ -140,17 +142,24 @@ async def on_message(message):
                                    str(get_prefix(client, message)) + "`")
 
     #profanity filter
-    #if author_id != 239605426033786881:
-    #    isClean = True
-    #    message_word_list = text.split()
-    #    for word in message_word_list:
-    #        if trie.search(word):
-    #            isClean = False
-    #            break
-    #    if not isClean:
-    #        await message.add_reaction("😮")
+    isClean = True
+    message_word_list = text.split()
+    for word in message_word_list:
+        if trie.search(word):
+            isClean = False
+            break
+    if not isClean:
+        with open("storage/swears.json", "r") as f:
+            swears = json.load(f)
+        if str(author_id) in swears.keys():
+            swears[str(author_id)] = swears[str(author_id)] + 1
+            
+        else:
+            swears[str(author_id)] = 1
+        f.close()
+        with open("storage/swears.json","w") as f:
+                json.dump(swears,f, indent = 4)
 
-      
     #the dan
     if any(word in text for word in thedan):
         await message.reply("I LOVE STEELY DAN!")
@@ -161,9 +170,6 @@ async def on_message(message):
     if emoji:
         await message.add_reaction(emoji)
 
-    if message.author.id == 1078785366468853961:
-      if random.randint(1,100) < 3:
-        await message.add_reaction("❤️")
 
     #Carrot agree function
     if check_carrot(text,message) == 1:
@@ -171,13 +177,8 @@ async def on_message(message):
 
     
 
-    #evie insult
-    if author_id == 450493258095919106:
-      if random.randint(0,100) == 1:
-        await message.reply(get_insult())
-
-    #defense to attacks towards clarence
-    if any(word in text for word in ["stfu","fuck","fuck you","you suck","shutup", "kill","murder"]) and any(word in text for word in ["clarence","bot"]):
+    #defense to attacks towards clarence, really not well written but funny
+    if not isClean and any(word in text for word in ["clarence","bot","hunter","huntie"]):
       await message.reply(get_insult())
 
     await client.process_commands(message)
@@ -192,6 +193,7 @@ async def main():
         await client.load_extension('cogs.help')
         await client.load_extension('cogs.flight')
         await client.load_extension('cogs.poker')
+        await client.load_extension('cogs.math')
         await client.start(os.getenv('token'))
 
 

@@ -5,7 +5,9 @@ from discord.ui import Button,View
 import json
 import os
 import requests
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 
 class Flight(commands.Cog):
   """ 

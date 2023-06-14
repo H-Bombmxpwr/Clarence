@@ -2,7 +2,6 @@ import requests
 import os
 import discord
 from functionality.structures import Trivia
-from replit import db
 import json
 import random
 import html

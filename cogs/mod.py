@@ -6,7 +6,9 @@ from datetime import date
 import functionality.functions
 import os
 import json
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 
 class Moderation(commands.Cog):
   """ 

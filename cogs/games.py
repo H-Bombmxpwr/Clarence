@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import functionality.functions
+from functionality.functions import fix_lines
 from functionality.structures import FizzBuzz,Card
 from datetime import date
 import requests
@@ -11,7 +11,9 @@ import random
 import json
 from PIL import Image
 from typing import Union
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 
 
 class Fun(commands.Cog):
@@ -133,17 +135,6 @@ class Fun(commands.Cog):
       for i in range(1,10):
         await msg.add_reaction(random.choice(emojis))
 
-  #simple collatz conjecture function
-  @commands.command(help = "Run the Collatz Conjecture")
-  async def collatz(self,ctx,num:int = None):
-    if num == None:
-      await ctx.send("Please send a postive integer as an argument")
-    else:
-      try:
-        c = functionality.functions.collatz(num)
-      except:
-        await ctx.send("Please send a postive integer")
-      await ctx.send(f"Total Calculations: `{c}`")
 
   #counting game
   @commands.command(help = "count to passed integer")
@@ -239,11 +230,16 @@ class Fun(commands.Cog):
           lines = f.readlines()
           f.close()
         
-        pruned_lines = functionality.functions.fix_lines(lines)
+        pruned_lines = fix_lines(lines)
         quotes = list(pruned_lines)
         for i in range(0,number):
           quote = random.choice(quotes)
           await ctx.send(f"{i+1}: {quote}")
+
+  @commands.command(help = "When you need facepalm", aliases = ["palm"])
+  async def facepalm(self, ctx):
+    await ctx.send(requests.get("https://some-random-api.com/animu/face-palm").json()["link"])
+
 
   @commands.command(help = "tell the last person that sent a message to shut up")
   async def shutup(self, ctx, member: discord.Member = None):

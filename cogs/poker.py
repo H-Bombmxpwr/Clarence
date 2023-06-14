@@ -3,7 +3,9 @@ from discord.ext import commands
 import requests
 import json
 import asyncio
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 class Poker(commands.Cog):
   """ 
   Games to play with the bot

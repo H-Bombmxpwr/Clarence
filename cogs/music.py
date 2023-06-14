@@ -7,7 +7,9 @@ from youtube_search import YoutubeSearch
 import json
 from profanity_filter import ProfanityFilter
 from discord.ui import Button,View
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path = 'keys.env')
 class Music(commands.Cog):
   """ 
   Module for playing music in a voice channel
@@ -198,11 +200,11 @@ class Music(commands.Cog):
   async def lyrics(self, ctx, *, song = None):
     async with ctx.typing():
       if song == None and ctx.voice_client.is_connected():
-          json = requests.get(f"https://some-random-api.ml/lyrics?title={self.client.song}").json()
+          json = requests.get(f"https://some-random-api.com/others/lyrics?title={self.client.song}").json()
       elif song == None:
           await ctx.send("Please send a song to get lyrics for")
       else:
-          json = requests.get(f"https://some-random-api.ml/lyrics?title={song}").json()
+          json = requests.get(f"https://some-random-api.com/others/lyrics?title={song}").json()
 
       with suppress(KeyError):
             if json["error"]:
@@ -210,8 +212,8 @@ class Music(commands.Cog):
                 return
       
 
-      pf = ProfanityFilter()
-      pf.censor_char = '#'
+      #pf = ProfanityFilter()
+      #pf.censor_char = '#'
       lyrics = json['lyrics']
       if len(lyrics) > 2048:
         lyrics = lyrics[:2045] + '...'

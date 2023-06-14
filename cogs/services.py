@@ -17,63 +17,17 @@ import random
 import wikipedia
 from discord.ui import Button,View
 from contextlib import suppress
-from functionality.structures import Bits
-from storage.Lists_Storage import load as song
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path = 'keys.env')
 
 
-
-class Local(commands.Cog, description = 'Local commands within the bot'):
+class Misc(commands.Cog, description = 'Local commands within the bot'):
   """ 
   Group of commands executed locally
   """
   def __init__(self,client):
       self.client = client
-
-
-  #List of Commands
-  @commands.command(help = 'List of commands for the bot',aliases = ["l"])
-  async def list(self,ctx):
-    embeds = storage.embed_storage.make_list()
-    
-    pages = 6
-    cur_page = 1
-    msg = await ctx.send(embed = embeds[0])
-    # getting the message object for editing and reacting
-
-    await msg.add_reaction("◀️")
-    await msg.add_reaction("▶️")
-
-    def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) in ["◀️", "▶️"]
-        # This makes sure nobody except the command sender can interact with the "menu"
-
-    while True:
-        try:
-            reaction, user = await self.client.wait_for("reaction_add", timeout=60, check=check)
-            # waiting for a reaction to be added - times out after x seconds, 60 in this
-            # example
-
-            if str(reaction.emoji) == "▶️" and cur_page != pages:
-                cur_page += 1
-                await msg.edit(embed = embeds[cur_page-1])
-
-                await msg.remove_reaction(reaction, user)
-
-            elif str(reaction.emoji) == "◀️" and cur_page > 1:
-                cur_page -= 1
-                await msg.edit(embed = embeds[cur_page-1])
-                await msg.remove_reaction(reaction, user)
-
-            else:
-                await msg.remove_reaction(reaction, user)
-                # removes reactions if the user tries to go forward on the last page or
-                # backwards on the first page
-        except asyncio.TimeoutError:
-            await msg.delete()
-            await ctx.delete()
-            break
-            # ending the loop if user doesn't react after x seconds
-  
   
     #hello command
   @commands.command(help = "Hello!", aliases = ["hi","hey","whatsup","heyy"])
@@ -81,36 +35,6 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
     user = "<@" + str(ctx.author.id) + ">"
     responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!"]
     await ctx.send(f"{random.choice(responses)} {user}")
-
-
-  #check the status of the bot
-  @commands.command(help = 'Explains the status of the bot')
-  async def status(self,ctx):
-    embedVar = discord.Embed(title = 'Clarence\'s current status is  ' + str(song["title"] + ", By " + song["author"]),color = ctx.author.color)
-    embedVar.set_image(url = song["thumbnail"]["genius"])
-    await ctx.send(embed=embedVar)
-    
-    #binary/hex/decimal conversions
-  @commands.command(help = "Binary/Hex/Decimal/Ascii converter")
-  async def bits(self,ctx,typ:str = None,input = None):
-    
-    if typ == None:
-      await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`, or `binary`\ni.e `bits decimal 35`')
-    elif input == None:
-      await ctx.send('Please add a value to convert\ni.e `bits decimal 35`')
-    
-    else:
-      Bit = Bits(typ,input)
-      decimal = Bit.to_decimal(typ[0].lower(),input)
-      if decimal == None:
-        await ctx.send("That is not a valid value for that type")
-        return
-      decimal,ascii,hexa,binary = Bit.from_decimal(decimal)
-      await ctx.send("Binary: `" + str(binary) + "`\nHex: `" + str(hexa) + "`\nDecimal: `" + str(decimal) + "`\nAscii: `" + str(ascii) + "`")
-      
-
-    
-
 
 
   #creates ASCII Art
@@ -125,8 +49,6 @@ class Local(commands.Cog, description = 'Local commands within the bot'):
         ascii_text = Figlet(font="small").renderText(text)
 
         await ctx.send(f"```\n{ascii_text}\n```")
-
-  
 
   #ping a user a bunch of times
   @commands.command(help = 'Ping a user x number of times', aliases  = ["annoy"])
@@ -191,56 +113,38 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
   #interactive trivia
   @commands.command(help = "Interactive trivia",aliases = ["tr"])
-  async def trivia(self,ctx,parameter = None):
+  async def trivia(self,ctx):
     info = functionality.functions.get_question2()
     answers = info.getAnswerList()
 
-    if parameter == None:
-      embedVar = discord.Embed(title= "Trivia Commands", description = "`trivia multiple: ` will generate a random multiple choice question that can be answered within 60 seconds by the user\n`trivia stats: ` will give the senders trivia stats\n`trivia: ` will give a list of trivia commands", color=0x8b0000).set_thumbnail(url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
-      await ctx.send(embed=embedVar)
+    embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + info.category, color = 0x8b0000 ).set_footer(text= str(ctx.author.name) + ', Send the correct answer below' ,icon_url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
+    embedVar.add_field(name = info.question, value = "\na. " + answers[0] + "\nb. " + answers[1] + "\nc. " + answers[2] + "\nd. " + answers[3] + "\n", inline = False)
+    await ctx.send(embed = embedVar)
 
-    if parameter.lower().startswith('s'):
-      stats = functionality.functions.get_trivia_stats(ctx)
-      if stats[0] == 0:
-        embedVar = discord.Embed(title= "Error", description = "You have not answered a trivia question and are not in the database, use `trivia multiple: ` to answer a question", color=0x8b0000)
-        await ctx.send(embed=embedVar)
-      else:
-        embedVar = discord.Embed(title = 'Stats for ' + str(ctx.author.name), description = 'Tracked statistics for the interactive trivia',color=0x8b0000).set_footer(icon_url = ctx.author.avatar, text = "As of " + str(date.today()))
-        embedVar.add_field(name = "Number of correct", value = stats[1],inline = False)
-        embedVar.add_field(name = "Total attempts", value = stats[2], inline = False)
-        embedVar.add_field(name = 'Percent correct',value = str(round((stats[1]/stats[2])*100,2)) + '%', inline = False)
-        await ctx.send(embed = embedVar)
+    local = answers.index(info.correctAnswer)
+    if local == 0:
+      ans = 'a'
+    elif local == 1:
+      ans = 'b'
+    elif local == 2:
+      ans  = 'c'
+    elif local == 3:
+      ans  = 'd'
+    try:
+      msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
     
-    if parameter.lower().startswith('m'):
-      embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + info.category, color = 0x8b0000 ).set_footer(text= str(ctx.author.name) + ', Send the correct answer below' ,icon_url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
-      embedVar.add_field(name = info.question, value = "\na. " + answers[0] + "\nb. " + answers[1] + "\nc. " + answers[2] + "\nd. " + answers[3] + "\n", inline = False)
-      await ctx.send(embed = embedVar)
+    
+      if msg.content.lower() == ans or msg.content.lower() == info.correctAnswer.lower():
+        await msg.add_reaction('✅')
+        await ctx.send("Correct! It was " + answers[local])
+        temp = 1
+      else:
+        await msg.add_reaction('❌')
+        await ctx.send("Incorrect! The correct answer was " + answers[local])
+        temp = 0
 
-      local = answers.index(info.correctAnswer)
-      if local == 0:
-        ans = 'a'
-      elif local == 1:
-        ans = 'b'
-      elif local == 2:
-        ans  = 'c'
-      elif local == 3:
-        ans  = 'd'
-      try:
-        msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
-      
-      
-        if msg.content.lower() == ans or msg.content.lower() == info.correctAnswer.lower():
-          await msg.add_reaction('✅')
-          await ctx.send("Correct! It was " + answers[local])
-          temp = 1
-        else:
-          await msg.add_reaction('❌')
-          await ctx.send("Incorrect! The correct answer was " + answers[local])
-          temp = 0
-
-        functionality.functions.update_score(ctx,temp)
-      except:
-          await ctx.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
+    except:
+        await ctx.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
 
 
 
@@ -529,9 +433,9 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
           
           if animal.lower() == "red" or animal.lower() == "redpanda":
             animal = "red_panda"
-          json = requests.get("https://some-random-api.ml/img/" + animal).json()
-          embed = discord.Embed(title="Here's a " + animal, colour=0x088f8f)
-          embed.set_image(url=json["link"])
+          json = requests.get("https://some-random-api.com/animal/" + animal).json()
+          embed = discord.Embed(title="Here's a " + animal,description = "Fun fact: " + str(json["fact"]), colour=0x088f8f)
+          embed.set_image(url=json["image"])
           await ctx.send(embed=embed)
 
       except:
@@ -582,5 +486,5 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   
 
 async def setup(client):
-    await client.add_cog(Local(client))
+    await client.add_cog(Misc(client))
     await client.add_cog(Api(client))
