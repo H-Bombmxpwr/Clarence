@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 from functionality.keep_alive import keep_alive
 from functionality.days import check_day
-from storage.Lists_Storage import thedan, status1
+from storage.Lists_Storage import thedan, status1, flag_emoji_dict, table, load
 from cogs.help import NewHelpName
 from functionality.functions import check_carrot, get_insult
 import json
@@ -15,6 +15,7 @@ import random
 import time
 import requests
 from dotenv import load_dotenv
+from googletrans import Translator
 
 load_dotenv(dotenv_path = 'keys.env')
 
@@ -26,26 +27,13 @@ def get_prefix(client, message):  #grab server prefix
 
 
 #status1 = ["Hey!", "We back!"]
-client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all())
+client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all()) #the whole bot itself
 client.help_command = NewHelpName()
 client.synced = True
-status_i = cycle(status1)
+status_i = cycle(status1) # for the song status 
+translator = Translator() # for translating messages
 
-trie = Trie()
-table = {
-    "\"": None,
-    "'": None,
-    "-": None,
-    "`": None,
-    "~": None,
-    ",": None,
-    ".": None,
-    ":": None,
-    ";": None,
-    "*": None,
-    " ": None,
-    "_": None
-}
+trie = Trie() # for the built in profanity filter
 
 
 def buildTrie():
@@ -71,7 +59,7 @@ async def on_command_error(ctx, error):  #detects if a command is valid
 
 @client.event
 async def on_ready():
-    print('=------------------------------=')
+    print('=---------------------------------------=')
     print("Rate Limited = " + str(client.is_ws_ratelimited()))
     change_status.start()
     built = False
@@ -80,9 +68,10 @@ async def on_ready():
         print("Trie is built. Profanity filter is on.\n")
     else:
         print("Trie was not built, profanity filter is off\n")
+    print(f'Status song: {load["title"]} by  {load["author"]}')
 
     print('{0.user} is online'.format(client))
-    print('=------------------------------=')
+    print('=---------------------------------------=')
     
 
 
@@ -113,6 +102,32 @@ async def on_guild_remove(guild):  #remove prefix if bot is kicked
     with open("storage/prefixes.json", "w") as f:
         json.dump(prefixes, f, indent=4)
 
+
+@client.event #reactions for google translate feature
+async def on_reaction_add(reaction, user):
+    # Check if the reaction is a flag emoji
+    print("reactin")
+    if reaction.emoji in flag_emoji_dict:
+        # Get the language code corresponding to the flag emoji
+        lang_code = flag_emoji_dict[reaction.emoji]
+    
+        # Get the original message
+        message = reaction.message
+        print(message.content)
+        # Translate the message to the desired language
+        detected_lang = translator.detect(message.content)
+        print(detected_lang.lang)
+        translated_message = translator.translate(message.content, dest=lang_code).text
+        print(translated_message)
+        pronunciation_message =translator.translate(message.content, dest=lang_code).pronunciation
+        print(pronunciation_message)
+        
+
+        embed = discord.Embed(title='Translated Text', description=f'{translated_message}', color=0x00ff00)
+        embed.add_field(name="Original Text", value=message.content, inline=False)
+        embed.add_field(name="Translated from:", value=f'{detected_lang.lang.capitalize()} ({detected_lang.confidence*100:.2f}%)')
+        embed.add_field(name="Pronunciation:", value=pronunciation_message, inline=False)
+        await reaction.message.channel.send(content=f'{user.mention}',embed=embed)
 
 @client.event
 async def on_message(message):
@@ -149,22 +164,22 @@ async def on_message(message):
     for word in message_word_list:
         if trie.search(word):
             isClean = False
-            break
-    if not isClean:
-        with open("storage/swears.json", "r") as f:
-            swears = json.load(f)
-        if str(author_id) in swears.keys():
-            swears[str(author_id)] = swears[str(author_id)] + 1
             
-        else:
-            swears[str(author_id)] = 1
-        f.close()
-        with open("storage/swears.json","w") as f:
-                json.dump(swears,f, indent = 4)
+            if not isClean:
+                with open("storage/swears.json", "r") as f:
+                    swears = json.load(f)
+                if str(author_id) in swears.keys():
+                    swears[str(author_id)] = swears[str(author_id)] + 1
+                    
+                else:
+                    swears[str(author_id)] = 1
+                f.close()
+                with open("storage/swears.json","w") as f:
+                        json.dump(swears,f, indent = 4)
 
     #the dan
     if any(word in text for word in thedan):
-        await message.reply("I LOVE STEELY DAN!")
+        await message.channel.reply("I LOVE STEELY DAN!")
 
     
       # rest of the days

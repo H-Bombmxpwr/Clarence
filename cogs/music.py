@@ -5,7 +5,7 @@ import requests
 from contextlib import suppress
 from youtube_search import YoutubeSearch
 import json
-from profanity_filter import ProfanityFilter
+from better_profanity import profanity
 from discord.ui import Button,View
 from dotenv import load_dotenv
 
@@ -228,12 +228,12 @@ class Music(commands.Cog):
         return embedVar
 
       view = View()
-      button_uncensor = Button(label = "Uncensored", style = discord.ButtonStyle.red, custom_id = "uncensor")
+      button_uncensor = Button(label = "Uncensor", style = discord.ButtonStyle.red, custom_id = "uncensor")
       
       view.add_item(button_uncensor)
       
 
-      msg = await ctx.send(embed = make_lyrics_embed(pf.censor(lyrics)),view=view)
+      msg = await ctx.send(embed = make_lyrics_embed(profanity.censor(lyrics, '#')),view=view)
 
     res = await self.client.wait_for('interaction', check=lambda interaction: interaction.data["component_type"] == 2 and "custom_id" in interaction.data.keys())
 

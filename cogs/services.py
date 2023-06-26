@@ -30,10 +30,10 @@ class Misc(commands.Cog, description = 'Local commands within the bot'):
       self.client = client
   
     #hello command
-  @commands.command(help = "Hello!", aliases = ["hi","hey","whatsup","heyy"])
+  @commands.command(help = "Hello!", aliases = ["hi","hey","whatsup","heyy","sup"])
   async def hello(self,ctx):
     user = "<@" + str(ctx.author.id) + ">"
-    responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!"]
+    responses = ["Hi!", "Hello!","What's up!","What does it do?","Hey!","Sup!","Big Chillin!","Hey Hey Hey","Lets Go!"]
     await ctx.send(f"{random.choice(responses)} {user}")
 
 

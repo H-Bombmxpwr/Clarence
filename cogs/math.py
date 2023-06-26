@@ -17,21 +17,24 @@ class Math(commands.Cog):
       
 
   @commands.command(help = "Latex Rendering", aliases = ["tex"])
-  async def latex(self, ctx, *, latex_string):
-    latex_string.encode('unicode_escape')
-    fig = plt.figure()
-    plt.axis("off")
-    plt.text(0.5, 0.5, f"${latex_string}$", size=50, ha="center", va="center")
-    epoch_time = int(time.time())
-    png_path = str(epoch_time) + ".png"
-    plt.savefig(png_path, format="png", bbox_inches="tight",pad_inches=0.2)
-    plt.close(fig)
-    await ctx.send(file=discord.File(png_path))
-    os.remove(png_path)
+  async def latex(self, ctx, *, latex_string = None):
+    if latex_string == None:
+      await ctx.send("Please send latex code to be rendered")
+    else:
+      latex_string.encode('unicode_escape')
+      fig = plt.figure()
+      plt.axis("off")
+      plt.text(0.5, 0.5, f"${latex_string}$", size=50, ha="center", va="center")
+      epoch_time = int(time.time())
+      png_path = str(epoch_time) + ".png"
+      plt.savefig(png_path, format="png", bbox_inches="tight",pad_inches=0.2)
+      plt.close(fig)
+      await ctx.send(file=discord.File(png_path))
+      os.remove(png_path)
    
   @commands.command(help = "Binary/Hex/Decimal/Ascii converter")
   async def bits(self,ctx,typ:str = None,input = None):
-      
+       
       if typ == None:
         await ctx.send('Please specify what you are sending: `ascii` , `decimal`, `hex`, or `binary`\ni.e `bits decimal 35`')
       elif input == None:
