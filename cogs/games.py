@@ -222,7 +222,7 @@ class Fun(commands.Cog):
 
   #send a random quote from 2070 paradigm shift
   @commands.command(help = "2070 Paradigm Shift, send '$paradigm source' to get the source video")
-  async def paradigm(self,ctx,number = 1):
+  async def paradigm(self,ctx,number: int = 1):
         if number > 30:
           await ctx.send(f"{number} is a few too many lines, try again with a smaller number")
           return
@@ -236,7 +236,7 @@ class Fun(commands.Cog):
           quote = random.choice(quotes)
           await ctx.send(f"{i+1}: {quote}")
 
-  @commands.command(help = "When you need facepalm", aliases = ["palm"])
+  @commands.command(help = "When you need facepalm", aliases = ["palm","fp"])
   async def facepalm(self, ctx):
     await ctx.send(requests.get("https://some-random-api.com/animu/face-palm").json()["link"])
 

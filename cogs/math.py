@@ -21,16 +21,25 @@ class Math(commands.Cog):
     if latex_string == None:
       await ctx.send("Please send latex code to be rendered")
     else:
-      latex_string.encode('unicode_escape')
-      fig = plt.figure()
-      plt.axis("off")
-      plt.text(0.5, 0.5, f"${latex_string}$", size=50, ha="center", va="center")
+
       epoch_time = int(time.time())
       png_path = str(epoch_time) + ".png"
-      plt.savefig(png_path, format="png", bbox_inches="tight",pad_inches=0.2)
-      plt.close(fig)
-      await ctx.send(file=discord.File(png_path))
-      os.remove(png_path)
+      latex_string.encode('unicode_escape')
+
+      try:
+        plt.subplot(111)
+        plt.axis('off')
+        plt.text(0.25,0.5,r"$%s$" %(latex_string),fontsize=30, color = "black")
+        #ax.set_facecolor('#35393e')
+        plt.savefig(png_path, format="png", bbox_inches="tight")
+        await ctx.send(file=discord.File(png_path))
+        os.remove(png_path)
+        plt.clf()
+        plt.close()
+      except:
+        await ctx.send("sorry that didnt work :(")
+
+
    
   @commands.command(help = "Binary/Hex/Decimal/Ascii converter")
   async def bits(self,ctx,typ:str = None,input = None):
