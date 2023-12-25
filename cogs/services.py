@@ -145,68 +145,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
 
     except:
         await ctx.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
-
-
-
-  #twitter commands
-  @commands.command(help = 'Interact with twitter', aliases = ["tw"])
-  async def twitter(self,ctx, parameter = None, second = None):
-
-    # Authenticate to Twitter
-    auth = tweepy.OAuthHandler(os.getenv('twitter_api_key'),os.getenv('twitter_secret_api_key'))
-    
-    auth.set_access_token(os.getenv('twitter_access_token'), 
-    os.getenv('twitter_secret_access_token'))
-
-    # Create API object
-    api = tweepy.API(auth, wait_on_rate_limit=True)
-
-    try:
-      api.verify_credentials()
-      print("Authentication OK")
-
-    except:
-      print("Error during authentication")
-    
-
-
-    if parameter == None:
-      embedVar = discord.Embed(title= "Twitter Commands", description = "`twitter user <username>: ` to view a specific users details\n`twitter trends us: ` to view whats currently trending in the US\n`twitter: ` to give a list of twitter commands\n ", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
-      await ctx.send(embed=embedVar)
-    
-    
-    if parameter.lower().startswith("u"):
-  
-      try:
-
-        user = api.get_user(screen_name = second)
-        user_url = user.profile_image_url
-        #starts the embed
-        embedVar = discord.Embed(title= user.name, description = user.description, color=0x1da1f2).set_thumbnail(url = user_url)
-        embedVar.add_field(name = "Follower Count:", value = user.followers_count,inline = False)
-        embedVar.add_field(name = "Account Link:", value = 'https://twitter.com/' + user.screen_name)
-        await ctx.send(embed=embedVar)
-      except:
-        embedVar = discord.Embed(title= "Error", description = "User not found or has a private account", color=0x1da1f2).set_thumbnail(url = 'https://296y67419hmo2gej4j232hyf-wpengine.netdna-ssl.com/wp-content/uploads/2008/12/twitter-bird-light-bgs-300x300.png')
-        await ctx.send(embed=embedVar)
-
-    
-    if parameter.lower().startswith("t"):
-      trends_result = api.get_place_trends(2379574)
-      embedVar = discord.Embed(title='Trends in the US', description = 'Top 25 trends on Twitter in the US', color=0x1da1f2).set_thumbnail(url = 'https://static01.nyt.com/images/2014/08/10/magazine/10wmt/10wmt-superJumbo-v4.jpg')
-
-      for trend in trends_result[0]["trends"]:
-        embedVar.add_field(name = trend["name"], value = "\u200b", inline = False)
-    
-      await ctx.send(embed=embedVar)
-
-    if parameter.lower().startswith("m"):
-      if ctx.author.id == 239605426033786881:
-        timeline = api.home_timeline()
-        for tweet in timeline:
-          await ctx.send(f"{tweet.user.name} said {tweet.text}\n \n \n \n \n \n")
-      else:
-        await ctx.send("Sorry you don't have permission to look at Hunter's timeline")
   
 
 
@@ -443,15 +381,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         await ctx.send(embed=embed)
 
 
-  #pull a random meme from a meme api
-  @commands.command(help = "get a random meme",aliases = ["m"])
-  async def meme(self,ctx):
-          with suppress(AttributeError):
-            await ctx.trigger_typing()
-          json = requests.get("https://some-random-api.ml/meme").json()
-          embed = discord.Embed(title="Random meme", colour=0xb00b69)
-          embed.set_image(url=json["image"])
-          await ctx.send(embed=embed)
 
 
   #pull a random quote from a notable figure

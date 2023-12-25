@@ -31,7 +31,7 @@ client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all()) 
 client.help_command = NewHelpName()
 client.synced = True
 status_i = cycle(status1) # for the song status 
-translator = Translator() # for translating messages
+# for translating messages
 
 trie = Trie() # for the built in profanity filter
 
@@ -109,6 +109,7 @@ async def on_reaction_add(reaction, user):
     print("reactin")
     if reaction.emoji in flag_emoji_dict:
         # Get the language code corresponding to the flag emoji
+        translator = Translator()
         lang_code = flag_emoji_dict[reaction.emoji]
     
         # Get the original message
