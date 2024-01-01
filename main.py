@@ -62,7 +62,7 @@ async def on_ready():
     print("Rate Limited = " + str(client.is_ws_ratelimited()))
     change_status.start()
     built = False
-    built = buildTrie()
+    #built = buildTrie()
     if built:
         print("Trie is built. Profanity filter is on.\n")
     else:
