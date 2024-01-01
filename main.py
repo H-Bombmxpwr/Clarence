@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands, tasks
 import os
-from functionality.keep_alive import keep_alive
 from functionality.days import check_day
 from storage.Lists_Storage import thedan, status1, flag_emoji_dict, table, load
 from cogs.help import NewHelpName
@@ -215,5 +214,4 @@ async def main():
         await client.start(os.getenv('token'))
 
 
-keep_alive()
 asyncio.run(main())
