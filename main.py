@@ -16,7 +16,7 @@ import requests
 from dotenv import load_dotenv
 from googletrans import Translator
 
-load_dotenv(dotenv_path = 'keys.env')
+#load_dotenv(dotenv_path = 'keys.env')
 
 def get_prefix(client, message):  #grab server prefix
     with open("storage/prefixes.json", "r") as f:
