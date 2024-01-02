@@ -105,7 +105,6 @@ async def on_guild_remove(guild):  #remove prefix if bot is kicked
 @client.event #reactions for google translate feature
 async def on_reaction_add(reaction, user):
     # Check if the reaction is a flag emoji
-    print("reactin")
     if reaction.emoji in flag_emoji_dict:
         # Get the language code corresponding to the flag emoji
         translator = Translator()
@@ -211,7 +210,7 @@ async def main():
         await client.load_extension('cogs.flight')
         await client.load_extension('cogs.poker')
         await client.load_extension('cogs.math')
-        await client.start(os.getenv('token'))
+        await client.start(os.getenv('token2'))
 
 
 asyncio.run(main())

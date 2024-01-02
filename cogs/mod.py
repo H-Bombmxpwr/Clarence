@@ -8,6 +8,9 @@ import os
 import json
 from dotenv import load_dotenv
 import asyncio
+from storage.Lists_Storage import load
+from discord.ui import Button,View
+from better_profanity import profanity
 
 load_dotenv(dotenv_path = 'keys.env')
 
@@ -287,7 +290,36 @@ class Moderation(commands.Cog):
         count += 1
     await ctx.send("There are {} messages in {}".format(count, channel.mention))
 
+  @commands.command(help = "display the status of the bot")
+  async def status(self,ctx):
+    lyrics = load['lyrics']
+    if len(lyrics) > 2048:
+      lyrics = lyrics[:2045] + '...'
 
+      
+    def make_lyrics_embed(lyrics):
+        embedVar = discord.Embed(title = 'Clarence\'s Status is currently ' + str(load["title"] + " By " + load["author"]), description = lyrics ,color = ctx.author.color)
+      
+        embedVar.set_thumbnail(url = load["thumbnail"]["genius"])
+      
+        embedVar.set_footer(text=  'Requested by ' + str(ctx.author.name),icon_url = ctx.author.avatar)
+        return embedVar
+
+    view = View()
+    button_uncensor = Button(label = "Uncensor", style = discord.ButtonStyle.red, custom_id = "uncensor_status")
+      
+    view.add_item(button_uncensor)
+      
+
+    msg = await ctx.send(embed = make_lyrics_embed(profanity.censor(lyrics, '#')),view=view)
+
+    res = await self.client.wait_for('interaction', check=lambda interaction: interaction.data["component_type"] == 2 and "custom_id" in interaction.data.keys())
+
+    for item in view.children:
+      if item.custom_id == res.data["custom_id"]:
+        button_uncensor.disabled = True
+        await msg.edit(embed = make_lyrics_embed(lyrics), view=view)
+        await res.response.defer()
 
 class Owner(commands.Cog):
   """ 
