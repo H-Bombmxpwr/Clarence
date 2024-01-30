@@ -18,6 +18,9 @@ from discord.ui import Button,View
 from contextlib import suppress
 from dotenv import load_dotenv
 
+import traceback
+import logging
+
 load_dotenv(dotenv_path = 'keys.env')
 
 
@@ -222,42 +225,54 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     color, image = functionality.functions.get_color(para,color)
     await ctx.send("Color function in the works, check back later")
     
-    
-#helper function for wolfram
-  async def printPod(self,ctx, text, title):
-    
-    text = text.replace("Wolfram|Alpha", "Clarence Calculations")
-    text = text.replace("Wolfram", "Wolf")
-    await ctx.send("__**" + title + ":**__\n" + "`" + text + "`")
   
-  async def printImgPod(self,ctx, img, title):
-    await ctx.send("__**" + title + ":**__\n" + img)
-    
   # wolfram query
-  @commands.command(help = 'Ask a question to a computational intelligence',aliases = ['q'])
-  async def query(self,ctx,*,parameter = None):
-    await ctx.send("This command is under maintenance, come back later :)")
-    return
-    if  parameter == None:
-      await ctx.send("Please send something to query as an arguement to the command")
-    else:
-      wolf_url = 'https://cdn.freebiesupply.com/logos/large/2x/wolfram-language-logo-png-transparent.png'
-      try:
+  @commands.command(help='Ask a question to a computational intelligence', aliases=['q'])
+  async def query(self, ctx, *, parameter=None):
+    if parameter is None:
+        await ctx.send("Please send something to query as an argument to the command.")
+        return
+
+    try:
         async with ctx.typing():
-          app_id = os.getenv('app_id')
-          client1 = wolframalpha.Client(app_id)
-          res = client1.query(parameter)
-          #answer = next(res.results)['subpod']['img']['@src']
-          #answertxt = next(res.results).text
-          for pod in res.pods:
-            if pod.text:
-              await self.printPod(self,ctx, pod.text, pod.title)
-            elif pod.img:
-              await self.printImgPod(self,ctx, pod.img, pod.title)
-      except:
-        async with ctx.typing():
-          embedVar = discord.Embed(title = "Error", description ="An error occurred and the bot was unable to process your request \n \n This could be due to many different things. Try rewording the question and sending it again. \n \n It is also possible the bot cannot perform the given request. \n ", color = 0xdc143c).set_thumbnail(url = wolf_url)
-          await ctx.send(embed = embedVar)
+            app_id = os.getenv('APP_ID')
+            if not app_id:
+                raise ValueError("Wolfram Alpha APP_ID not set in environment variables.")
+
+            client = wolframalpha.Client(app_id)
+            res = client.query(parameter)
+
+            response_messages = [""]
+            for pod in res['pod']:
+                if isinstance(pod, dict) and 'subpod' in pod:
+                    subpods = pod['subpod']
+                    # Check if 'subpod' is a list and iterate, or work directly with it if it's a dict
+                    if isinstance(subpods, list):
+                        for subpod in subpods:
+                            await self.add_response_section(ctx,response_messages, subpod, pod['@title'])
+                    else:
+                        await self.add_response_section(ctx,response_messages, subpods, pod['@title'])
+            
+            # Send all messages
+            for message in response_messages:
+                if message:  # Check if message is not empty
+                    await ctx.send(message)
+
+    except Exception as e:
+        await ctx.send(f"Error: {str(e)}")
+
+  async def add_response_section(self, ctx, response_messages, subpod, title):
+    """ Helper function to add a section of the response to the list of messages. """
+    response_section = ""
+    if 'plaintext' in subpod and subpod['plaintext']:
+        # Add the pod title and the plaintext content
+        response_section += f"**{title}**\n{subpod['plaintext']}\n"
+        await ctx.send(response_section)
+    if 'img' in subpod:
+        # Add a hyperlink to the image
+        image_url = subpod['img']['@src']
+        await ctx.send(image_url)
+
 
 
 

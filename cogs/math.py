@@ -7,6 +7,8 @@ import os
 import time    
 from functionality.structures import Bits
 from  functionality.functions import collatz
+import matplotlib.pyplot as plt
+import uuid
 
 class Math(commands.Cog):
   """ 
@@ -16,28 +18,29 @@ class Math(commands.Cog):
       self.client = client
       
 
-  @commands.command(help = "Latex Rendering", aliases = ["tex"])
-  async def latex(self, ctx, *, latex_string = None):
-    if latex_string == None:
-      await ctx.send("Please send latex code to be rendered")
-    else:
+  @commands.command(help="LaTeX Rendering", aliases=["tex"])
+  async def latex(self, ctx, *, latex_string=None):
+        if latex_string is None:
+            await ctx.send("Please send LaTeX code to be rendered.")
+            return
 
-      epoch_time = int(time.time())
-      png_path = str(epoch_time) + ".png"
-      latex_string.encode('unicode_escape')
+        # Generate a unique file name
+        png_path = f"{uuid.uuid4()}.png"
 
-      try:
-        plt.subplot(111)
-        plt.axis('off')
-        plt.text(0.25,0.5,r"$%s$" %(latex_string),fontsize=30, color = "black")
-        #ax.set_facecolor('#35393e')
-        plt.savefig(png_path, format="png", bbox_inches="tight")
-        await ctx.send(file=discord.File(png_path))
-        os.remove(png_path)
-        plt.clf()
-        plt.close()
-      except:
-        await ctx.send("sorry that didnt work :(")
+        try:
+            plt.subplot(111)
+            plt.axis('off')
+            plt.text(0.5, 0.5, r"$%s$" % latex_string, fontsize=30, color="black", ha='center', va='center')
+            plt.savefig(png_path, format="png", bbox_inches='tight', pad_inches=0.1)
+            plt.clf()
+            plt.close()
+
+            await ctx.send(file=discord.File(png_path))
+        except Exception as e:
+            await ctx.send(f"An error occurred: {str(e)}")
+        finally:
+            if os.path.exists(png_path):
+                os.remove(png_path)
 
 
    
