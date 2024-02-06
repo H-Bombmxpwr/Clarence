@@ -7,7 +7,7 @@ days = ["Thursday","thursday","thurday","4th day of the week"]
 
 
 #getting the lyrics to be the bots status
-song = "you keep me waiting snoh aalegra"
+song = "sometimes gerry cinammon"
 profanity.load_censor_words()
 load = requests.get(f"https://some-random-api.com/others/lyrics?title={song}").json()
 lyrics = profanity.censor(load['lyrics'])
