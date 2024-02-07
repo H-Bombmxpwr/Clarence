@@ -147,7 +147,7 @@ async def on_message(message):
             await message.channel.send("Its Thursday!", view=view)
             await message.channel.send(requests.get("isitthrusday.org"))
           else:
-            button = Button(label = "yikes", style = discord.ButtonStyle.primary, url = "https://www.merriam-webster.com/dictionary/bozo")
+            button = Button(label = "yikes", style = discord.ButtonStyle.primary, url = "https://www.merriam-webster.com/dictionary/ignoramus")
             view = View()
             view.add_item(button)
             await message.channel.send("its not thursday...", view=view)
