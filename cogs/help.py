@@ -30,9 +30,9 @@ class Help(commands.Cog):
                 owner = ctx.guild.get_member(239605426033786881).mention
 
       except AttributeError:
-                owner = "H-Bombmxpwr#2243"
+                owner = "@hbombmxpwr"
 
-      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `help` and `list` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
+      embedVar1 = discord.Embed(title = "About Me", description = "I am a bot that does a little bit of everything.\nUse `help` to look through a list of commands!\n\n The bot is [open sourced](https://github.com/H-Bombmxpwr/Clarence) on GitHub",color = color)
   
       embedVar1.add_field(name = "Basic Information", value = f"`      Developer:`{owner}\n`        Servers:` {servers}\n`        Members:` {members}\n`        Latency:` {latency} ms ",inline = False)
 
@@ -40,13 +40,19 @@ class Help(commands.Cog):
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
       await ctx.send(embed=embedVar1,view=view)
 
-    @commands.command(help = "Invite the bot",aliases = ["in"])
+    @commands.command(help = "Open sourced",aliases = ["sc"])
+    async def source(self,ctx):
+      button = Button(label = "GitHub", style = discord.ButtonStyle.primary, url = "https://github.com/H-Bombmxpwr/Clarence")
+      view = View()
+      view.add_item(button)
+      await ctx.send("Clarence is open sourced, check out the code below!", view=view)
+    
+    @commands.command(help = "Invite Clarence!",aliases = ["in"])
     async def invite(self,ctx):
       button = Button(label = "Invite", style = discord.ButtonStyle.primary, url = "https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot")
       view = View()
       view.add_item(button)
       await ctx.send("Woah you want to invite me! Thats awesome, just click the button below", view=view)
-
 
     @commands.command(help = 'List all commands of the bot in one page',aliases = ['fl'])
     async def fulllist(self,ctx):
