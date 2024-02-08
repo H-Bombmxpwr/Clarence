@@ -8,6 +8,9 @@ import json
 from better_profanity import profanity
 from discord.ui import Button,View
 from dotenv import load_dotenv
+from pytube import YouTube
+from moviepy.editor import *
+from discord import FFmpegPCMAudio
 
 load_dotenv(dotenv_path = 'keys.env')
 class Music(commands.Cog):
@@ -25,17 +28,28 @@ class Music(commands.Cog):
       await ctx.send(embed=embedVar)
 
     
-  @commands.command(help = 'Join a voice channel')
-  async def join(self,ctx):
-        if ctx.author.voice is None:
-            await ctx.send("You're not in a voice channel!\nJoin one first pleb")
-        voice_channel = ctx.author.voice.channel
-      
-        if ctx.voice_client is None:
+  @commands.command(help='Join a voice channel')
+  async def join(self, ctx):
+    if ctx.author.voice is None:
+        await ctx.send("You're not in a voice channel! Join one first.")
+        return
+
+    voice_channel = ctx.author.voice.channel
+
+    if ctx.voice_client is None:
+        try:
             await voice_channel.connect()
-            await ctx.send("Joined: " + str(voice_channel))
-        else:
+            await ctx.send(f"Joined: {voice_channel}")
+        except Exception as e:
+            await ctx.send("An error occurred while trying to connect to the voice channel.")
+            print(e)  # Log the error
+    else:
+        try:
             await ctx.voice_client.move_to(voice_channel)
+        except Exception as e:
+            await ctx.send("An error occurred while trying to move to the voice channel.")
+            print(e)  # Log the error
+
   
   @commands.command(help = "Clear the queue",aliases = ['cq'])
   async def clearqueue(self,ctx):
@@ -58,48 +72,48 @@ class Music(commands.Cog):
         
 
 
-  @commands.command(help = "Play skip the queue",aliases = ['ps'])
-  async def playskip(self,ctx,*,song:str = None):
-    if song == None:
-        await ctx.send("Please send the title of a song to play")
-        return
-    await ctx.invoke(self.client.get_command('join'))
-    self.client.song = str(song)
-    self.qu = {}
-    self.titles = {}
-    #search the song/ check if a url was sent
-    if str(song).find("https://www.youtube.com") == -1:
-          yt = YoutubeSearch(str(song), max_results=1).to_json()
-          song_id = str(json.loads(yt)['videos'][0]['id'])
-          url = "https://www.youtube.com/watch?v=" + song_id
-          if url == None:
-            await ctx.send("Song not found")
-            return
-    else:
-          url = str(song)
+  # @commands.command(help = "Play skip the queue",aliases = ['ps'])
+  # async def playskip(self,ctx,*,song:str = None):
+  #   if song == None:
+  #       await ctx.send("Please send the title of a song to play")
+  #       return
+  #   await ctx.invoke(self.client.get_command('join'))
+  #   self.client.song = str(song)
+  #   self.qu = {}
+  #   self.titles = {}
+  #   #search the song/ check if a url was sent
+  #   if str(song).find("https://www.youtube.com") == -1:
+  #         yt = YoutubeSearch(str(song), max_results=1).to_json()
+  #         song_id = str(json.loads(yt)['videos'][0]['id'])
+  #         url = "https://www.youtube.com/watch?v=" + song_id
+  #         if url == None:
+  #           await ctx.send("Song not found")
+  #           return
+  #   else:
+  #         url = str(song)
 
-    with suppress(AttributeError):
-      await ctx.trigger_typing()  
+  #   with suppress(AttributeError):
+  #     await ctx.trigger_typing()  
 
-    #plays the url generated above
-    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-    YDL_OPTIONS = {'format':"bestaudio"}
-    vc = ctx.voice_client
-    try:
-      with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
-        info = ydl.extract_info(url, download=False)
-        url2 = info['formats'][0]['url']
-        source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
+  #   #plays the url generated above
+  #   FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+  #   YDL_OPTIONS = {'format':"bestaudio"}
+  #   vc = ctx.voice_client
+  #   try:
+  #     with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
+  #       info = ydl.extract_info(url, download=False)
+  #       url2 = info['formats'][0]['url']
+  #       source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
             
-    except:
-      await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
-      return
-    vc.stop()
-    vc.play(source)
-    guild_id = ctx.message.guild.id
-    self.qu[guild_id] = [source]
-    self.titles[guild_id] = [info.get('title',None)]
-    await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
+  #   except:
+  #     await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
+  #     return
+  #   vc.stop()
+  #   vc.play(source)
+  #   guild_id = ctx.message.guild.id
+  #   self.qu[guild_id] = [source]
+  #   self.titles[guild_id] = [info.get('title',None)]
+  #   await ctx.send("Now playing: " + str(info.get('title', None)) + '\n' + url)
 
     
   @commands.command(help = 'Play a song')
@@ -125,37 +139,77 @@ class Music(commands.Cog):
 
         with suppress(AttributeError):
           await ctx.trigger_typing()  
-
-        #plays the url generated above
-        FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-        YDL_OPTIONS = {'format':"bestaudio"}
-        vc = ctx.voice_client
+        
+        #url is now obtained, next is to save off the mp3 file
         try:
-          with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-            url2 = info['formats'][0]['url']
-            source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTIONS)
-            
-        except:
-          await ctx.send("There was an error getting that song\nIt could be age restricted or private. Try a different song")
-          return
+          youtube = YouTube(url)
 
-        guild_id = ctx.message.guild.id
-        title = str(info.get('title',None))
-        if not vc.is_playing():
-          async with ctx.typing():
-            vc.play(source, after=lambda x=None: self.queuel(ctx, guild_id))
-            vc.is_playing()
-            self.titles[guild_id] = [title]
-            await ctx.send("Now playing: " + title + '\n' + url)
-        else:
-          if guild_id in self.qu:
-            self.qu[guild_id].append(source)
-          else:
-            self.qu[guild_id] = [source]
+          custom_directory_path = r'storage/audio'
+          custom_filename = f'{song_id}.mp3'
+
+          # Download the audio stream at the highest quality
+          audio_stream = youtube.streams.get_audio_only()
+          audio_stream.download(output_path=custom_directory_path, filename=custom_filename.replace(".mp3", ".mp4"))
+
+          # Convert MP4 to MP3
+          mp4_path = f'{custom_directory_path}/{custom_filename.replace(".mp3", ".mp4")}'
+          mp3_path = f'{custom_directory_path}/{custom_filename}'
+
+          audioclip = AudioFileClip(mp4_path)
+          audioclip.write_audiofile(mp3_path)
+
+          # Optional: Remove the original MP4 file
+          audioclip.close()
+          os.remove(mp4_path)
             
-          self.titles[guild_id].append(title)
-          await ctx.send(str(info.get('title',None)) + " was added to the queue")
+        except Exception as e:
+          await ctx.send("There was an error getting that song. Try a different song")
+          print(f"Error: {e}")
+          return
+        
+        #now is saved as song_id.mp3
+        await ctx.send(f"{url} was found, and is now playing")
+        #nopw time to play the song
+        guild_id = ctx.message.guild.id
+        #mp3_path = os.path.join(custom_directory_path, custom_filename)
+        mp3_path = os.path.join(custom_directory_path, custom_filename)
+        print("source about to be made")
+        print(f"MP3 Path: {mp3_path}")
+        if not os.path.exists(mp3_path):
+            print("File does not exist at the given path.")
+        else:
+            print("File exists, attempting to play.")
+        try:
+            source = FFmpegPCMAudio(mp3_path)
+            print("FFmpeg line executed successfully.")
+        except Exception as e:
+            print(f"FFmpeg error: {e}")
+        print("FFFMPEG WORKED")
+        vc = ctx.voice_client
+
+        if vc and vc.is_connected():
+            def after_playing(error):
+                if error:
+                    print(f"Error after playing: {error}")
+                if guild_id in self.qu and self.qu[guild_id]:
+                    print("got to queue")
+                    next_source = self.qu[guild_id].pop(0)
+                    vc.play(next_source, after=after_playing)
+                    next_title = self.titles[guild_id].pop(0)
+                    future = ctx.send(f"Now playing: {next_title}")
+                    self.client.loop.create_task(future)
+
+            if not vc.is_playing():
+                print("attempted to play")
+                vc.play(source, after=after_playing)
+                self.titles.setdefault(guild_id, []).append(song)  # Use song or a specific title
+                await ctx.send(f"Now playing: {song}")
+            else:
+                self.qu.setdefault(guild_id, []).append(source)
+                self.titles.setdefault(guild_id, []).append(song)
+                await ctx.send(f"{song} added to the queue.")
+        else:
+            await ctx.send("Bot is not connected to a voice channel.")
         
 
 
