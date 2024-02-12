@@ -11,18 +11,17 @@ from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 
 
-def check_carrot(string,message):
-  for i in range(0,len(string)):
-    if string[i] != '^': #check to see its all ^
-      return 0
-  
-  if message.author.bot == True: #make sure it doesn't read itelf
-    return 0
-  
-  if not (not message.attachments): #make sure its not an image
-    return 0
+def check_carrot(string, message):
+    # Check if the message is from a bot or contains attachments
+    if message.author.bot or message.attachments:
+        return 0
 
-  return 1
+    # Strip whitespace from the string and check if it consists solely of carrots
+    stripped_string = string.strip()
+    if stripped_string and all(char == '^' for char in stripped_string):
+        return 1
+    else:
+        return 0
 
 
 def get_insult():

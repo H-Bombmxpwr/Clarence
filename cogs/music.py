@@ -257,6 +257,7 @@ class Music(commands.Cog):
           json = requests.get(f"https://some-random-api.com/others/lyrics?title={self.client.song}").json()
       elif song == None:
           await ctx.send("Please send a song to get lyrics for")
+          return
       else:
           json = requests.get(f"https://some-random-api.com/others/lyrics?title={song}").json()
 
