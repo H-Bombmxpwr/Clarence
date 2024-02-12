@@ -32,7 +32,7 @@ class Music(commands.Cog):
   async def join(self, ctx):
     if ctx.author.voice is None:
         await ctx.send("You're not in a voice channel! Join one first.")
-        return
+        return 1
 
     voice_channel = ctx.author.voice.channel
 
@@ -122,10 +122,18 @@ class Music(commands.Cog):
         if song == None:
           await ctx.send("Please send the title of a song to play")
           return
+        
+        guild_id = ctx.guild.id  # Get the unique guild ID
+        custom_directory_path = f'storage/audio/{guild_id}' # to save to mutiple guilds at the same time
         #get the bot to join the player if it isnt already in it
-        await ctx.invoke(self.client.get_command('join'))
+
+        var = await ctx.invoke(self.client.get_command('join'))
+        if var == 1: # cancel if not in voice channel
+           return
         self.client.song = str(song)
-          
+        
+        if not os.path.exists(custom_directory_path):
+          os.makedirs(custom_directory_path)
         #search the song/ check if a url was sent
         if str(song).find("https://www.youtube.com") == -1:
           yt = YoutubeSearch(str(song), max_results=1).to_json()
@@ -144,7 +152,6 @@ class Music(commands.Cog):
         try:
           youtube = YouTube(url)
 
-          custom_directory_path = r'storage/audio'
           custom_filename = f'{song_id}.mp3'
 
           # Download the audio stream at the highest quality
@@ -170,7 +177,6 @@ class Music(commands.Cog):
         #now is saved as song_id.mp3
         await ctx.send(f"{url} was found, and is now playing")
         #nopw time to play the song
-        guild_id = ctx.message.guild.id
         #mp3_path = os.path.join(custom_directory_path, custom_filename)
         mp3_path = os.path.join(custom_directory_path, custom_filename)
         print("source about to be made")
@@ -212,6 +218,23 @@ class Music(commands.Cog):
             await ctx.send("Bot is not connected to a voice channel.")
         
 
+  @commands.Cog.listener() #this is to delete all of the mp3s in a guild after the bot has left the voice channel
+  async def on_voice_state_update(self, member, before, after):
+        # Check if the bot is the one who left the channel
+        if member.id == self.client.user.id:
+            # Check if the bot was in a voice channel before
+            if before.channel is not None and after.channel is None:
+                guild_id = before.channel.guild.id
+                custom_directory_path = f'storage/audio/{guild_id}'
+                # Ensure the directory for this guild exists
+                if os.path.exists(custom_directory_path):
+                    # Delete all mp3 files in the directory
+                    for file in os.listdir(custom_directory_path):
+                        if file.endswith('.mp3'):
+                            os.remove(os.path.join(custom_directory_path, file))
+                    # If you want to delete the directory itself, uncomment the following line
+                    # shutil.rmtree(custom_directory_path)
+                    print(f"Cleared all MP3 files from {custom_directory_path}")
 
   #pause the player
   @commands.command(help = 'Pause the current song',aliases = ['pa'])
