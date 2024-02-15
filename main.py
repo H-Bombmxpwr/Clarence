@@ -102,32 +102,6 @@ async def on_guild_remove(guild):  #remove prefix if bot is kicked
         json.dump(prefixes, f, indent=4)
 
 
-@client.event #reactions for google translate feature
-async def on_reaction_add(reaction, user):
-    # Check if the reaction is a flag emoji
-    if reaction.emoji in flag_emoji_dict:
-        # Get the language code corresponding to the flag emoji
-        translator = Translator()
-        lang_code = flag_emoji_dict[reaction.emoji]
-    
-        # Get the original message
-        message = reaction.message
-        print(message.content)
-        # Translate the message to the desired language
-        detected_lang = translator.detect(message.content)
-        print(detected_lang.lang)
-        translated_message = translator.translate(message.content, dest=lang_code).text
-        print(translated_message)
-        pronunciation_message =translator.translate(message.content, dest=lang_code).pronunciation
-        print(pronunciation_message)
-        
-
-        embed = discord.Embed(title='Translated Text', description=f'{translated_message}', color=0x00ff00)
-        embed.add_field(name="Original Text", value=message.content, inline=False)
-        embed.add_field(name="Translated from:", value=f'{detected_lang.lang.capitalize()} ({detected_lang.confidence*100:.2f}%)')
-        embed.add_field(name="Pronunciation:", value=pronunciation_message, inline=False)
-        await reaction.message.channel.send(content=f'{user.mention}',embed=embed)
-
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -210,6 +184,7 @@ async def main():
         await client.load_extension('cogs.flight')
         await client.load_extension('cogs.poker')
         await client.load_extension('cogs.math')
+        await client.load_extension('cogs.translate')
         await client.start(os.getenv('token'))
 
 
