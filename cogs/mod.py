@@ -22,23 +22,29 @@ class Moderation(commands.Cog):
       self.client = client
 
 
-  #ban a user
-  @commands.command(help = "Ban a user")
-  @commands.has_permissions(ban_members = True)
-  async def ban(self,ctx, member : discord.Member, *, reason = None):
-    if member.id != 239605426033786881:
-      await member.ban(reason = reason)
-      embed=discord.Embed(title="User Banned!", description="**{0}** was banned by **{1}**! with reason: **{2}**".format(member, ctx.message.author,reason), color=0x800000).set_footer(icon_url = member.avatar, text = 'banned on ' + str(date.today()))
-      await ctx.send(embed=embed)
-    else:
-      await ctx.send('I cannot ban my creator')
+  @commands.command(help="Ban a user")
+  @commands.has_permissions(ban_members=True)
+  async def ban(self, ctx, member: discord.Member, *, reason=None):
+    # Check if the target member is the bot's owner
+    if member.id == self.client.owner_id:
+      await ctx.send('I cannot ban my creator.')
+      return
 
-#The below code unbans player.
-  @commands.command(help = "Unban a user")
-  @commands.has_permissions(administrator = True)
-  async def unban(self,ctx, *, member):
+    # Proceed to ban the member
+    await member.ban(reason=reason)
+    embed = discord.Embed(title="User Banned!",
+                          description=f"**{member}** was banned by **{ctx.author}**!",
+                          color=0x800000)
+    embed.add_field(name="Reason", value=reason if reason else "No reason provided.", inline=False)
+    embed.set_footer(text=f'Banned on {date.today()}')
+    embed.set_thumbnail(url=member.avatar.url)
+    await ctx.send(embed=embed)
+
+  @commands.command(help="Unban a user")
+  @commands.has_permissions(administrator=True)
+  async def unban(self, ctx, *, member_identifier: str):
     banned_users = await ctx.guild.bans()
-    member_name, member_discriminator = member.split("#")
+    member_name, member_discriminator = member_identifier.split('#', 1)
 
     for ban_entry in banned_users:
         user = ban_entry.user
@@ -47,19 +53,29 @@ class Moderation(commands.Cog):
             await ctx.guild.unban(user)
             await ctx.send(f'Unbanned {user.mention}')
             return
+    
+    await ctx.send(f'User {member_identifier} not found in ban list.')
 
   #generate a list of banned members
   
-  @commands.command(help = "List of banned users from the guild")
-  @commands.has_permissions(ban_members = True)
-  async def banlist(self,ctx):
+  @commands.command(help="List of banned users from the guild")
+  @commands.has_permissions(ban_members=True)
+  async def banlist(self, ctx):
     banned_users = await ctx.guild.bans()
-    banned_list = ''
-    for ban_entry in banned_users:
-        user = ban_entry.user
-        banned_list = banned_list + str(user) + '\n'
+    if not banned_users:
+        await ctx.send("No users are currently banned.")
+        return
 
-    await ctx.send(embed = discord.Embed(title = 'Banned Users: ', description = banned_list, color = 0x800000))
+    banned_list = '\n'.join(f'{user.name}#{user.discriminator}' for _, user in banned_users)
+    # Splitting the ban list into chunks of 1024 characters to fit within the embed field limit
+    banned_list_chunks = [banned_list[i:i+1024] for i in range(0, len(banned_list), 1024)]
+
+    embed = discord.Embed(title='Banned Users:', color=0x800000)
+    for index, chunk in enumerate(banned_list_chunks, start=1):
+        embed.add_field(name=f'Page {index}', value=chunk, inline=False)
+
+    await ctx.send(embed=embed)
+
 
 
   #get the latency of the bot
@@ -81,60 +97,39 @@ class Moderation(commands.Cog):
 
 
   #mute a user from all channels
-  @commands.command(help = "Mute a user from sending messages")
-  async def mute(self,ctx, member: discord.Member):
-    if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
-      #checking if the muted role exists, and if doesn't makes the muted role
-      if get(ctx.guild.roles, name="Muted"):
-        print("role exits")
-      else:
-        
-        perms = discord.Permissions(send_messages = False, read_message_history = True, connect = False,read_messages = True)
+  @commands.command(help="Mute a user from sending messages")
+  @commands.has_permissions(manage_roles=True)
+  async def mute(self, ctx, member: discord.Member):
+      # Check if the member trying to mute is the bot or the server owner
+      if member == ctx.guild.owner or member.bot:
+          await ctx.send("I cannot mute the server owner or bots.")
+          return
 
-        muted = await ctx.guild.create_role(name="Muted", colour=discord.Colour(0x800000), permissions=perms)
-        
-        for channel in ctx.guild.channels:
-          await channel.set_permissions(muted, send_messages=False, read_messages=True, read_message_history=True,connect = False)
-        
-        await ctx.send('Mute Role created!')
-      #gives the muted role to the selected member
-      
-      try:
-          add_role= discord.utils.get(ctx.guild.roles, name='Muted')
-          if member.id != 239605426033786881:
-            await member.add_roles(add_role)
-            embed=discord.Embed(title="User Muted!", description="**{0}** was muted by **{1}**!".format(member, ctx.message.author), color=0x800000).set_footer(icon_url = member.avatar, text = 'muted on ' + str(date.today()))
-            await ctx.send(embed=embed)
-          else:
-            await ctx.send("I can't mute my creator")      
-          
-      except:
-            await ctx.send("Not able to update role")
-    else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
-        await ctx.send(embed=embed)
+      # Find or create the Muted role
+      muted_role = get(ctx.guild.roles, name="Muted")
+      if not muted_role:
+          muted_role = await ctx.guild.create_role(name="Muted", permissions=discord.Permissions(send_messages=False, speak=False))
+          for channel in ctx.guild.channels:
+              await channel.set_permissions(muted_role, send_messages=False, speak=False, add_reactions=False)
+
+      await member.add_roles(muted_role)
+      await ctx.send(f"{member.mention} has been muted.")
 
 
   #unmute a user
-  @commands.command(help = 'Unmutes a user')
-  async def unmute(self,ctx, member: discord.Member):
-    if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
-     try:
-      role = get(ctx.guild.roles, name='Muted')
-      await member.remove_roles(role)
-      embed=discord.Embed(title="User Unmuted!", description="**{0}** was unmuted by **{1}**!".format(member, ctx.message.author), color=0x800000)
-      await ctx.send(embed=embed)
-     except:
-      embed=discord.Embed(title="Mute/Unmute Error", description="User is not muted", color=0x800000)
-      await ctx.send(embed=embed)
-    
-    else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0xff00f6)
-        await ctx.send(embed=embed)
+  @commands.command(help='Unmutes a user')
+  @commands.has_permissions(manage_roles=True)
+  async def unmute(self, ctx, member: discord.Member):
+      muted_role = get(ctx.guild.roles, name="Muted")
+      if not muted_role:
+          await ctx.send("The 'Muted' role does not exist.")
+          return
 
-
-
-
+      if muted_role in member.roles:
+          await member.remove_roles(muted_role)
+          await ctx.send(f"{member.mention} has been unmuted.")
+      else:
+          await ctx.send(f"{member.mention} is not muted.")
 
   #change the server prefix
   @commands.command(help = "Change Server Prefix")
@@ -154,141 +149,155 @@ class Moderation(commands.Cog):
       await ctx.send(f"Prefix changed to: `{prefix}`")
   
   #gives the administrator role
-  @commands.command(help = 'gives a user the administrator role',aliases = ['gvad'])
-  async def giveadmin(self,ctx, member: discord.Member):
-    if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
-      #checking if the admin role exists, and if doesn't makes the muted role
-      if get(ctx.guild.roles, name="Admin"):
-        print("role exits")
+  @commands.command(help='Gives a user the administrator role', aliases=['gvad'])
+  @commands.has_permissions(administrator=True)
+  async def giveadmin(self, ctx, member: discord.Member):
+      # Prevent granting admin role to bots or the server owner
+      if member.bot or member == ctx.guild.owner:
+          await ctx.send("I cannot give the Admin role to bots or the server owner.")
+          return
+
+      admin_role = get(ctx.guild.roles, name="Admin")
+      if not admin_role:
+          # If the Admin role does not exist, create it with administrator permissions
+          admin_role = await ctx.guild.create_role(name="Admin", permissions=discord.Permissions(administrator=True), colour=discord.Colour(0x280137), hoist=True)
+          await ctx.send('Admin Role created!')
+
+      if admin_role in member.roles:
+          await ctx.send(f"{member.mention} already has the Admin role.")
       else:
-        perms = discord.Permissions(administrator = True)
-        await ctx.guild.create_role(name="Admin", colour=discord.Colour(0x280137), permissions=perms, hoist = True)
-        await ctx.send('Admin Role created!')
-      #gives the muted role to the selected member
-      try:
-          add_role= discord.utils.get(ctx.guild.roles, name='Admin')
-          await member.add_roles(add_role)      
-          embed=discord.Embed(title="New Admin!", description="**{0}** was given admin by **{1}**!".format(member, ctx.message.author), color=0x280137).set_footer(icon_url = member.avatar, text = 'given on ' + str(date.today()))
-          await ctx.send(embed=embed)
-      except:
-            await ctx.send("Not able to give role")
-    else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0x280137)
-        await ctx.send(embed=embed)
+          await member.add_roles(admin_role)
+          await ctx.send(f"{member.mention} was given the Admin role.")
 
 
-  #removes the administrator role
-  @commands.command(help = 'removes the admin role',aliases = ['rmad'])
-  async def removeadmin(self,ctx, member: discord.Member):
-    if ctx.message.author.guild_permissions.administrator or ctx.message.author.id == 239605426033786881:
-     try:
-      role = get(ctx.guild.roles, name='Admin')
-      await member.remove_roles(role)
-      embed=discord.Embed(title="Admin Removed!", description="**{0}** was stripped of admin by **{1}**!".format(member, ctx.message.author), color=0x280137)
-      await ctx.send(embed=embed)
-     except:
-      embed=discord.Embed(title="Admin Removal Error", description="The admin role was not able to be removed", color=0x280137)
-      await ctx.send(embed=embed)
-    
-    else:
-        embed=discord.Embed(title="Permission Denied.", description="You don't have permission to use this command.", color=0x280137)
-        await ctx.send(embed=embed)
+
+
+  @commands.command(help='Removes the admin role', aliases=['rmad'])
+  @commands.has_permissions(administrator=True)
+  async def removeadmin(self, ctx, member: discord.Member):
+      admin_role = get(ctx.guild.roles, name="Admin")
+      if not admin_role:
+          await ctx.send("The 'Admin' role does not exist.")
+          return
+
+      if admin_role not in member.roles:
+          await ctx.send(f"{member.mention} does not have the Admin role.")
+      else:
+          await member.remove_roles(admin_role)
+          await ctx.send(f"{member.mention}'s Admin role has been removed.")
+
 
 
   #prune x number of messages
-  @commands.command(help = 'delete x number of messages, regardless of sender',aliases = ['cl'])
-  async def clean(self,ctx,limit :int):
-    if ctx.message.author.guild_permissions.administrator or ctx.author.id == 239605426033786881:
-      if limit > 250:
-        await ctx.send('``` You cannot delete more than 250 messages at a time```')
-      else:
-        await ctx.channel.purge(limit=limit)
-        await ctx.send('```' + str(limit) + ' messages cleared by {}'.format(ctx.author.name) + '```')
-        await ctx.message.delete()
-    else:
-       await ctx.send("Either you or the bot does not have the necessary permissions to perform this task")
+  @commands.command(help='Delete a specified number of messages, regardless of sender', aliases=['cl'])
+  @commands.has_permissions(manage_messages=True)  # Ensure the user has permission to manage messages
+  @commands.bot_has_permissions(manage_messages=True)  # Ensure the bot has permission to manage messages
+  async def clean(self, ctx, limit: int):
+      if limit < 1 or limit > 250:  # Check for a valid limit
+          await ctx.send('Please specify a limit between 1 and 250.')
+          return
+
+      purged_messages = await ctx.channel.purge(limit=limit + 1)  # +1 to include the command message itself
+
+      # Send confirmation message that self-deletes after 5 seconds to avoid clutter
+      confirmation_message = f'Cleared {len(purged_messages) - 1} messages.'  # -1 to exclude the command message
+      await ctx.send(confirmation_message, delete_after=5)
 
 
   #kick a user
-  @commands.command(help = "kick a user")
-  async def kick(self,ctx,member: discord.Member, *, reason = None):
-   if ctx.message.author.guild_permissions.kick_members or ctx.author.id == 239605426033786881:    
-    try:
-        await member.kick(reason = reason)
-        embed=discord.Embed(title="User kicked!", description="**{0}** was kicked by **{1}**! with reason: **{2}**".format(member, ctx.message.author,reason), color=0x800000).set_footer(icon_url = member.avatar, text = 'kicked on ' + str(date.today()))
-        await ctx.send(embed=embed)
-    except:
-        await ctx.send("There was a syntax error, please try again")
-   else:
-     await ctx.send("You do not have permission to kick people")
+  @commands.command(help="Kick a user from the server")
+  @commands.has_permissions(kick_members=True)
+  async def kick(self, ctx, member: discord.Member, *, reason=None):
+      # Prevent kicking the server owner or bots
+      if member == ctx.guild.owner or member.bot:
+          await ctx.send("I cannot kick the server owner or bots.")
+          return
+
+      try:
+          await member.kick(reason=reason)
+          reason_msg = f" Reason: {reason}" if reason else ""
+          await ctx.send(f"{member.mention} has been kicked from the server.{reason_msg}")
+      except discord.Forbidden:
+          await ctx.send("I do not have permission to kick this user.")
+      except Exception as e:
+          await ctx.send(f"An error occurred: {str(e)}")
+
   
   #give a role to everyone
-  @commands.command(help = "Give a certain role to everyone in the server")
-  async def assignall(self, ctx, * , role: discord.Role):
-    count = 0
-    if (not ctx.author.guild_permissions.manage_roles):
-      await ctx.reply("Error: User is missing permission `Manage Roles`")
-      return
-    elif role == None:
-      await ctx.send("Please send a role to apply to everyone")
-      return
-    await ctx.send(f"Attempting to assign all members {role.name}...")
-    msg = await ctx.send(f"Assigned {role.name} to {count} guild members")
-    for member in ctx.guild.members:
-      try:
-        await member.add_roles(role)
-      except:
-        await ctx.send(f"Error: Can not assign {role.name} to {member.name}!\n"
-        f"Potential fix: Try moving my role above {role.name} in the role order\n\n")
-      count = count + 1
-      await msg.edit(content = f"Assigned {role.name} to {count} out of {len(ctx.guild.members)} guild members...")
-    await msg.edit(content = f"DONE: Sucessfully assigned {role.name} to {count} guild members!")
+  @commands.command(help="Give a certain role to everyone in the server")
+  @commands.has_permissions(manage_roles=True)
+  async def assignall(self, ctx, *, role: discord.Role):
+      if role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
+          await ctx.send("You cannot assign a role higher or equal to your top role.")
+          return
+
+      member_count = 0
+      for member in ctx.guild.members:
+          if not member.bot:  # Optionally skip bots
+              try:
+                  if role not in member.roles:
+                      await member.add_roles(role)
+                      member_count += 1
+              except discord.Forbidden:
+                  await ctx.send(f"Cannot assign {role.name} to {member.display_name}. Insufficient permissions.")
+                  continue
+              except Exception as e:
+                  await ctx.send(f"Failed to assign {role.name} to {member.display_name}: {e}")
+                  continue
+
+      await ctx.send(f"{role.name} role has been assigned to {member_count} members.")
+
 
     #remove a role from everyone
-  @commands.command(help = "Give a certain role to everyone in the server")
-  async def removeall(self, ctx, * , role: discord.Role):
-    count = 0
-    if (not ctx.author.guild_permissions.manage_roles):
-      await ctx.reply("Error: User is missing permission `Manage Roles`")
-      return
-    elif role == None:
-      await ctx.send("Please send a role to remove from everyone")
-      return
-    await ctx.send(f"Attempting to remove {role.name} from all members...")
-    msg = await ctx.send(f"Removed {role.name} from {count} out of {len(ctx.guild.members)} guild members")
-    for member in ctx.guild.members:
+  @commands.command(help="Remove a certain role from everyone in the server")
+  @commands.has_permissions(manage_roles=True)
+  async def removeall(self, ctx, *, role: discord.Role):
+      if role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
+          await ctx.send("You cannot remove a role higher or equal to your top role.")
+          return
+
+      member_count = 0
+      for member in ctx.guild.members:
+          if role in member.roles:
+              try:
+                  await member.remove_roles(role)
+                  member_count += 1
+              except discord.Forbidden:
+                  await ctx.send(f"Cannot remove {role.name} from {member.display_name}. Insufficient permissions.")
+                  continue
+              except Exception as e:
+                  await ctx.send(f"Failed to remove {role.name} from {member.display_name}: {e}")
+                  continue
+
+      await ctx.send(f"{role.name} role has been removed from {member_count} members.")
+
+
+
+  @commands.command(help="Change the hierarchy of roles", aliases=['mvrl'])
+  @commands.has_permissions(manage_roles=True)
+  async def moverole(self, ctx, role: discord.Role, pos: int):
+      if role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
+          await ctx.send("You cannot move a role higher or equal to your top role.")
+          return
+
       try:
-        await member.remove_roles(role)
-      except:
-        await ctx.send(f"Error: Can not remove {role.name} from {member.name}!\n"
-        f"Potential fix: Try moving my role above {role.name} in the role order.\n\n")
-      count = count + 1
-      await msg.edit(content = f"Removed {role.name} from {count} guild members...")
-    await msg.edit(content = f"DONE: Sucessfully removed {role.name} from {count} guild members!")
+          await role.edit(position=pos)
+          await ctx.send(f"Role {role.name} moved to position {pos}.")
+      except discord.Forbidden:
+          await ctx.send("I do not have permission to move this role.")
+      except Exception as e:
+          await ctx.send(f"An error occurred while moving the role: {e}")
 
+  
+  @commands.command(help="Count the number of messages in a channel")
+  async def message_count(self, ctx, channel: discord.TextChannel = None):
+      channel = channel or ctx.channel
+      async with ctx.typing():
+          count = 0
+          async for _ in channel.history(limit=None):
+              count += 1
+          await ctx.send(f"There are {count} messages in {channel.mention}.")
 
-  #move roles around in positon
-  @commands.command(help = "Change the hierarchy of roles",aliases = ['mvrl'])
-  async def moverole(self,ctx, role: discord.Role, pos: int):
-    all_roles = await ctx.guild.fetch_roles()
-    num_roles = len(all_roles)
-    print(f'The server has {num_roles} roles.')
-    try:
-        await role.edit(position=pos)
-        await ctx.send("Role moved.")
-    except discord.Forbidden:
-        await ctx.send("You do not have permission to do that")
-    except discord.HTTPException:
-        await ctx.send("Failed to move role")
-    except discord.InvalidArgument:
-        await ctx.send("Invalid argument")
-  @commands.command(help = "count the number of messages in a channel")
-  async def message_count(self,ctx, channel: discord.TextChannel=None):
-    channel = channel or ctx.channel
-    count = 0
-    async for _ in channel.history(limit=None):
-        count += 1
-    await ctx.send("There are {} messages in {}".format(count, channel.mention))
 
   @commands.command(help = "display the status of the bot")
   async def status(self,ctx):
@@ -332,6 +341,7 @@ class Owner(commands.Cog):
 
   #search through databases of the bot
   @commands.command(help = 'database commands,  used to view the Bot databases',hidden = True)
+  @commands.is_owner()
   async def database(self,ctx,arg):
     if ctx.author.id == 239605426033786881:
       if arg.lower() == "trivia":
@@ -352,6 +362,7 @@ class Owner(commands.Cog):
 
   #manage profanity text file
   @commands.command(help = "Manage the words the bot's filter\n parameter = add/remove",hidden = True)
+  @commands.is_owner()
   async def filter(self,ctx, parameter,*, change):
    if ctx.author.id ==  239605426033786881:
     with open("storage/words.txt", "r") as f:
@@ -388,6 +399,7 @@ class Owner(commands.Cog):
 
   #command to add a server manually to the json file if the bot was offline when added to server
   @commands.command(help = "add a server prefix to json file if offline when joined",hidden = True)
+  @commands.is_owner()
   async def addserver(self,ctx,id):
     if ctx.author.id ==  239605426033786881:
       with open("storage/prefixes.json", "r") as f:
@@ -402,6 +414,7 @@ class Owner(commands.Cog):
 
   #command to manually remove server from prefix json file if bot was offline when added to server
   @commands.command(help = "add a server prefix to json file if offline when joined",hidden = True)
+  @commands.is_owner()
   async def removeserver(self,ctx,id):
     if ctx.author.id ==  239605426033786881:
       with open("storage/prefixes.json", "r") as f:
@@ -416,6 +429,7 @@ class Owner(commands.Cog):
 
   
   @commands.command(help = "use clarence to send a dm", hidden = True)
+  @commands.is_owner()
   async def direct(self,ctx,member: discord.Member,*,message = None):
     if ctx.author.id ==  239605426033786881:
       if message == None:
@@ -425,26 +439,6 @@ class Owner(commands.Cog):
         await member.send(message)
     else:
       await ctx.send("You do not have permission to use this command")
-
-  #Removes the sent role from the user if they have NOT sent a message in the sent channel
-  @commands.command(help = "count the number of messages in a channel", hidden = True)
-  async def whoops(self,ctx, channel: discord.TextChannel=None,*, role : discord.Role):
-    if ctx.author.id ==  239605426033786881:
-      channel = channel or ctx.channel
-      count = 0
-      wrote = False
-      for member in ctx.guild.members:
-          print("here")
-          wrote = False
-          print(member.name)
-          async for message in channel.history(limit=None):
-            if member.id == message.author.id:
-              wrote = True
-              print(f"{member.name} wrote an intro")
-              break
-          if wrote == False:
-            await member.remove_roles(role)
-            print(f"{member.name} did not write an intro, role removed")
         
 
 async def setup(client):
