@@ -185,7 +185,7 @@ async def main():
         await client.load_extension('cogs.poker')
         await client.load_extension('cogs.math')
         await client.load_extension('cogs.translate')
-        await client.start(os.getenv('token'))
+        await client.start(os.getenv('token2'))
 
 
 asyncio.run(main())
