@@ -269,7 +269,7 @@ class Poker(commands.Cog):
                     await ctx.send(f"{p.mention} {label_for_tools}".strip(), view=PrivateTools(self, p.id))
 
 
-    @commands.command(name="give_money", help="Admin: give money to a user. Usage: give_money @user 250")
+    @commands.command(name="give_money", help="Admin: give money to a user. Usage: give_money @user 250", hidden = True)
     @commands.has_permissions(administrator=True)
     async def give_money(self, ctx, target: discord.Member = None, amount: int | None = None):
         # Guild-only

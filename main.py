@@ -32,11 +32,12 @@ if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not found in keys.env")
 
 
+
+
 #status1 = ["Hey!", "We back!"]
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all()) #the whole bot itself
 client.help_command = NewHelpName()
 client.synced = True
-status_iter = cycle(["We are so back"])
 # for translating messages
 
 trie = Trie() # for the built in profanity filter
@@ -67,7 +68,6 @@ async def on_command_error(ctx, error):  #detects if a command is valid
 async def on_ready():
     print('=---------------------------------------=')
     print("Rate Limited = " + str(client.is_ws_ratelimited()))
-    change_status.start()
     built = False
     #built = buildTrie()
     if built:
@@ -77,13 +77,6 @@ async def on_ready():
 
     print('{0.user} is online'.format(client))
     print('=---------------------------------------=')
-    
-
-
-@tasks.loop(seconds=10)
-async def change_status():
-    await client.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.listening, name=next(status_iter)))
       
 
 @client.event
@@ -191,6 +184,7 @@ async def main():
         await client.load_extension('cogs.math')
         await client.load_extension('cogs.translate')
         await client.load_extension('cogs.trivia')
+        await client.load_extension('status')
         await client.start(os.getenv('DISCORD_TOKEN'))
 
 

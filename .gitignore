@@ -48,6 +48,8 @@ coverage.xml
 *.mo
 *.pot
 
+!storage\lyrics.json
+*.json
 # Django stuff:
 *.log
 

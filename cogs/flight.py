@@ -391,7 +391,7 @@ class Flight(commands.Cog):
         await ctx.send(embed=emb)
 
     @commands.command(help="Diagnostics for OpenSky connectivity and auth mode. Example: osdiag")
-    async def osdiag(self, ctx):
+    async def osdiag(self, ctx, hidden = True):
         mode = "auth" if self.auth.has_creds else "anon"
         async with aiohttp.ClientSession() as s:
             try:

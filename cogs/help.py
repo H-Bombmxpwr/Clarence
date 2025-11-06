@@ -40,7 +40,7 @@ class Help(commands.Cog):
       embedVar1.set_footer(icon_url = os.getenv('icon'), text = 'Working as of ' + str(date.today()))
       await ctx.send(embed=embedVar1,view=view)
 
-    @commands.command(help = "Open sourced",aliases = ["sc"])
+    @commands.command(help = "Open sourced",aliases = ["sc"], hidden = True)
     async def source(self,ctx):
       button = Button(label = "GitHub", style = discord.ButtonStyle.primary, url = "https://github.com/H-Bombmxpwr/Clarence")
       view = View()
@@ -53,19 +53,6 @@ class Help(commands.Cog):
       view = View()
       view.add_item(button)
       await ctx.send("Woah you want to invite me! Thats awesome, just click the button below", view=view)
-
-    @commands.command(help = 'List all commands of the bot in one page',aliases = ['fl'])
-    async def fulllist(self,ctx):
-
-      commands_desc = ''
-      for command in self.bot.walk_commands():
-        if not command.hidden:
-          commands_desc += f'`{command.name}: `  {command.help}\n'
-
-
-      embedVar = discord.Embed(title = "Complete list of commands my commands", description = commands_desc, color = 0x280137).set_footer(icon_url = os.getenv('icon'), text = "Clarence#8444")
-      await ctx.send(embed=embedVar)
-
 
 class NewHelpName(commands.MinimalHelpCommand): #creating a new help command
     async def send_pages(self):
