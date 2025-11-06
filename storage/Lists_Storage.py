@@ -6,13 +6,6 @@ from better_profanity import profanity
 days = ["Thursday","thursday","thurday","4th day of the week"]
 
 
-#getting the lyrics to be the bots status
-song = "sometimes gerry cinnamon"
-profanity.load_censor_words()
-load = requests.get(f"https://some-random-api.com/others/lyrics?title={song}").json()
-lyrics = profanity.censor(load['lyrics'])
-#lyrics = pf.censor(lyrics)
-status1 = lyrics.split("\n")
 
 
 thedan = ["steely dan","Steely dan","the dan","donald and walter","don and walt","walt and don","walter and donald"]

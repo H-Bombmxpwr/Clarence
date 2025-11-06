@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import os
 from functionality.days import check_day
-from storage.Lists_Storage import thedan, status1, flag_emoji_dict, table, load
+from storage.Lists_Storage import thedan, flag_emoji_dict, table
 from cogs.help import NewHelpName
 from functionality.functions import check_carrot, get_insult
 import json
@@ -25,11 +25,18 @@ def get_prefix(client, message):  #grab server prefix
     return prefixes[str(message.guild.id)]
 
 
+load_dotenv('keys.env')                 # <-- UNCOMMENT / ADD
+
+TOKEN = os.getenv('DISCORD_TOKEN')      # match the name in keys.env
+if not TOKEN:
+    raise RuntimeError("DISCORD_TOKEN not found in keys.env")
+
+
 #status1 = ["Hey!", "We back!"]
 client = commands.Bot(command_prefix=get_prefix, intents=discord.Intents.all()) #the whole bot itself
 client.help_command = NewHelpName()
 client.synced = True
-status_i = cycle(status1) # for the song status 
+status_iter = cycle(["We are so back"])
 # for translating messages
 
 trie = Trie() # for the built in profanity filter
@@ -51,7 +58,7 @@ async def on_command_error(ctx, error):  #detects if a command is valid
         em = discord.Embed(
             title=f"Error",
             description=f"Command \'" + ctx.message.content +
-            "   \' not found. \nUse `list: ` or `help: ` for a list of commands",
+            "   \' not found. \nUse `help: ` for a list of commands",
             color=0xff0000)
         await ctx.send(embed=em)
 
@@ -67,7 +74,6 @@ async def on_ready():
         print("Trie is built. Profanity filter is on.\n")
     else:
         print("Trie was not built, profanity filter is off\n")
-    print(f'Status song: {load["title"]} by  {load["author"]}')
 
     print('{0.user} is online'.format(client))
     print('=---------------------------------------=')
@@ -77,7 +83,7 @@ async def on_ready():
 @tasks.loop(seconds=10)
 async def change_status():
     await client.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.listening, name=next(status_i)))
+        type=discord.ActivityType.listening, name=next(status_iter)))
       
 
 @client.event
@@ -176,7 +182,6 @@ async def on_message(message):
 
 async def main():
     async with client:
-        await client.load_extension('cogs.music')
         await client.load_extension('cogs.services')
         await client.load_extension('cogs.mod')
         await client.load_extension('cogs.games')
@@ -185,7 +190,8 @@ async def main():
         await client.load_extension('cogs.poker')
         await client.load_extension('cogs.math')
         await client.load_extension('cogs.translate')
-        await client.start(os.getenv('token'))
+        await client.load_extension('cogs.trivia')
+        await client.start(os.getenv('DISCORD_TOKEN'))
 
 
 asyncio.run(main())

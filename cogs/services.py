@@ -111,44 +111,7 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
   """
   def __init__(self,client):
       self.client = client
-
-
-  #interactive trivia
-  @commands.command(help = "Interactive trivia",aliases = ["tr"])
-  async def trivia(self,ctx):
-    info = functionality.functions.get_question2()
-    answers = info.getAnswerList()
-
-    embedVar = discord.Embed(title = "Random Triva Question" , description = " Category: " + info.category, color = 0x8b0000 ).set_footer(text= str(ctx.author.name) + ', Send the correct answer below' ,icon_url = 'https://lakevieweast.com/wp-content/uploads/trivia-stock-scaled.jpg')
-    embedVar.add_field(name = info.question, value = "\na. " + answers[0] + "\nb. " + answers[1] + "\nc. " + answers[2] + "\nd. " + answers[3] + "\n", inline = False)
-    await ctx.send(embed = embedVar)
-
-    local = answers.index(info.correctAnswer)
-    if local == 0:
-      ans = 'a'
-    elif local == 1:
-      ans = 'b'
-    elif local == 2:
-      ans  = 'c'
-    elif local == 3:
-      ans  = 'd'
-    try:
-      msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
-    
-    
-      if msg.content.lower() == ans or msg.content.lower() == info.correctAnswer.lower():
-        await msg.add_reaction('✅')
-        await ctx.send("Correct! It was " + answers[local])
-        temp = 1
-      else:
-        await msg.add_reaction('❌')
-        await ctx.send("Incorrect! The correct answer was " + answers[local])
-        temp = 0
-
-    except:
-        await ctx.send("Timeout Error: User took to long to respond. Bot is back to normal operations")
   
-
 
   #ai generation
   @commands.command(help = "ai image generation")
@@ -226,52 +189,153 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
     await ctx.send("Color function in the works, check back later")
     
   
-  # wolfram query
   @commands.command(help='Ask a question to a computational intelligence', aliases=['q'])
-  async def query(self, ctx, *, parameter=None):
-    if parameter is None:
-        await ctx.send("Please send something to query as an argument to the command.")
-        return
+  async def query(self, ctx, *, parameter: str | None = None):
 
-    try:
-        async with ctx.typing():
-            app_id = os.getenv('APP_ID')
-            if not app_id:
-                raise ValueError("Wolfram Alpha APP_ID not set in environment variables.")
+      if not parameter:
+          await ctx.send("Usage: `query <your question>`")
+          return
 
-            client = wolframalpha.Client(app_id)
-            res = client.query(parameter)
+      app_id = os.getenv("APP_ID")
+      if not app_id:
+          await ctx.send("Wolfram Alpha APP_ID not set.")
+          return
 
-            response_messages = [""]
-            for pod in res['pod']:
-                if isinstance(pod, dict) and 'subpod' in pod:
-                    subpods = pod['subpod']
-                    # Check if 'subpod' is a list and iterate, or work directly with it if it's a dict
-                    if isinstance(subpods, list):
-                        for subpod in subpods:
-                            await self.add_response_section(ctx,response_messages, subpod, pod['@title'])
-                    else:
-                        await self.add_response_section(ctx,response_messages, subpods, pod['@title'])
-            
-            # Send all messages
-            for message in response_messages:
-                if message:  # Check if message is not empty
-                    await ctx.send(message)
+      async with ctx.typing():
+          client = wolframalpha.Client(app_id)
+          res = client.query(parameter)
 
-    except Exception as e:
-        await ctx.send(f"Error: {str(e)}")
+          # Normalize pods -> list
+          pods = res.get('pod', [])
+          if isinstance(pods, dict):
+              pods = [pods]
 
-  async def add_response_section(self, ctx, response_messages, subpod, title):
-    """ Helper function to add a section of the response to the list of messages. """
-    response_section = ""
-    if 'plaintext' in subpod and subpod['plaintext']:
-        # Add the pod title and the plaintext content
-        response_section += f"**{title}**\n{subpod['plaintext']}\n"
-        await ctx.send(response_section)
-    if 'img' in subpod:
-        # Add a hyperlink to the image
-        image_url = subpod['img']['@src']
-        await ctx.send(image_url)
+          # If nothing useful came back
+          if not pods:
+              await ctx.send("No results.")
+              return
+
+          # Stable-sort: primary pod first (if any), otherwise keep API order
+          def _is_primary(p): 
+              return 0 if str(p.get('@primary', 'false')).lower() == 'true' else 1
+          pods = sorted(pods, key=_is_primary)
+
+          # Embed helpers (inner-only)
+          def _as_list(x):
+              if x is None: return []
+              return x if isinstance(x, list) else [x]
+
+          def _chunk_text(txt, limit=1000):
+              # Discord field value max ~1024; keep some headroom
+              txt = txt.strip()
+              if not txt:
+                  return []
+              if len(txt) <= limit:
+                  return [txt]
+              chunks = []
+              for para in txt.split("\n\n"):
+                  if len(para) <= limit:
+                      chunks.append(para)
+                  else:
+                      # Hard-wrap very long paragraphs
+                      chunks.extend(textwrap.wrap(para, width=limit, replace_whitespace=False))
+              # Merge tiny trailing pieces
+              merged = []
+              buf = ""
+              for c in chunks:
+                  if len(buf) + 1 + len(c) <= limit:
+                      buf = f"{buf}\n{c}".strip()
+                  else:
+                      if buf: merged.append(buf)
+                      buf = c
+              if buf: merged.append(buf)
+              return merged
+
+          def _build_embed(title, subtitle=None, color=0x2D9BF0):
+              desc = subtitle or ""
+              return discord.Embed(title=title, description=desc, color=color)
+
+          # Build & send embeds (cap to avoid spam)
+          sent = 0
+          MAX_EMBEDS = 10
+
+          for pod in pods:
+              if sent >= MAX_EMBEDS:
+                  await ctx.send("…additional results omitted.")
+                  break
+
+              title = pod.get('@title', 'Result')
+              subpods = _as_list(pod.get('subpod'))
+
+              # If there are many subpods, we’ll spread them across multiple embeds if needed
+              embed = _build_embed(title=title)
+
+              image_set = False
+              fields_used = 0
+
+              for idx, sp in enumerate(subpods, start=1):
+                  # Pull text and image
+                  txt = (sp.get('plaintext') or "").strip()
+                  img = sp.get('img') or {}
+                  img_url = img.get('@src')
+
+                  # Add text in chunks to avoid field size limits
+                  if txt:
+                      chunks = _chunk_text(txt)
+                      for j, ch in enumerate(chunks, start=1):
+                          name = f"Answer" if fields_used == 0 else f"More ({fields_used+1})"
+                          # Keep field name short; Discord field name limit is 256 chars
+                          if len(name) > 240:
+                              name = name[:240] + "…"
+                          embed.add_field(name=name, value=ch, inline=False)
+                          fields_used += 1
+
+                          # If we’re out of field slots, flush and start a fresh embed
+                          if fields_used >= 20:  # keep a little safety margin (Discord max is 25)
+                              await ctx.send(embed=embed)
+                              sent += 1
+                              if sent >= MAX_EMBEDS:
+                                  break
+                              embed = _build_embed(title=title + " (cont.)")
+                              image_set = False
+                              fields_used = 0
+                      if sent >= MAX_EMBEDS:
+                          break
+
+                  # Prefer setting one main image; link extras
+                  if img_url:
+                      if not image_set:
+                          embed.set_image(url=img_url)
+                          image_set = True
+                      else:
+                          # Add a link for additional images
+                          embed.add_field(name="Image", value=f"[Open image]({img_url})", inline=False)
+                          fields_used += 1
+                          if fields_used >= 20:
+                              await ctx.send(embed=embed)
+                              sent += 1
+                              if sent >= MAX_EMBEDS:
+                                  break
+                              embed = _build_embed(title=title + " (cont.)")
+                              image_set = False
+                              fields_used = 0
+                  if sent >= MAX_EMBEDS:
+                      break
+
+              # If this pod had no plaintext or images, skip empty embed
+              if len(embed.fields) == 0 and not embed.image.url:
+                  continue
+
+              await ctx.send(embed=embed)
+              sent += 1
+
+          # Add a compact “Open Full Results” link if available
+          try:
+              if 'datatypes' in res or 'numpods' in res:
+                  # Res doesn't provide a canonical "share" URL for arbitrary queries, but echo the query
+                  await ctx.send(f"Full computation may include interactive pods not shown here. Query: `{parameter}`")
+          except Exception:
+              pass
 
 
 
@@ -394,18 +458,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
         embed = discord.Embed(title="Error " ,description = "A valid animal was not given, see \'$animal\'", colour = 0x088f8f)
         await ctx.send(embed=embed)
 
-
-
-
-  #pull a random quote from a notable figure
-  @commands.command(help = "pull an inspirational quote")
-  async def quote(self, ctx):
-      quote = requests.get("https://api.quotable.io/random").json()
-      embedVar = discord.Embed(title = "As " +  str(quote["author"]) +  " once said:", description = quote["content"], color = 0x66ceff).set_footer(icon_url = "https://cdn.discordapp.com/avatars/1078785366468853961/bdd37313af29fe332ba3a139689c675c.png", text = "Inpsired by Mortimer#5601")
-      await ctx.send(embed=embedVar)
-      
-
-
   
   #sends most common gif based on query
   @commands.command(help="Search for GIFs (filtered) on Tenor")
@@ -423,10 +475,6 @@ class Api(commands.Cog, description = 'Commands that call an outside api to retu
             await ctx.send("❌ Couldn't find any matching GIFs.")
 
 
-
-
-
-  
 
 async def setup(client):
     await client.add_cog(Misc(client))
