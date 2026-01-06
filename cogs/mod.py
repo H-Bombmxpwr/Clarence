@@ -1,24 +1,25 @@
+# cogs/mod.py
 import asyncio
 import json
-import logging
 import os
-from datetime import date, datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+import re
 
 import discord
 from discord.ext import commands
-from discord.utils import get
 
 # ----------------------------
-# Config / constants
+# Config / Storage
 # ----------------------------
 STORAGE_DIR = Path("storage")
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-CONFIG_FILE = STORAGE_DIR / "guild_config.json"  # per-guild settings incl. prefix & log channel
+CONFIG_FILE = STORAGE_DIR / "guild_config.json"
+WARNS_FILE = STORAGE_DIR / "warnings.json"
 
-# In-memory config cache (persisted to JSON)
 _guild_cfg = {}
+_warnings = {}
 
 
 def _load_cfg():
@@ -28,15 +29,23 @@ def _load_cfg():
             _guild_cfg = json.loads(CONFIG_FILE.read_text("utf-8"))
         except Exception:
             _guild_cfg = {}
-    else:
-        _guild_cfg = {}
 
 
 def _save_cfg():
-    try:
-        CONFIG_FILE.write_text(json.dumps(_guild_cfg, indent=2, ensure_ascii=False))
-    except Exception:
-        pass
+    CONFIG_FILE.write_text(json.dumps(_guild_cfg, indent=2, ensure_ascii=False))
+
+
+def _load_warns():
+    global _warnings
+    if WARNS_FILE.exists():
+        try:
+            _warnings = json.loads(WARNS_FILE.read_text("utf-8"))
+        except Exception:
+            _warnings = {}
+
+
+def _save_warns():
+    WARNS_FILE.write_text(json.dumps(_warnings, indent=2, ensure_ascii=False))
 
 
 def get_prefix_for(guild_id: int, default: str = "$") -> str:
@@ -48,6 +57,15 @@ def set_prefix_for(guild_id: int, prefix: str):
     g = _guild_cfg.setdefault(str(guild_id), {})
     g["prefix"] = prefix
     _save_cfg()
+    # Also update prefixes.json for compatibility
+    try:
+        with open("storage/prefixes.json", "r") as f:
+            prefixes = json.load(f)
+    except:
+        prefixes = {}
+    prefixes[str(guild_id)] = prefix
+    with open("storage/prefixes.json", "w") as f:
+        json.dump(prefixes, f, indent=4)
 
 
 def get_log_channel_id(guild_id: int) -> Optional[int]:
@@ -64,13 +82,12 @@ def set_log_channel_id(guild_id: int, channel_id: Optional[int]):
     _save_cfg()
 
 
-async def send_log(guild: discord.Guild, embed: discord.Embed, fallback_text: Optional[str] = None):
+async def send_log(guild: discord.Guild, embed: discord.Embed):
     cid = get_log_channel_id(guild.id)
-    if cid is None:
+    if not cid:
         return
     ch = guild.get_channel(cid)
     if ch is None:
-        # Try to fetch
         try:
             ch = await guild.fetch_channel(cid)
         except Exception:
@@ -78,31 +95,50 @@ async def send_log(guild: discord.Guild, embed: discord.Embed, fallback_text: Op
     try:
         await ch.send(embed=embed)
     except Exception:
-        if fallback_text:
-            try:
-                await ch.send(fallback_text)
-            except Exception:
-                pass
+        pass
 
 
-# Basic runtime logger
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+def add_warning(guild_id: int, user_id: int, moderator_id: int, reason: str) -> int:
+    _load_warns()
+    g = _warnings.setdefault(str(guild_id), {})
+    u = g.setdefault(str(user_id), [])
+    warn_num = len(u) + 1
+    u.append({
+        "id": warn_num,
+        "reason": reason,
+        "mod_id": moderator_id,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    _save_warns()
+    return warn_num
+
+
+def get_warnings(guild_id: int, user_id: int) -> list:
+    _load_warns()
+    g = _warnings.get(str(guild_id), {})
+    return g.get(str(user_id), [])
+
+
+def clear_warnings(guild_id: int, user_id: int) -> int:
+    _load_warns()
+    g = _warnings.get(str(guild_id), {})
+    count = len(g.get(str(user_id), []))
+    if str(user_id) in g:
+        del g[str(user_id)]
+        _save_warns()
+    return count
 
 
 class Moderation(commands.Cog):
-    """Moderation commands with robust permission checks and mod-logging."""
+    """Server Moderation Commands"""
 
     def __init__(self, client: commands.Bot):
         self.client = client
         _load_cfg()
+        _load_warns()
 
-    # ----------------------------
-    # Helpers
-    # ----------------------------
     @staticmethod
     def _can_act(acting: discord.Member, target: discord.Member) -> bool:
-        """Return True if acting member can act on target (role hierarchy check)."""
         if target == acting.guild.owner:
             return False
         if acting == target:
@@ -116,438 +152,255 @@ class Moderation(commands.Cog):
             return False
         return me.top_role > target.top_role
 
-    # ----------------------------
-    # Prefix & logging channel management
-    # ----------------------------
-    @commands.command(help="Change server command prefix (Admin only)")
+    @commands.command(help="Change server prefix. Usage: prefix !")
     @commands.has_permissions(administrator=True)
-    async def prefix(self, ctx: commands.Context, prefix: Optional[str] = None):
-        if not prefix:
-            cur = get_prefix_for(ctx.guild.id)
-            await ctx.send(f"Current prefix is `{cur}`. To change: `prefix !`.")
-            return
-        if len(prefix) > 5:
-            await ctx.send("Prefix too long (max 5 chars).")
-            return
-        set_prefix_for(ctx.guild.id, prefix)
-        await ctx.send(f"Prefix changed to `{prefix}`")
-        embed = discord.Embed(title="Prefix Changed", description=f"New prefix: `{prefix}`", color=0x2ECC71, timestamp=datetime.utcnow())
-        await send_log(ctx.guild, embed)
+    async def prefix(self, ctx: commands.Context, new_prefix: Optional[str] = None):
+        if ctx.guild is None:
+            return await ctx.send("Use in a server.")
+        if new_prefix is None:
+            current = get_prefix_for(ctx.guild.id)
+            return await ctx.send(f"Current prefix: `{current}`")
+        if len(new_prefix) > 5:
+            return await ctx.send("Prefix too long (max 5).")
+        set_prefix_for(ctx.guild.id, new_prefix)
+        embed = discord.Embed(title="Prefix Changed", description=f"New prefix: `{new_prefix}`", color=0x2ecc71)
+        await ctx.send(embed=embed)
 
-    @commands.command(help="Set the moderation log channel. Use without args to clear.")
+    @commands.command(help="Set mod log channel")
     @commands.has_permissions(administrator=True)
     async def setlog(self, ctx: commands.Context, channel: Optional[discord.TextChannel] = None):
+        if ctx.guild is None:
+            return await ctx.send("Use in a server.")
         if channel is None:
             set_log_channel_id(ctx.guild.id, None)
-            await ctx.send("Logging channel cleared.")
-            return
+            return await ctx.send("Logging disabled.")
         set_log_channel_id(ctx.guild.id, channel.id)
-        await ctx.send(f"Logging channel set to {channel.mention}")
-        embed = discord.Embed(title="Logging Channel Set", description=f"Channel: {channel.mention}", color=0x3498DB, timestamp=datetime.utcnow())
-        await send_log(ctx.guild, embed)
+        await ctx.send(f"Mod logs will be sent to {channel.mention}")
 
-    # ----------------------------
-    # Core moderation commands
-    # ----------------------------
-    @commands.command(help="Ban a user. Usage: ban @user [reason]")
+    @commands.command(help="Ban a user")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(self, ctx: commands.Context, member: discord.Member, *, reason: Optional[str] = None):
-        if member.id == self.client.owner_id:
-            await ctx.send("I cannot ban my creator.")
-            return
         if not self._can_act(ctx.author, member):
-            await ctx.send("You cannot ban someone with an equal or higher role.")
-            return
+            return await ctx.send("Cannot ban: role hierarchy.")
         if not self._bot_can_act(ctx.guild, member):
-            await ctx.send("I cannot ban that user due to role hierarchy.")
-            return
+            return await ctx.send("I cannot ban this user.")
+        reason = reason or "No reason"
         try:
-            await member.ban(reason=reason, delete_message_days=0)
-        except discord.Forbidden:
-            await ctx.send("I lack permission to ban this user.")
-            return
-        except Exception as e:
-            await ctx.send(f"Failed to ban: {type(e).__name__}")
-            return
-        embed = discord.Embed(title="User Banned", color=0xE74C3C, timestamp=datetime.utcnow())
+            await member.send(embed=discord.Embed(title=f"Banned from {ctx.guild.name}", description=f"Reason: {reason}", color=0xe74c3c))
+        except:
+            pass
+        await member.ban(reason=f"{ctx.author}: {reason}")
+        embed = discord.Embed(title="User Banned", color=0xe74c3c, timestamp=datetime.now(timezone.utc))
         embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        embed.add_field(name="Reason", value=reason or "No reason provided.", inline=False)
+        embed.add_field(name="Moderator", value=str(ctx.author), inline=True)
+        embed.add_field(name="Reason", value=reason, inline=False)
         await ctx.send(embed=embed)
         await send_log(ctx.guild, embed)
 
-    @commands.command(help="Unban a user. Usage: unban name#1234")
+    @commands.command(help="Unban a user by ID or name#1234")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def unban(self, ctx: commands.Context, *, member_identifier: str):
-        if "#" not in member_identifier:
-            await ctx.send("Provide the tag like `name#1234`.")
-            return
-        name, discriminator = member_identifier.rsplit("#", 1)
-        bans = await ctx.guild.bans()
-        for entry in bans:
-            user = entry.user
-            if (user.name, user.discriminator) == (name, discriminator):
-                try:
-                    await ctx.guild.unban(user)
-                except Exception as e:
-                    await ctx.send(f"Failed to unban: {type(e).__name__}")
-                    return
-                await ctx.send(f"Unbanned {user.mention}")
-                embed = discord.Embed(title="User Unbanned", color=0x2ECC71, timestamp=datetime.utcnow())
-                embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
-                embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-                await send_log(ctx.guild, embed)
-                return
-        await ctx.send(f"User {member_identifier} not found in ban list.")
+    async def unban(self, ctx: commands.Context, *, user_id: str):
+        try:
+            uid = int(user_id)
+            user = await self.client.fetch_user(uid)
+            await ctx.guild.unban(user)
+            await ctx.send(f"Unbanned {user}")
+        except:
+            await ctx.send("User not found or not banned.")
 
-    @commands.command(help="List banned users")
-    @commands.has_permissions(ban_members=True)
-    async def banlist(self, ctx: commands.Context):
-        banned = await ctx.guild.bans()
-        if not banned:
-            await ctx.send("No users are currently banned.")
-            return
-        # Chunk into pages by 25 entries
-        pages = [banned[i:i+25] for i in range(0, len(banned), 25)]
-        for idx, page in enumerate(pages, start=1):
-            desc = "\n".join(f"{e.user} ({e.user.id})" for e in page)
-            embed = discord.Embed(title=f"Banned Users — Page {idx}/{len(pages)}", description=desc, color=0x8E44AD)
-            await ctx.send(embed=embed)
-
-    @commands.command(help="Kick a user. Usage: kick @user [reason]")
+    @commands.command(help="Kick a user")
     @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, member: discord.Member, *, reason: Optional[str] = None):
-        if member.bot or member == ctx.guild.owner:
-            await ctx.send("I cannot kick the server owner or bots.")
-            return
         if not self._can_act(ctx.author, member):
-            await ctx.send("You cannot kick someone with an equal or higher role.")
-            return
-        if not self._bot_can_act(ctx.guild, member):
-            await ctx.send("I cannot kick that user due to role hierarchy.")
-            return
-        try:
-            await member.kick(reason=reason)
-        except discord.Forbidden:
-            await ctx.send("I lack permission to kick this user.")
-            return
-        except Exception as e:
-            await ctx.send(f"An error occurred: {type(e).__name__}")
-            return
-        await ctx.send(f"{member.mention} has been kicked.")
-        embed = discord.Embed(title="User Kicked", color=0xD35400, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        embed.add_field(name="Reason", value=reason or "No reason provided.", inline=False)
+            return await ctx.send("Cannot kick: role hierarchy.")
+        reason = reason or "No reason"
+        await member.kick(reason=f"{ctx.author}: {reason}")
+        embed = discord.Embed(title="User Kicked", color=0xf39c12, timestamp=datetime.now(timezone.utc))
+        embed.add_field(name="User", value=f"{member}", inline=True)
+        embed.add_field(name="Reason", value=reason, inline=False)
+        await ctx.send(embed=embed)
         await send_log(ctx.guild, embed)
 
-    # ----------------------------
-    # Roles & muting
-    # ----------------------------
-    @commands.command(help="Mute a user (create Muted role + enforce overwrites)")
-    @commands.has_permissions(manage_roles=True, manage_channels=True)
-    @commands.bot_has_permissions(manage_roles=True, manage_channels=True)
-    async def mute(self, ctx, member: discord.Member, *, reason: Optional[str] = None):
-        if member == ctx.guild.owner or member.bot:
-            await ctx.send("I cannot mute the server owner or bots.")
-            return
-        if not self._can_act(ctx.author, member) or not self._bot_can_act(ctx.guild, member):
-            await ctx.send("Cannot mute due to role hierarchy.")
-            return
-
-        async with ctx.typing():
-            muted_role = await self._ensure_muted_role_and_overwrites(ctx.guild)
-            if muted_role in member.roles:
-                await ctx.send(f"{member.mention} is already muted.")
-                return
-            await member.add_roles(muted_role, reason=reason)
-
-        await ctx.send(f"{member.mention} is now muted: can view only what they already could, but cannot send/speak anywhere.")
-
-
-
-    @commands.command(help="Unmute a user")
-    @commands.has_permissions(manage_roles=True)
-    @commands.bot_has_permissions(manage_roles=True)
-    async def unmute(self, ctx: commands.Context, member: discord.Member):
-        muted_role = get(ctx.guild.roles, name="Muted")
-        if not muted_role:
-            await ctx.send("The 'Muted' role does not exist.")
-            return
-        if muted_role not in member.roles:
-            await ctx.send(f"{member.mention} is not muted.")
-            return
-        try:
-            await member.remove_roles(muted_role)
-        except Exception as e:
-            await ctx.send(f"Failed to remove role: {type(e).__name__}")
-            return
-        await ctx.send(f"{member.mention} has been unmuted.")
-        embed = discord.Embed(title="User Unmuted", color=0x1ABC9C, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        await send_log(ctx.guild, embed)
-
-    @commands.command(help="Give Admin role (creates one if missing)", aliases=["gvad"])
-    @commands.has_permissions(administrator=True)
-    @commands.bot_has_permissions(manage_roles=True)
-    async def giveadmin(self, ctx: commands.Context, member: discord.Member):
-        if member.bot or member == ctx.guild.owner:
-            await ctx.send("I cannot give the Admin role to bots or the server owner.")
-            return
-        if not self._can_act(ctx.author, member) or not self._bot_can_act(ctx.guild, member):
-            await ctx.send("Cannot assign role due to hierarchy.")
-            return
-        admin_role = get(ctx.guild.roles, name="Admin")
-        if not admin_role:
-            try:
-                admin_role = await ctx.guild.create_role(
-                    name="Admin",
-                    permissions=discord.Permissions(administrator=True),
-                    colour=discord.Colour(0x280137),
-                    hoist=True,
-                )
-            except Exception as e:
-                await ctx.send(f"Failed to create Admin role: {type(e).__name__}")
-                return
-        if admin_role in member.roles:
-            await ctx.send(f"{member.mention} already has the Admin role.")
-            return
-        try:
-            await member.add_roles(admin_role)
-        except Exception as e:
-            await ctx.send(f"Failed to add Admin role: {type(e).__name__}")
-            return
-        await ctx.send(f"{member.mention} was given the Admin role.")
-        embed = discord.Embed(title="Admin Role Granted", color=0x9B59B6, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        await send_log(ctx.guild, embed)
-
-
-
-    # inside class Moderation(commands.Cog):
-
-    async def _ensure_muted_role_and_overwrites(self, guild: discord.Guild) -> discord.Role:
-        """
-        Create/get 'Muted' and apply channel overwrites that DO NOT grant visibility.
-        We only DENY talk perms (send/speak/etc). Visibility (view_channel/connect) is left as None.
-        Effect: user stays able to see only what they already could, but cannot send/speak anywhere.
-        """
-        muted = discord.utils.get(guild.roles, name="Muted")
-        if muted is None:
-            muted = await guild.create_role(name="Muted", colour=discord.Colour.dark_grey())
-
-        # Iterate all channels and write DENY overwrites for the Muted role.
-        for ch in guild.channels:
-            try:
-                ow = ch.overwrites_for(muted)
-
-                if isinstance(ch, (discord.TextChannel, discord.ForumChannel)):
-                    # keep ow.view_channel as-is (None). Only deny “talking”.
-                    ow.send_messages = False
-                    ow.add_reactions = False
-                    ow.send_messages_in_threads = False
-                    ow.create_public_threads = False
-                    ow.create_private_threads = False
-                    ow.attach_files = False
-                    ow.embed_links = False
-                    await ch.set_permissions(muted, overwrite=ow)
-
-                elif isinstance(ch, discord.Thread):
-                    # threads need explicit denies too; do not modify visibility
-                    ow.send_messages = False
-                    ow.add_reactions = False
-                    await ch.set_permissions(muted, overwrite=ow)
-
-                elif isinstance(ch, discord.VoiceChannel):
-                    # do NOT set connect/view_channel; only deny speaking
-                    ow.speak = False
-                    ow.stream = False
-                    ow.use_voice_activation = False
-                    await ch.set_permissions(muted, overwrite=ow)
-
-                elif isinstance(ch, discord.StageChannel):
-                    # do NOT set connect/view_channel; only deny speaking/request
-                    ow.speak = False
-                    ow.request_to_speak = False
-                    ow.stream = False
-                    ow.use_voice_activation = False
-                    await ch.set_permissions(muted, overwrite=ow)
-
-                # Categories: skip changing visibility. Generally no need to set denies here;
-                # child channel overwrites are sufficient. If you want to be thorough, you could
-                # mirror the same denies on categories, but it’s optional and can interact with inheritance.
-
-            except Exception:
-                continue
-
-        return muted
-
-
-    @commands.command(help="Remove Admin role", aliases=["rmad"])
-    @commands.has_permissions(administrator=True)
-    @commands.bot_has_permissions(manage_roles=True)
-    async def removeadmin(self, ctx: commands.Context, member: discord.Member):
-        admin_role = get(ctx.guild.roles, name="Admin")
-        if not admin_role:
-            await ctx.send("The 'Admin' role does not exist.")
-            return
-        if admin_role not in member.roles:
-            await ctx.send(f"{member.mention} does not have the Admin role.")
-            return
-        if not self._can_act(ctx.author, member) or not self._bot_can_act(ctx.guild, member):
-            await ctx.send("Cannot remove role due to hierarchy.")
-            return
-        try:
-            await member.remove_roles(admin_role)
-        except Exception as e:
-            await ctx.send(f"Failed to remove Admin role: {type(e).__name__}")
-            return
-        await ctx.send(f"{member.mention}'s Admin role has been removed.")
-        embed = discord.Embed(title="Admin Role Removed", color=0xC0392B, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{member} ({member.id})", inline=False)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        await send_log(ctx.guild, embed)
-
-    # ----------------------------
-    # Utilities
-    # ----------------------------
-    @commands.command(help="List roles in the server")
-    async def roles(self, ctx: commands.Context):
-        roles = "\n".join(r.mention for r in ctx.guild.roles[::-1])  # top first
-        embed = discord.Embed(title="Active Roles", description=roles, color=ctx.author.color)
-        embed.add_field(name="Total Roles", value=len(ctx.guild.roles), inline=False)
+    @commands.command(help="Timeout a user. Usage: mute @user 1h reason")
+    @commands.has_permissions(moderate_members=True)
+    @commands.bot_has_permissions(moderate_members=True)
+    async def mute(self, ctx: commands.Context, member: discord.Member, duration: str = "1h", *, reason: Optional[str] = None):
+        if not self._can_act(ctx.author, member):
+            return await ctx.send("Cannot mute: role hierarchy.")
+        dur_map = {'m': 60, 'h': 3600, 'd': 86400}
+        match = re.match(r'^(\d+)([mhd])$', duration.lower())
+        if not match:
+            return await ctx.send("Invalid duration (e.g., 30m, 1h, 1d)")
+        secs = int(match.group(1)) * dur_map[match.group(2)]
+        if secs > 28 * 86400:
+            return await ctx.send("Max 28 days.")
+        until = datetime.now(timezone.utc) + timedelta(seconds=secs)
+        await member.timeout(until, reason=reason or "No reason")
+        embed = discord.Embed(title="User Muted", color=0x9b59b6)
+        embed.add_field(name="User", value=str(member), inline=True)
+        embed.add_field(name="Duration", value=duration, inline=True)
+        embed.add_field(name="Expires", value=f"<t:{int(until.timestamp())}:R>", inline=True)
         await ctx.send(embed=embed)
 
-    @commands.command(help="Ping (bot latency)")
-    async def ping(self, ctx: commands.Context):
-        await ctx.send(f" `{round(self.client.latency * 1000)}` ms")
+    @commands.command(help="Remove timeout")
+    @commands.has_permissions(moderate_members=True)
+    @commands.bot_has_permissions(moderate_members=True)
+    async def unmute(self, ctx: commands.Context, member: discord.Member):
+        if not member.timed_out_until:
+            return await ctx.send(f"{member.mention} is not muted.")
+        await member.timeout(None)
+        await ctx.send(f"{member.mention} has been unmuted.")
 
-    @commands.command(help="Delete the last N messages (1-250)", aliases=["cl"]) 
+    @commands.command(help="Warn a user")
+    @commands.has_permissions(moderate_members=True)
+    async def warn(self, ctx: commands.Context, member: discord.Member, *, reason: str):
+        warn_num = add_warning(ctx.guild.id, member.id, ctx.author.id, reason)
+        total = len(get_warnings(ctx.guild.id, member.id))
+        embed = discord.Embed(title="Warning Issued", color=0xf1c40f)
+        embed.add_field(name="User", value=str(member), inline=True)
+        embed.add_field(name="Warning #", value=str(warn_num), inline=True)
+        embed.add_field(name="Total", value=str(total), inline=True)
+        embed.add_field(name="Reason", value=reason, inline=False)
+        await ctx.send(embed=embed)
+
+    @commands.command(help="View warnings")
+    @commands.has_permissions(moderate_members=True)
+    async def warnings(self, ctx: commands.Context, member: discord.Member):
+        warns = get_warnings(ctx.guild.id, member.id)
+        if not warns:
+            return await ctx.send(f"{member} has no warnings.")
+        embed = discord.Embed(title=f"Warnings for {member}", color=0xf1c40f)
+        for w in warns[-10:]:
+            embed.add_field(name=f"#{w['id']}", value=w['reason'][:100], inline=False)
+        embed.set_footer(text=f"Total: {len(warns)}")
+        await ctx.send(embed=embed)
+
+    @commands.command(help="Clear all warnings")
+    @commands.has_permissions(administrator=True)
+    async def clearwarns(self, ctx: commands.Context, member: discord.Member):
+        count = clear_warnings(ctx.guild.id, member.id)
+        await ctx.send(f"Cleared {count} warning(s) from {member}")
+
+    @commands.command(help="Purge messages")
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
-    async def clean(self, ctx: commands.Context, limit: int):
-        if limit < 1 or limit > 250:
-            await ctx.send("Please specify a limit between 1 and 250.")
-            return
-        purged = await ctx.channel.purge(limit=limit + 1)
-        count = max(0, len(purged) - 1)
-        msg = await ctx.send(f"Cleared {count} messages.")
+    async def purge(self, ctx: commands.Context, amount: int, member: Optional[discord.Member] = None):
+        if amount < 1 or amount > 500:
+            return await ctx.send("1-500 messages.")
+        await ctx.message.delete()
+        check = (lambda m: m.author == member) if member else None
+        deleted = await ctx.channel.purge(limit=amount, check=check)
+        msg = await ctx.send(f"🧹 Deleted {len(deleted)} messages.")
+        await asyncio.sleep(3)
         try:
-            await msg.delete(delay=5)
-        except Exception:
+            await msg.delete()
+        except:
             pass
-        embed = discord.Embed(title="Messages Purged", color=0xF1C40F, timestamp=datetime.utcnow())
-        embed.add_field(name="Channel", value=ctx.channel.mention, inline=True)
-        embed.add_field(name="By", value=f"{ctx.author}", inline=True)
-        embed.add_field(name="Count", value=str(count), inline=True)
-        await send_log(ctx.guild, embed)
 
-    @commands.command(help="Move a role to a specific position", aliases=["mvrl"]) 
-    @commands.has_permissions(manage_roles=True)
-    @commands.bot_has_permissions(manage_roles=True)
-    async def moverole(self, ctx: commands.Context, role: discord.Role, pos: int):
-        if role.position >= ctx.author.top_role.position and ctx.author != ctx.guild.owner:
-            await ctx.send("You cannot move a role higher or equal to your top role.")
-            return
-        try:
-            await role.edit(position=pos)
-            await ctx.send(f"Role {role.name} moved to position {pos}.")
-        except discord.Forbidden:
-            await ctx.send("I do not have permission to move this role.")
-        except Exception as e:
-            await ctx.send(f"An error occurred while moving the role: {type(e).__name__}")
+    @commands.command(help="Alias for purge")
+    @commands.has_permissions(manage_messages=True)
+    async def clean(self, ctx: commands.Context, amount: int):
+        await self.purge(ctx, amount)
 
-    @commands.command(help="Count messages in a channel")
-    async def message_count(self, ctx: commands.Context, channel: Optional[discord.TextChannel] = None):
+    @commands.command(help="Set slowmode (seconds)")
+    @commands.has_permissions(manage_channels=True)
+    async def slowmode(self, ctx: commands.Context, seconds: int = 0):
+        if seconds < 0 or seconds > 21600:
+            return await ctx.send("0-21600 seconds.")
+        await ctx.channel.edit(slowmode_delay=seconds)
+        await ctx.send(f"Slowmode {'disabled' if seconds == 0 else f'set to {seconds}s'}")
+
+    @commands.command(help="Lock channel")
+    @commands.has_permissions(manage_channels=True)
+    async def lock(self, ctx: commands.Context, channel: Optional[discord.TextChannel] = None):
         channel = channel or ctx.channel
-        async with ctx.typing():
-            count = 0
-            async for _ in channel.history(limit=None):
-                count += 1
-        await ctx.send(f"There are {count} messages in {channel.mention}.")
+        ow = channel.overwrites_for(ctx.guild.default_role)
+        ow.send_messages = False
+        await channel.set_permissions(ctx.guild.default_role, overwrite=ow)
+        await ctx.send(f"{channel.mention} locked.")
 
-    # ----------------------------
-    # Passive logging events
-    # ----------------------------
-    @commands.Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(title="Member Banned (Audit)", color=0xE74C3C, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
-        await send_log(guild, embed)
+    @commands.command(help="Unlock channel")
+    @commands.has_permissions(manage_channels=True)
+    async def unlock(self, ctx: commands.Context, channel: Optional[discord.TextChannel] = None):
+        channel = channel or ctx.channel
+        ow = channel.overwrites_for(ctx.guild.default_role)
+        ow.send_messages = None
+        await channel.set_permissions(ctx.guild.default_role, overwrite=ow)
+        await ctx.send(f"{channel.mention} unlocked.")
 
-    @commands.Cog.listener()
-    async def on_member_unban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(title="Member Unbanned (Audit)", color=0x2ECC71, timestamp=datetime.utcnow())
-        embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
-        await send_log(guild, embed)
+    @commands.command(help="Add role to user")
+    @commands.has_permissions(manage_roles=True)
+    async def addrole(self, ctx: commands.Context, member: discord.Member, *, role: discord.Role):
+        if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+            return await ctx.send("Cannot assign higher role.")
+        await member.add_roles(role)
+        await ctx.send(f"Added {role.mention} to {member.mention}")
+
+    @commands.command(help="Remove role from user")
+    @commands.has_permissions(manage_roles=True)
+    async def removerole(self, ctx: commands.Context, member: discord.Member, *, role: discord.Role):
+        await member.remove_roles(role)
+        await ctx.send(f"Removed {role.mention} from {member.mention}")
+
+    @commands.command(help="List server roles")
+    async def roles(self, ctx: commands.Context):
+        roles = sorted(ctx.guild.roles[1:], key=lambda r: r.position, reverse=True)
+        desc = "\n".join([f"{r.mention} ({len(r.members)})" for r in roles[:25]])
+        embed = discord.Embed(title="Server Roles", description=desc, color=0x3498db)
+        await ctx.send(embed=embed)
+
+    @commands.command(help="Server info")
+    async def serverinfo(self, ctx: commands.Context):
+        g = ctx.guild
+        embed = discord.Embed(title=g.name, color=0x3498db)
+        if g.icon:
+            embed.set_thumbnail(url=g.icon.url)
+        embed.add_field(name="Owner", value=g.owner.mention if g.owner else "?", inline=True)
+        embed.add_field(name="Members", value=g.member_count, inline=True)
+        embed.add_field(name="Channels", value=len(g.channels), inline=True)
+        embed.add_field(name="Created", value=f"<t:{int(g.created_at.timestamp())}:R>", inline=True)
+        embed.add_field(name="Boost Lvl", value=g.premium_tier, inline=True)
+        await ctx.send(embed=embed)
+
+    @commands.command(help="View ban list")
+    @commands.has_permissions(ban_members=True)
+    async def banlist(self, ctx: commands.Context):
+        bans = [e async for e in ctx.guild.bans()]
+        if not bans:
+            return await ctx.send("No bans.")
+        desc = "\n".join([f"{e.user} ({e.user.id})" for e in bans[:20]])
+        embed = discord.Embed(title=f"Ban List ({len(bans)})", description=desc, color=0xe74c3c)
+        await ctx.send(embed=embed)
+
+    @commands.command(help="Bot latency")
+    async def ping(self, ctx: commands.Context):
+        await ctx.send(f"Pong! `{round(self.client.latency * 1000)}ms`")
 
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message):
-        if message.guild is None or message.author.bot:
+        if not message.guild or message.author.bot:
             return
-        embed = discord.Embed(title="Message Deleted", color=0xF39C12, timestamp=datetime.utcnow())
-        embed.add_field(name="Author", value=f"{message.author} ({message.author.id})", inline=False)
+        embed = discord.Embed(title="Message Deleted", color=0xf39c12, timestamp=datetime.now(timezone.utc))
+        embed.add_field(name="Author", value=str(message.author), inline=True)
         embed.add_field(name="Channel", value=message.channel.mention, inline=True)
-        content = message.content or "(no text)"
-        if len(content) > 1000:
-            content = content[:1000] + "…"
+        content = message.content[:500] if message.content else "(empty)"
         embed.add_field(name="Content", value=content, inline=False)
         await send_log(message.guild, embed)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
-        if before.guild is None or before.author.bot:
+        if not before.guild or before.author.bot or before.content == after.content:
             return
-        if before.content == after.content:
-            return
-        embed = discord.Embed(title="Message Edited", color=0x3498DB, timestamp=datetime.utcnow())
-        embed.add_field(name="Author", value=f"{before.author} ({before.author.id})", inline=False)
+        embed = discord.Embed(title="Message Edited", color=0x3498db, timestamp=datetime.now(timezone.utc))
+        embed.add_field(name="Author", value=str(before.author), inline=True)
         embed.add_field(name="Channel", value=before.channel.mention, inline=True)
-        b = before.content or "(no text)"
-        a = after.content or "(no text)"
-        if len(b) > 700:
-            b = b[:700] + "…"
-        if len(a) > 700:
-            a = a[:700] + "…"
-        embed.add_field(name="Before", value=b, inline=False)
-        embed.add_field(name="After", value=a, inline=False)
+        embed.add_field(name="Before", value=before.content[:400] or "(empty)", inline=False)
+        embed.add_field(name="After", value=after.content[:400] or "(empty)", inline=False)
         await send_log(before.guild, embed)
-
-
-class Owner(commands.Cog):
-    """Owner-only utilities."""
-
-    def __init__(self, client: commands.Bot):
-        self.client = client
-
-    @commands.command(help="Show active servers (owner only)", hidden=True)
-    @commands.is_owner()
-    async def servers(self, ctx: commands.Context):
-        activeservers = self.client.guilds
-        guild_list = "\n".join(f"{g.name} ({g.id})" for g in activeservers)
-        embed = discord.Embed(title="Active Servers", description=guild_list, color=0x6A0DAD)
-        embed.set_footer(text=f"As of {date.today()}")
-        await ctx.send(embed=embed)
-
-    @commands.command(help="Manually add a server prefix (owner only)", hidden=True)
-    @commands.is_owner()
-    async def addserver(self, ctx: commands.Context, id: int):
-        set_prefix_for(id, get_prefix_for(id))
-        await ctx.send("Server entry ensured in config.")
-
-    @commands.command(help="Manually remove a server from config (owner only)", hidden=True)
-    @commands.is_owner()
-    async def removeserver(self, ctx: commands.Context, id: int):
-        _guild_cfg.pop(str(id), None)
-        _save_cfg()
-        await ctx.send("Server removed from config.")
 
 
 async def setup(client: commands.Bot):
     await client.add_cog(Moderation(client))
-    await client.add_cog(Owner(client))

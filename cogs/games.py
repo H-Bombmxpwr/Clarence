@@ -1,7 +1,8 @@
+# cogs/games.py
 import discord
 from discord.ext import commands
 from functionality.functions import fix_lines
-from functionality.structures import FizzBuzz,Card
+from functionality.structures import FizzBuzz, Card
 from datetime import date
 import requests
 from discord import NotFound
@@ -11,305 +12,348 @@ import random
 import json
 from PIL import Image
 from typing import Union
-from dotenv import load_dotenv
+from io import BytesIO
+import asyncio
+import aiohttp
+from discord.ui import View, Button
 
-load_dotenv(dotenv_path = 'keys.env')
+
+DECK_API_BASE = "https://www.deckofcardsapi.com/api/deck"  # API base :contentReference[oaicite:1]{index=1}
+
+class DeletePickupView(View):
+    def __init__(self, *, author_id: int, channel: discord.abc.Messageable, to_delete: list[discord.Message]):
+        super().__init__(timeout=300)  # 5 minutes
+        self.author_id = author_id
+        self.channel = channel
+        self.to_delete = to_delete
+
+        self.add_item(self.DeleteButton())
+
+    class DeleteButton(Button):
+        def __init__(self):
+            super().__init__(label="Delete pickup", style=discord.ButtonStyle.danger)
+
+        async def callback(self, interaction: discord.Interaction):
+            view: "DeletePickupView" = self.view  # type: ignore
+
+            # Only allow the user who invoked the command to delete
+            if interaction.user.id != view.author_id:
+                await interaction.response.send_message("Only the command invoker can delete these messages.", ephemeral=True)
+                return
+
+            # Acknowledge immediately to avoid interaction timeouts
+            await interaction.response.send_message("Deleting…", ephemeral=True)
+
+            # Try bulk delete first (fast, <=100 messages). Requires Manage Messages.
+            try:
+                # Bulk delete works only in text channels and for messages < 14 days old.
+                if isinstance(view.channel, (discord.TextChannel, discord.Thread)):
+                    await view.channel.delete_messages(view.to_delete)
+                else:
+                    # Fallback: delete individually for non-standard channels
+                    for m in view.to_delete:
+                        try:
+                            await m.delete()
+                        except (discord.Forbidden, discord.NotFound):
+                            pass
+            except (discord.Forbidden, discord.HTTPException):
+                # Fallback: attempt individual deletes (will at least delete bot messages)
+                for m in view.to_delete:
+                    try:
+                        await m.delete()
+                    except (discord.Forbidden, discord.NotFound):
+                        pass
+
+            # Disable the button after attempt
+            for item in view.children:
+                item.disabled = True
+            try:
+                await interaction.message.edit(content="Pickup cleanup attempted.", view=view)
+            except (discord.Forbidden, discord.NotFound):
+                pass
 
 
 class Fun(commands.Cog):
-  """ 
-  Games to play with the bot
-  """
-  def __init__(self,client):
-      self.client = client
-
-
-
-  @commands.command(help = "do you own an nft with Clarence?")
-  async def nft(self,ctx,*, addition = None):
-    with open("storage/nft.json", "r") as f:
-        nfts = json.load(f)
-
-    user = "<@" + str(ctx.author.id) + ">"
-    if addition != None:
-      nfts[str(ctx.author.id)] = addition
-  
-      with open("storage/nft.json","w") as f:
-        json.dump(nfts,f, indent = 4)
-      await ctx.send(f"Your `NEW` nft, {user}:")
-      await ctx.send(f"{nfts[str(ctx.author.id)]}")
-    else:
-      try:
-          instance = nfts[str(ctx.author.id)]
-          await ctx.send(f"Your nft, {user}:")
-          await ctx.send(f"{instance}")
-      except:
-        await ctx.send(f"You do not have an nft on file {user}, please send one using `$nft <your_nft>`")
+    """Fun Games and Entertainment"""
     
+    def __init__(self, client):
+        self.client = client
 
-  #fizzbuzz game
-  @commands.command(help = "play fizzbuzz",aliases = ['fizz','buzz'])
-  async def fizzbuzz(self,ctx, iterate = None):
-    if iterate == None:
-      check = 0
-      count = 1
-      await ctx.send("```Fizzbuzz activated! 1 player mode. Send one number at a time below\n\nPress 'q' at any point to leave. Use 'fizzbuzz r' for a list of rules```")
-      
-      while check == 0:
-        msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
-    
-        
-        if msg.content.lower() == 'q':
-          check = 1
-          functionality.functions.update_fizzbuzz(ctx,count)
-          await ctx.send("```FizzBuzz canceled by player```")
-          return
-
-        varint = int(count)
-        current = FizzBuzz(varint)
-        if msg.content.lower() == current.solve(varint).lower():
-          await msg.add_reaction('✅')
-          count = count + 1
-        else:
-          await msg.add_reaction('❌')
-          await ctx.send('```' + str(msg.content) + ' is incorrect, the correct answer was ' + current.solve(varint) + '```')
-          functionality.functions.update_fizzbuzz(ctx,count)
-          return
-
-    if iterate.startswith('r'):
-      await ctx.send('``` FizzBuzzz is a simple game\n If a number is divisible by 3, send fizz\n If a number is divisible by 5, send buzz\n If is it divisible by both, send fizzbuzz\n Else, send the original number\n\n i.e. 1,2,fizz,4,buzz,fizz....```')
-
-    if iterate.startswith('s'):
-      stats = functionality.functions.get_fizzbuzz_stats(ctx)
-      if stats[0] == 0:
-        ctx.send("You have not played fizzbuzz yet, use $fizzbuzz to play")
-      else:
-        embedVar = discord.Embed(title = 'Stats for @' + str(ctx.author.name), description = 'Tracked statistics for fizzbuzz',color=0x32CD32).set_footer(icon_url = ctx.author.avatar, text = "As of " + str(date.today()))
-        embedVar.add_field(name = "Highest number achieved", value = stats[0],inline = False)
-        await ctx.send(embed = embedVar)
-
-    if iterate.startswith('p'):
-      await ctx.send('```How many terms do you with to print?```')
-      msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
-
-      await ctx.send("```First " + str(msg.content) + ' terms of FizzBuzz```')
-      for i in range(1,int(msg.content) + 1):
-        await ctx.send(FizzBuzz(i).solve(i))
-
-   
-   
-   
-   
-  @commands.command(help="Gives you something to do if you're bored")
-  async def bored(self, ctx):
-        r = requests.get("https://www.boredapi.com/api/activity?participants=1&price=0")
-
-        if r.status_code != 200:
-            await ctx.send(
-                "❌ The Bored API has returned an error. Please try again later."
-            )
-            return
-
-        json = r.json()
-        await ctx.send(json["activity"])
-
-  #ratio a message
-  @commands.command(help = "Ratio a worthy foe")
-  async def ratio(self,ctx,msg_id = None):
-    if msg_id == None:
-      await ctx.send("To ratio a message, right click on the message and click `Copy ID`. Pass the id as an argument to this function. You need to be in developer mode to be able to see `Copy ID`")
-    else:
-      with suppress(AttributeError):
-        ratio = await ctx.send("Searching for the message...")
-        await ctx.trigger_typing()
-    
-      for channel in ctx.guild.channels:
+    @commands.command(help="View or set your NFT")
+    async def nft(self, ctx, *, addition=None):
         try:
-          msg = await ctx.fetch_message(msg_id)
-        except NotFound:
-          continue
+            with open("storage/nft.json", "r") as f:
+                nfts = json.load(f)
+        except:
+            nfts = {}
 
-      await ratio.edit("Message found, initiating ratio💪")
-
-
-      for i in range(1,10):
-        await msg.add_reaction(random.choice(emojis))
-
-
-  #counting game
-  @commands.command(help = "count to passed integer")
-  async def count(self,ctx,endpoint: int = None):
-    if endpoint == None:
-      await ctx.send("Please send an integer arguement to count to")
-      return
-    elif endpoint <=0:
-      await ctx.send("You can only count to positive integers")
-      return
-    else:
-      count = 1
-      funny = 0
-      await ctx.send(f"You are now counting to {endpoint}. HAHAHAHA, better start counting")
-      
-      while count - 1 != endpoint:
-        msg = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout = 60)
-    
-        
-        if msg.content.lower() == 'give up':
-          await msg.add_reaction('😆')
-          await ctx.send("You gave up, how pathetic")
-          return
-        
-        
-
-        
-        if msg.content.lower() == str(count):
-          await msg.add_reaction('✅')
-          count = count + 1
+        user = f"<@{ctx.author.id}>"
+        if addition is not None:
+            nfts[str(ctx.author.id)] = addition
+            with open("storage/nft.json", "w") as f:
+                json.dump(nfts, f, indent=4)
+            await ctx.send(f"Your **NEW** NFT, {user}:\n{nfts[str(ctx.author.id)]}")
         else:
-          await msg.add_reaction('❌')
-          funny = funny + 1
-          await ctx.send(str(msg.content) + ' is very wrong, you are on ' + str(count))
-          if funny == 5:
-            await ctx.send("You are bad at this, yikes")
-          if funny == 10:
-            await ctx.send("10 mess ups!! Embarrasing")
-          if funny == 15:
-            await ctx.send("This is just sad...")
-          if funny == 20:
-            await ctx.send("I can't take this anymore, I am ending this out of pity")
+            if str(ctx.author.id) in nfts:
+                await ctx.send(f"Your NFT, {user}:\n{nfts[str(ctx.author.id)]}")
+            else:
+                await ctx.send(f"You don't have an NFT. Set one with `nft <url or text>`")
+
+    @commands.command(help="Play FizzBuzz!", aliases=['fizz', 'buzz'])
+    async def fizzbuzz(self, ctx, mode=None):
+        if mode == 'r':
+            return await ctx.send("**FizzBuzz Rules:**\n• If divisible by 3: `Fizz`\n• If divisible by 5: `Buzz`\n• If divisible by both: `FizzBuzz`\n• Otherwise: the number")
+        
+        count = 1
+        await ctx.send("🎮 **FizzBuzz started!** Send your answers. Type `q` to quit.")
+
+        while True:
+            def check(m):
+                return m.author == ctx.author and m.channel == ctx.channel
+
+            try:
+                msg = await self.client.wait_for("message", check=check, timeout=60)
+            except:
+                return await ctx.send("⏰ Time's up!")
+
+            if msg.content.lower() == 'q':
+                return await ctx.send(f"Game over! You reached **{count - 1}**")
+
+            current = FizzBuzz(count)
+            if msg.content.lower() == current.solve(count).lower():
+                await msg.add_reaction('✅')
+                count += 1
+            else:
+                await msg.add_reaction('❌')
+                return await ctx.send(f"❌ Wrong! The answer was **{current.solve(count)}**. You reached **{count - 1}**")
+            
+    @commands.command(help="52 card pickup", hidden=True)
+    async def fiftytwo(self, ctx: commands.Context, member: discord.Member = None):
+        if member is None:
+            await ctx.send("Please @ a person to play the game as an argument to the function")
             return
-      
-      embed = discord.Embed(title = "CONGRATS YOU FINSIHED", description = "Lets play again sometime :)", color = 0xFFD700).set_image(url = 'https://img.freepik.com/free-vector/congrats-greeting-card_53876-82116.jpg?size=338&ext=jpg')
-      await ctx.send(embed=embed)
 
-  
-  @commands.command(help = "52 card pickup",hidden = True)
-  async def fiftytwo(self,ctx,member: discord.Member = None):
-    if member == None:
-      await ctx.send("Please @ a person to play the game as an arguement to the function")
-    
-    if member.id == 239605426033786881:
-      await ctx.send("Hunter would not like to play that game right now")
-    elif member.id == 877014219499925515:
-      await ctx.send("I am throwing the cards, not picking them up")
-    elif member.id == ctx.author.id:
-      await ctx.send("Who would want to play this game with themselves?")
-    else:
+        if member.id == 239605426033786881:
+            await ctx.send("Hunter would not like to play that game right now")
+            return
+        if member.id == 877014219499925515:
+            await ctx.send("I am throwing the cards, not picking them up")
+            return
+        if member.id == ctx.author.id:
+            await ctx.send("Who would want to play this game with themselves?")
+            return
 
-      colors = ['hearts', 'diamonds', 'spades', 'clubs']
-      deck_o = [Card(value, color) for value in range(1, 14) for color in colors]
-    
-      #random.shuffle(deck)
-      deck = []
-    
-      for i in range(0,52):
-        deck.append(str(deck_o[i].value) + " of " + str(deck_o[i].color))
-    
-      #find and replace number with word
+        # Create a new shuffled deck, then draw 52 cards in one request (more efficient)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{DECK_API_BASE}/new/shuffle/?deck_count=1") as r:
+                deck_data = await r.json()
+            deck_id = deck_data["deck_id"]
 
-      deck = [d.replace('11', 'Jack') for d in deck]
-      deck = [d.replace('12', 'Queen') for d in deck]
-      deck = [d.replace('13', 'King') for d in deck]
-      deck = [d.replace('1', 'Ace') for d in deck]
-      deck = [d.replace('Ace0', '10') for d in deck]
+            async with session.get(f"{DECK_API_BASE}/{deck_id}/draw/?count=52") as r:
+                draw_data = await r.json()
 
-      #shuffle da deck
-      random.shuffle(deck)
+        cards = draw_data.get("cards", [])
+        if len(cards) < 52:
+            await ctx.send("Deck API did not return 52 cards.")
+            return
 
-      id = '<@' + str(member.id) + '>'
-      for i in range(0,52):
-        await ctx.send(f"{id}, {deck[i]}")
+        # Track messages to delete: the original command message + the 52 card messages
+        messages_to_delete: list[discord.Message] = [ctx.message]
 
-  #send a random quote from 2070 paradigm shift
-  @commands.command(help = "2070 Paradigm Shift, send '$paradigm source' to get the source video")
-  async def paradigm(self,ctx,number: int = 1):
+        mention = member.mention
+
+        for c in cards:
+            # API fields include: value, suit, image (png), etc. :contentReference[oaicite:2]{index=2}
+            value = c.get("value", "CARD")
+            suit = c.get("suit", "SUIT")
+            img_url = c.get("image")
+
+            embed = discord.Embed(title=f"{value} of {suit}")
+            if img_url:
+                embed.set_image(url=img_url)
+
+            msg = await ctx.send(content=f"{mention}", embed=embed)
+            messages_to_delete.append(msg)
+
+            # Avoid hitting rate limits from 52 rapid sends
+            await asyncio.sleep(0.35)
+
+        # Button that deletes the 52 cards + the invoking message (53 total)
+        view = DeletePickupView(author_id=ctx.author.id, channel=ctx.channel, to_delete=messages_to_delete)
+        await ctx.send("Cleanup:", view=view)
+
+    @commands.command(help="Get something to do when bored")
+    async def bored(self, ctx):
+        try:
+            r = requests.get("https://www.boredapi.com/api/activity?participants=1&price=0", timeout=10)
+            if r.status_code == 200:
+                await ctx.send(f"**Idea:** {r.json()['activity']}")
+            else:
+                await ctx.send("❌ Couldn't fetch an activity. Try again!")
+        except:
+            await ctx.send("❌ API error. Try again!")
+
+    @commands.command(help="Ratio a message by adding reactions")
+    async def ratio(self, ctx, msg_id=None):
+        if msg_id is None:
+            return await ctx.send("Usage: `ratio <message_id>`\nRight-click a message → Copy ID")
+        
+        try:
+            msg = await ctx.fetch_message(int(msg_id))
+            for _ in range(min(10, len(emojis))):
+                await msg.add_reaction(random.choice(emojis))
+            await ctx.send("Ratio'd!")
+        except:
+            await ctx.send("❌ Message not found")
+
+    @commands.command(help="Count to a number!")
+    async def count(self, ctx, endpoint: int = None):
+        if not endpoint or endpoint <= 0:
+            return await ctx.send("Usage: `count <positive number>`")
+
+        count = 1
+        mistakes = 0
+        await ctx.send(f"🔢 Count to **{endpoint}**! Type `give up` to quit.")
+
+        while count <= endpoint:
+            def check(m):
+                return m.author == ctx.author and m.channel == ctx.channel
+
+            try:
+                msg = await self.client.wait_for("message", check=check, timeout=60)
+            except:
+                return await ctx.send("⏰ Time's up!")
+
+            if msg.content.lower() == 'give up':
+                return await ctx.send(f"😔 You gave up at **{count}**")
+
+            if msg.content == str(count):
+                await msg.add_reaction('✅')
+                count += 1
+            else:
+                await msg.add_reaction('❌')
+                mistakes += 1
+                await ctx.send(f"❌ Wrong! You're on **{count}**")
+                if mistakes >= 20:
+                    return await ctx.send("Too many mistakes. Game over!")
+
+        embed = discord.Embed(title="🎉 CONGRATS!", description=f"You counted to **{endpoint}**!", color=0xFFD700)
+        await ctx.send(embed=embed)
+
+    @commands.command(help="Get a random quote from 2070 Paradigm Shift")
+    async def paradigm(self, ctx, number: int = 1):
         if number > 30:
-          await ctx.send(f"{number} is a few too many lines, try again with a smaller number")
-          return
-        with open("storage/paradigm.txt", "r") as f:
-          lines = f.readlines()
-          f.close()
+            return await ctx.send("Max 30 lines!")
         
-        pruned_lines = fix_lines(lines)
-        quotes = list(pruned_lines)
-        for i in range(0,number):
-          quote = random.choice(quotes)
-          await ctx.send(f"{i+1}: {quote}")
+        try:
+            with open("storage/paradigm.txt", "r") as f:
+                lines = [l.strip() for l in f.readlines() if l.strip() and l.strip() != "\n"]
+            
+            for i in range(min(number, len(lines))):
+                await ctx.send(f"**{i+1}:** {random.choice(lines)}")
+        except:
+            await ctx.send("❌ Could not load paradigm file")
 
-  @commands.command(help = "When you need facepalm", aliases = ["palm","fp"])
-  async def facepalm(self, ctx):
-    await ctx.send(requests.get("https://some-random-api.com/animu/face-palm").json()["link"])
+    @commands.command(help="Get a facepalm GIF", aliases=["palm", "fp"])
+    async def facepalm(self, ctx):
+        try:
+            r = requests.get("https://some-random-api.com/animu/face-palm", timeout=10)
+            if r.status_code == 200:
+                await ctx.send(r.json().get("link", "No GIF found"))
+        except:
+            await ctx.send("❌ API error")
 
-
-  @commands.command(help = "tell the last person that sent a message to shut up")
-  async def shutup(self, ctx, member: discord.Member = None):
-    sender_id = ctx.author.id
-    if member == None:
-      messages = messages = [message async for message in ctx.guild.get_channel(ctx.channel.id).history(limit=50)]
-      for msg in messages:
-        if msg.author.id != sender_id and msg.author.id != 877014219499925515:
-          await ctx.send("Shutup <@" + str(msg.author.id) + ">")
-          break
-    else:
-      await ctx.send("Shutup <@" + str(member.id) + ">")
-
-
-  @commands.command(help = "emojify an image", aliases = ["em"])
-  async def emojify(self,ctx,url: Union[discord.Member, str], size: int = 14):
-
-    COLORS = {
-    (0, 0, 0): "⬛",
-    (0, 0, 255): "🟦",
-    (255, 0, 0): "🟥",
-    (255, 255, 0): "🟨",
-    #(190, 100, 80):  "🟫",
-    (255, 165, 0): "🟧",
-    #(160, 140, 210): "🟪",
-    (255, 255, 255): "⬜",
-    (0, 255, 0): "🟩",
-    }
-
-
-    def euclidean_distance(c1, c2):
-      r1, g1, b1 = c1
-      r2, g2, b2 = c2
-      d = ((r2 - r1) ** 2 + (g2 - g1) ** 2 + (b2 - b1) ** 2) ** 0.5
-  
-      return d
-
-
-    def find_closest_emoji(color):
-      c = sorted(list(COLORS), key=lambda k: euclidean_distance(color, k))
-      return COLORS[c[0]]
-
-
-    def emojify_image(img, size=14):
-      WIDTH, HEIGHT = (size, size)
-      small_img = img.resize((WIDTH, HEIGHT), Image.NEAREST)
-  
-      emoji = ""
-      small_img = small_img.load()
-      for y in range(HEIGHT):
-          for x in range(WIDTH):
-              emoji += find_closest_emoji(small_img[x, y])
-          emoji += "\n"
-      return emoji
-    
-    if not isinstance(url, str):
-        url = url.display_avatar.url
-
-    def get_emojified_image():
-        r = requests.get(url, stream=True)
-        image = Image.open(r.raw).convert("RGB")
-        res = emojify_image(image, size)
-
-        if size > 14:
-            res = f"```{res}```"
-        return res
-
-    result = await self.client.loop.run_in_executor(None, get_emojified_image)
-    await ctx.send(result)
-      
+    @commands.command(help="Tell someone to shut up")
+    async def shutup(self, ctx, member: discord.Member = None):
+        if member is None:
+            messages = [m async for m in ctx.channel.history(limit=50)]
+            for msg in messages:
+                if msg.author.id != ctx.author.id and msg.author.id != self.client.user.id:
+                    member = msg.author
+                    break
         
+        if member:
+            await ctx.send(f"Shut up {member.mention}!")
+        else:
+            await ctx.send("No one to shut up!")
+
+    @commands.command(help="Convert an image to emojis", aliases=["em"])
+    async def emojify(self, ctx, source: Union[discord.Member, str] = None, size: int = 14):
+        COLORS = {
+            (0, 0, 0): "⬛",
+            (0, 0, 255): "🟦",
+            (255, 0, 0): "🟥",
+            (255, 255, 0): "🟨",
+            (255, 165, 0): "🟧",
+            (255, 255, 255): "⬜",
+            (0, 255, 0): "🟩",
+        }
+
+        def euclidean_distance(c1, c2):
+            return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
+
+        def find_closest_emoji(color):
+            closest = min(COLORS.keys(), key=lambda c: euclidean_distance(color, c))
+            return COLORS[closest]
+
+        if source is None:
+            source = ctx.author
+
+        url = source.display_avatar.url if isinstance(source, discord.Member) else source
+
+        try:
+            r = requests.get(url, stream=True, timeout=10)
+            img = Image.open(BytesIO(r.content)).convert("RGB")
+            img = img.resize((size, size), Image.NEAREST)
+
+            result = ""
+            for y in range(size):
+                for x in range(size):
+                    result += find_closest_emoji(img.getpixel((x, y)))
+                result += "\n"
+
+            if size > 14:
+                result = f"```{result}```"
+
+            await ctx.send(result)
+        except Exception as e:
+            await ctx.send(f"❌ Error: {e}")
+
+    @commands.command(help="Roll a dice", aliases=["roll"])
+    async def dice(self, ctx, sides: int = 6):
+        result = random.randint(1, sides)
+        await ctx.send(f"You rolled a **{result}** (d{sides})")
+
+    @commands.command(help="Flip a coin")
+    async def coinflip(self, ctx):
+        result = random.choice(["Heads", "Tails"])
+        emoji = "🪙"
+        await ctx.send(f"{emoji} **{result}!**")
+
+    @commands.command(help="8ball - Ask a question!")
+    async def eightball(self, ctx, *, question: str = None):
+        if not question:
+            return await ctx.send("Usage: `8ball <question>`")
+        
+        responses = [
+            "It is certain.", "It is decidedly so.", "Without a doubt.",
+            "Yes – definitely.", "You may rely on it.", "As I see it, yes.",
+            "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.",
+            "Reply hazy, try again.", "Ask again later.", "Better not tell you now.",
+            "Cannot predict now.", "Concentrate and ask again.",
+            "Don't count on it.", "My reply is no.", "My sources say no.",
+            "Outlook not so good.", "Very doubtful."
+        ]
+        
+        embed = discord.Embed(title="🎱 Magic 8-Ball", color=0x000000)
+        embed.add_field(name="Question", value=question, inline=False)
+        embed.add_field(name="Answer", value=random.choice(responses), inline=False)
+        await ctx.send(embed=embed)
+
+
+
+
+
+
 async def setup(client):
     await client.add_cog(Fun(client))
