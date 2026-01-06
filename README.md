@@ -2,7 +2,7 @@
 This is a discord bot that does a whole assortment of different tasks. 
 
 
-It is still a work in progress but as of 2/7/2024 it interacts with over about 2 dozen apis, has a plethora moderation commands, has 
+It is still a work in progress but as of 2/7/2025 it interacts with over about 2 dozen apis, has a plethora moderation commands, has 
 an assortment of local commands, has some games to play within the chat, and can sometimes play music within a voice channel. 
 
 # Usage

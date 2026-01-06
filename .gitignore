@@ -48,7 +48,12 @@ coverage.xml
 *.mo
 *.pot
 
-
+storage/prefixes.json
+storage/swears.json
+storage/guild_config.json
+storage/nft.json
+storage/poker.json
+storage/trivia.json
 
 
 # Django stuff:
