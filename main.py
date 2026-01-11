@@ -78,7 +78,8 @@ async def on_command_error(ctx, error):
 async def on_ready():
     print('=---------------------------------------=')
     print(f"Rate Limited = {client.is_ws_ratelimited()}")
-    built = buildTrie()
+    built = False
+    # built = buildTrie()
     if built:
         print("Trie is built. Profanity filter is on.\n")
     else:
