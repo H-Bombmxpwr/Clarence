@@ -289,7 +289,7 @@ class Music(commands.Cog):
         else:
             await channel.connect()
         
-        await ctx.send(f"🔊 Joined **{channel.name}**")
+        await ctx.send(f"Joined **{channel.name}**")
 
     @commands.command(name="leave", aliases=["disconnect", "dc", "gtfo"])
     async def leave(self, ctx):
@@ -305,7 +305,7 @@ class Music(commands.Cog):
         self.current[guild_id] = None
         
         await ctx.voice_client.disconnect()
-        await ctx.send("👋 Disconnected!")
+        await ctx.send("Disconnected!")
 
     @commands.command(name="play")
     async def play(self, ctx, *, query: str):
@@ -360,7 +360,7 @@ class Music(commands.Cog):
                 else:
                     # Added to queue
                     embed = discord.Embed(
-                        title="📋 Added to Queue",
+                        title="Added to Queue",
                         description=f"**[{song.title}]({song.url})**",
                         color=0x3498db
                     )
@@ -399,7 +399,7 @@ class Music(commands.Cog):
         if ctx.voice_client.is_playing():
             ctx.voice_client.stop()
         
-        await ctx.send("⏹️ Stopped and cleared queue!")
+        await ctx.send("Stopped and cleared queue!")
 
     @commands.command(name="pause")
     async def pause(self, ctx):
@@ -409,7 +409,7 @@ class Music(commands.Cog):
         
         if ctx.voice_client.is_playing():
             ctx.voice_client.pause()
-            await ctx.send("⏸️ Paused!")
+            await ctx.send("⏸Paused!")
         elif ctx.voice_client.is_paused():
             await ctx.send("Already paused. Use `resume` to continue.")
         else:
@@ -423,7 +423,7 @@ class Music(commands.Cog):
         
         if ctx.voice_client.is_paused():
             ctx.voice_client.resume()
-            await ctx.send("▶️ Resumed!")
+            await ctx.send("▶Resumed!")
         else:
             await ctx.send("❌ Not paused!")
 
@@ -438,7 +438,7 @@ class Music(commands.Cog):
         
         if current:
             embed.add_field(
-                name="🔊 Now Playing",
+                name="Now Playing",
                 value=f"**{current.title}** [{current.duration_str}]",
                 inline=False
             )
@@ -447,7 +447,7 @@ class Music(commands.Cog):
             lines = []
             for i, song in enumerate(list(queue)[:10], 1):
                 lines.append(f"`{i}.` **{song.title}** [{song.duration_str}]")
-            embed.add_field(name="📋 Up Next", value="\n".join(lines), inline=False)
+            embed.add_field(name="Up Next", value="\n".join(lines), inline=False)
             if len(queue) > 10:
                 embed.set_footer(text=f"And {len(queue) - 10} more...")
         elif not current:
@@ -464,7 +464,7 @@ class Music(commands.Cog):
             return await ctx.send("❌ Nothing is playing!")
         
         embed = discord.Embed(
-            title="🎵 Now Playing",
+            title="Now Playing",
             description=f"**[{current.title}]({current.url})**",
             color=0x1db954
         )
@@ -483,7 +483,7 @@ class Music(commands.Cog):
         
         if vol is None:
             current_vol = int(self.get_volume(guild_id) * 100)
-            return await ctx.send(f"🔊 Volume: **{current_vol}%**")
+            return await ctx.send(f"Volume: **{current_vol}%**")
         
         if vol < 0 or vol > 100:
             return await ctx.send("❌ Volume must be 0-100!")
@@ -503,9 +503,9 @@ class Music(commands.Cog):
         self.loop_mode[guild_id] = not self.loop_mode.get(guild_id, False)
         
         if self.loop_mode[guild_id]:
-            await ctx.send("🔁 Loop **enabled**")
+            await ctx.send("Loop **enabled**")
         else:
-            await ctx.send("🔁 Loop **disabled**")
+            await ctx.send("Loop **disabled**")
 
     @commands.command(name="shuffle")
     async def shuffle(self, ctx):
@@ -520,7 +520,7 @@ class Music(commands.Cog):
         random.shuffle(songs)
         self.queues[ctx.guild.id] = deque(songs)
         
-        await ctx.send("🔀 Queue shuffled!")
+        await ctx.send("Queue shuffled!")
 
     @commands.command(name="clear")
     async def clear(self, ctx):
@@ -540,7 +540,7 @@ class Music(commands.Cog):
         removed = songs.pop(position - 1)
         self.queues[ctx.guild.id] = deque(songs)
         
-        await ctx.send(f"🗑️ Removed **{removed.title}**")
+        await ctx.send(f"Removed **{removed.title}**")
 
     @commands.command(name="lyrics", aliases=["ly"])
     async def lyrics(self, ctx, *, query: str = None):

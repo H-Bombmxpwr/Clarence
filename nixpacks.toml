@@ -2,7 +2,8 @@
 # Installs FFmpeg for discord.py voice/audio support
 
 [phases.setup]
-nixPkgs = ["ffmpeg"]
+nixPkgs = ["ffmpeg-full"]
+aptPkgs = ["ffmpeg"]
 
 [start]
 cmd = "python main.py"
