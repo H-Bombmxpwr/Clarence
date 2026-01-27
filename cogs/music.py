@@ -45,7 +45,7 @@ except ImportError:
 
 # yt-dlp options
 YTDL_OPTIONS = {
-    'format': 'bestaudio[ext=m4a]/bestaudio/best',
+    'format': 'bestaudio/best',
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
@@ -55,8 +55,8 @@ YTDL_OPTIONS = {
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
     'extract_flat': False,
-    # Use ios client to bypass YouTube SABR/PO Token restrictions
-    'extractor_args': {'youtube': {'player_client': ['ios', 'tv_embedded']}},
+    # Use clients that don't require PO Token
+    'extractor_args': {'youtube': {'player_client': ['mweb', 'tv_embedded'], 'player_skip': ['webpage', 'configs']}},
 }
 
 # FFmpeg options for streaming
