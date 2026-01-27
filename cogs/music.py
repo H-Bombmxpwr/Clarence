@@ -406,12 +406,6 @@ class Music(commands.Cog):
                 embed.set_thumbnail(url=song.thumbnail)
             await ctx.send(embed=embed)
 
-            except Exception as e:
-                import traceback
-                print(f"[music] Play error: {e}")
-                print(f"[music] Traceback: {traceback.format_exc()}")
-                await ctx.send(f"❌ Error: {e}")
-
     @commands.command(name="skip", aliases=["s", "next"])
     async def skip(self, ctx):
         """Skip the current song"""
