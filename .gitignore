@@ -66,4 +66,3 @@ docs/_build/
 
 # Dev container setup
 .devcontainer/
-Dockerfile
