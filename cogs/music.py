@@ -179,13 +179,35 @@ class Music(commands.Cog):
     def set_volume(self, guild_id: int, vol: float):
         self.volumes[guild_id] = max(0.0, min(1.0, vol))
 
-    def get_voice_client(self, ctx) -> Optional[discord.VoiceClient]:
-        """Get the voice client for this guild"""
-        return ctx.voice_client
+    def get_voice_client(self, guild: discord.Guild) -> Optional[discord.VoiceClient]:
+        """Get the voice client for this guild from bot's voice_clients list"""
+        for vc in self.bot.voice_clients:
+            if vc.guild.id == guild.id:
+                return vc
+        return None
 
-    async def play_next(self, ctx):
+    async def ensure_voice_connected(self, guild: discord.Guild, channel: discord.VoiceChannel) -> Optional[discord.VoiceClient]:
+        """Ensure we have a voice connection, reconnecting if needed"""
+        vc = self.get_voice_client(guild)
+
+        if vc and vc.is_connected():
+            return vc
+
+        # Need to connect or reconnect
+        print(f"[music] Connecting/reconnecting to voice channel: {channel.name}")
+        try:
+            if vc:
+                await vc.disconnect(force=True)
+            vc = await channel.connect(timeout=10.0, reconnect=True)
+            print(f"[music] Voice connection established")
+            return vc
+        except Exception as e:
+            print(f"[music] Failed to connect to voice: {e}")
+            return None
+
+    async def play_next(self, guild: discord.Guild, channel: discord.abc.Messageable):
         """Play the next song in queue"""
-        guild_id = ctx.guild.id
+        guild_id = guild.id
         queue = self.get_queue(guild_id)
         print(f"[music] play_next called for guild {guild_id}, queue size: {len(queue)}")
 
@@ -202,7 +224,7 @@ class Music(commands.Cog):
         self.current[guild_id] = song
         print(f"[music] Attempting to play: {song.title}")
 
-        vc = self.get_voice_client(ctx)
+        vc = self.get_voice_client(guild)
         if not vc:
             print(f"[music] No voice client found!")
             self.current[guild_id] = None
@@ -215,24 +237,19 @@ class Music(commands.Cog):
         print(f"[music] Voice client connected to: {vc.channel.name}")
 
         try:
-            # Re-fetch stream URL (they expire!)
-            print(f"[music] Re-fetching stream URL for: {song.url}")
-            fresh_song = await Song.from_query(song.url, song.requester, self.bot.loop)
-            if fresh_song:
-                if fresh_song.stream_url:
+            # Only re-fetch if stream URL is missing or empty
+            if not song.stream_url:
+                print(f"[music] No stream URL, fetching for: {song.url}")
+                fresh_song = await Song.from_query(song.url, song.requester, self.bot.loop)
+                if fresh_song and fresh_song.stream_url:
                     song = fresh_song
                     self.current[guild_id] = song
-                    print(f"[music] Got fresh stream URL")
+                    print(f"[music] Got stream URL")
                 else:
-                    print(f"[music] Fresh song has no stream URL, using original")
-            else:
-                print(f"[music] Failed to get fresh song info")
-
-            if not song.stream_url:
-                print(f"[music] ERROR: No stream URL available!")
-                await ctx.send(f"❌ Could not get audio stream for **{song.title}**")
-                await self.play_next(ctx)
-                return
+                    print(f"[music] ERROR: Could not get stream URL!")
+                    await channel.send(f"❌ Could not get audio stream for **{song.title}**")
+                    await self.play_next(guild, channel)
+                    return
 
             source = song.create_source(self.get_volume(guild_id))
             print(f"[music] Audio source created, starting playback...")
@@ -243,7 +260,7 @@ class Music(commands.Cog):
                 else:
                     print(f"[music] Playback finished normally")
                 # Schedule next song
-                coro = self.play_next(ctx)
+                coro = self.play_next(guild, channel)
                 fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
                 try:
                     fut.result()
@@ -264,47 +281,49 @@ class Music(commands.Cog):
             if song.thumbnail:
                 embed.set_thumbnail(url=song.thumbnail)
 
-            await ctx.send(embed=embed)
+            await channel.send(embed=embed)
 
         except Exception as e:
             import traceback
             print(f"[music] Error playing: {e}")
             print(f"[music] Traceback: {traceback.format_exc()}")
-            await ctx.send(f"❌ Error playing **{song.title}**: {e}")
+            await channel.send(f"❌ Error playing **{song.title}**: {e}")
             # Try next song
-            await self.play_next(ctx)
+            await self.play_next(guild, channel)
 
     @commands.command(name="join", aliases=["connect"])
     async def join(self, ctx):
         """Join your voice channel"""
         if not ctx.author.voice:
             return await ctx.send("❌ You need to be in a voice channel!")
-        
+
         channel = ctx.author.voice.channel
-        
-        if ctx.voice_client:
-            if ctx.voice_client.channel == channel:
+        vc = self.get_voice_client(ctx.guild)
+
+        if vc and vc.is_connected():
+            if vc.channel.id == channel.id:
                 return await ctx.send(f"✅ Already in **{channel.name}**")
-            await ctx.voice_client.move_to(channel)
+            await vc.move_to(channel)
         else:
-            await channel.connect()
-        
+            await channel.connect(timeout=10.0, reconnect=True)
+
         await ctx.send(f"Joined **{channel.name}**")
 
     @commands.command(name="leave", aliases=["disconnect", "dc", "gtfo"])
     async def leave(self, ctx):
         """Leave the voice channel"""
-        if not ctx.voice_client:
+        vc = self.get_voice_client(ctx.guild)
+        if not vc:
             return await ctx.send("❌ I'm not in a voice channel!")
 
         print(f"[music] Leaving voice channel in guild {ctx.guild.id}")
-        
+
         # Clear queue
         guild_id = ctx.guild.id
         self.queues[guild_id] = deque()
         self.current[guild_id] = None
-        
-        await ctx.voice_client.disconnect()
+
+        await vc.disconnect(force=True)
         await ctx.send("Disconnected!")
 
     @commands.command(name="play")
@@ -322,18 +341,13 @@ class Music(commands.Cog):
         if not FFMPEG_PATH:
             return await ctx.send("❌ FFmpeg not found. Audio playback unavailable.")
 
-        # Auto-join if not in voice
-        if not ctx.voice_client:
-            if not ctx.author.voice:
-                return await ctx.send("❌ You need to be in a voice channel!")
-            print(f"[music] Connecting to voice channel: {ctx.author.voice.channel.name}")
-            try:
-                await ctx.author.voice.channel.connect(timeout=10.0, reconnect=True)
-                print(f"[music] Connected to voice channel successfully")
-            except Exception as e:
-                print(f"[music] Failed to connect to voice: {e}")
-                return await ctx.send(f"❌ Could not join voice channel: {e}")
+        # Check user is in voice channel
+        if not ctx.author.voice:
+            return await ctx.send("❌ You need to be in a voice channel!")
 
+        voice_channel = ctx.author.voice.channel
+
+        # Search FIRST (before connecting) - this is the slow part
         async with ctx.typing():
             try:
                 print(f"[music] Searching for: {query}")
@@ -343,32 +357,54 @@ class Music(commands.Cog):
                     print(f"[music] No song found for query: {query}")
                     return await ctx.send(f"❌ Could not find: **{query}**")
 
-                print(f"[music] Found song: {song.title}, stream_url: {'yes' if song.stream_url else 'NO!'}")
+                if not song.stream_url:
+                    print(f"[music] Song found but no stream URL!")
+                    return await ctx.send(f"❌ Could not get audio stream for: **{query}**")
 
-                queue = self.get_queue(ctx.guild.id)
-                queue.append(song)
-                print(f"[music] Added to queue, queue size: {len(queue)}")
+                print(f"[music] Found song: {song.title}, stream_url: yes ({len(song.stream_url)} chars)")
 
-                # If not playing, start playback
-                is_playing = ctx.voice_client.is_playing()
-                is_paused = ctx.voice_client.is_paused()
-                print(f"[music] Voice state - is_playing: {is_playing}, is_paused: {is_paused}")
+            except Exception as e:
+                import traceback
+                print(f"[music] Search error: {e}")
+                print(f"[music] Traceback: {traceback.format_exc()}")
+                return await ctx.send(f"❌ Error searching: {e}")
 
-                if not is_playing and not is_paused:
-                    print(f"[music] Starting playback...")
-                    await self.play_next(ctx)
-                else:
-                    # Added to queue
-                    embed = discord.Embed(
-                        title="Added to Queue",
-                        description=f"**[{song.title}]({song.url})**",
-                        color=0x3498db
-                    )
-                    embed.add_field(name="Position", value=str(len(queue)), inline=True)
-                    embed.add_field(name="Duration", value=song.duration_str, inline=True)
-                    if song.thumbnail:
-                        embed.set_thumbnail(url=song.thumbnail)
-                    await ctx.send(embed=embed)
+        # NOW connect to voice (after search is done)
+        vc = self.get_voice_client(ctx.guild)
+        if not vc or not vc.is_connected():
+            print(f"[music] Connecting to voice channel: {voice_channel.name}")
+            try:
+                vc = await voice_channel.connect(timeout=10.0, reconnect=True)
+                print(f"[music] Connected to voice channel successfully")
+            except Exception as e:
+                print(f"[music] Failed to connect to voice: {e}")
+                return await ctx.send(f"❌ Could not join voice channel: {e}")
+
+        # Add to queue
+        queue = self.get_queue(ctx.guild.id)
+        queue.append(song)
+        print(f"[music] Added to queue, queue size: {len(queue)}")
+
+        # If not playing, start playback
+        is_playing = vc.is_playing()
+        is_paused = vc.is_paused()
+        print(f"[music] Voice state - is_playing: {is_playing}, is_paused: {is_paused}")
+
+        if not is_playing and not is_paused:
+            print(f"[music] Starting playback...")
+            await self.play_next(ctx.guild, ctx.channel)
+        else:
+            # Added to queue
+            embed = discord.Embed(
+                title="Added to Queue",
+                description=f"**[{song.title}]({song.url})**",
+                color=0x3498db
+            )
+            embed.add_field(name="Position", value=str(len(queue)), inline=True)
+            embed.add_field(name="Duration", value=song.duration_str, inline=True)
+            if song.thumbnail:
+                embed.set_thumbnail(url=song.thumbnail)
+            await ctx.send(embed=embed)
 
             except Exception as e:
                 import traceback
