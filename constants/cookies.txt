@@ -1,0 +1,2 @@
+# Placeholder - cookies are loaded from YOUTUBE_COOKIES environment variable
+# Set YOUTUBE_COOKIES in Railway with base64 encoded cookies

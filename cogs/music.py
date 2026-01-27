@@ -43,6 +43,30 @@ try:
 except ImportError:
     print("[music] WARNING: PyNaCl not installed - voice may not work")
 
+# Setup cookies from environment variable or file
+import os
+import base64
+COOKIES_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'constants', 'cookies.txt')
+
+# Check for cookies in environment variable first (base64 encoded)
+youtube_cookies_env = os.environ.get('YOUTUBE_COOKIES')
+if youtube_cookies_env:
+    try:
+        cookies_content = base64.b64decode(youtube_cookies_env).decode('utf-8')
+        # Write to file for yt-dlp
+        os.makedirs(os.path.dirname(COOKIES_PATH), exist_ok=True)
+        with open(COOKIES_PATH, 'w') as f:
+            f.write(cookies_content)
+        print(f"[music] Cookies loaded from YOUTUBE_COOKIES environment variable")
+    except Exception as e:
+        print(f"[music] ERROR decoding YOUTUBE_COOKIES: {e}")
+        COOKIES_PATH = None
+elif os.path.exists(COOKIES_PATH):
+    print(f"[music] Cookies file found at: {COOKIES_PATH}")
+else:
+    print(f"[music] WARNING: No cookies available - YouTube may block requests")
+    COOKIES_PATH = None
+
 # yt-dlp options
 YTDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -55,9 +79,11 @@ YTDL_OPTIONS = {
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
     'extract_flat': False,
-    # Use clients that don't require PO Token
-    'extractor_args': {'youtube': {'player_client': ['mweb', 'tv_embedded'], 'player_skip': ['webpage', 'configs']}},
 }
+
+# Add cookies if available
+if COOKIES_PATH:
+    YTDL_OPTIONS['cookiefile'] = COOKIES_PATH
 
 # FFmpeg options for streaming
 FFMPEG_OPTIONS = {
