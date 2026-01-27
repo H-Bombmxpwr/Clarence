@@ -434,35 +434,76 @@ class Music(commands.Cog):
 
     @commands.command(name="lyrics", aliases=["ly"])
     async def lyrics(self, ctx, *, query: str = None):
-        """Get lyrics for a song"""
+        """
+        Get lyrics for a song
+
+        Usage: lyrics <artist> - <song>
+        Or just: lyrics (uses current playing song)
+        """
         if not query:
             current = self.current.get(ctx.guild.id)
             if current:
                 query = current.title
             else:
                 return await ctx.send("❌ Specify a song or play something first!")
-        
+
         async with ctx.typing():
             try:
-                url = f"https://some-random-api.com/others/lyrics?title={quote(query)}"
-                resp = requests.get(url, timeout=10)
-                
+                # Try to parse "Artist - Song" format
+                # Common formats: "Artist - Song", "Song by Artist", "Artist: Song"
+                artist = None
+                song = None
+
+                # Clean up common YouTube title artifacts
+                clean_query = re.sub(r'\(Official.*?\)|\[Official.*?\]|\(Lyrics.*?\)|\[Lyrics.*?\]|\(Audio.*?\)|\[Audio.*?\]|\(HD\)|\[HD\]|\(HQ\)|\[HQ\]|Official Video|Official Audio|Lyric Video|Music Video', '', query, flags=re.IGNORECASE)
+                clean_query = clean_query.strip()
+
+                if ' - ' in clean_query:
+                    parts = clean_query.split(' - ', 1)
+                    artist = parts[0].strip()
+                    song = parts[1].strip()
+                elif ' by ' in clean_query.lower():
+                    idx = clean_query.lower().index(' by ')
+                    song = clean_query[:idx].strip()
+                    artist = clean_query[idx+4:].strip()
+                else:
+                    # No clear separator - use the whole thing as song, leave artist empty
+                    song = clean_query
+                    artist = ""
+
+                # URL encode artist and song
+                artist_encoded = quote(artist) if artist else ""
+                song_encoded = quote(song)
+
+                # Try lyrics.ovh API
+                if artist:
+                    url = f"https://api.lyrics.ovh/v1/{artist_encoded}/{song_encoded}"
+                else:
+                    # If no artist, try with just the song name (less reliable)
+                    url = f"https://api.lyrics.ovh/v1/_/{song_encoded}"
+
+                resp = requests.get(url, timeout=15)
+
                 if resp.status_code == 200:
                     data = resp.json()
-                    if 'lyrics' in data:
-                        lyrics = data['lyrics']
-                        if len(lyrics) > 3900:
-                            lyrics = lyrics[:3900] + "\n\n*...(truncated)*"
-                        
+                    if 'lyrics' in data and data['lyrics']:
+                        lyrics_text = data['lyrics'].strip()
+                        if len(lyrics_text) > 3900:
+                            lyrics_text = lyrics_text[:3900] + "\n\n*...(truncated)*"
+
+                        title_display = f"{artist} - {song}" if artist else song
                         embed = discord.Embed(
-                            title=f"🎤 {data.get('title', query)}",
-                            description=lyrics,
+                            title=f"🎤 {title_display}",
+                            description=lyrics_text,
                             color=0x1db954
                         )
-                        embed.set_footer(text=f"Artist: {data.get('author', 'Unknown')}")
+                        embed.set_footer(text="Lyrics from lyrics.ovh")
                         return await ctx.send(embed=embed)
-                
-                await ctx.send(f"❌ No lyrics found for **{query}**")
+
+                # No lyrics found
+                await ctx.send(f"❌ No lyrics found for **{query}**\nTip: Try format `lyrics Artist - Song`")
+            except requests.exceptions.Timeout:
+                await ctx.send("❌ Lyrics request timed out. Try again.")
             except Exception as e:
                 await ctx.send(f"❌ Error fetching lyrics: {e}")
 

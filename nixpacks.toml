@@ -1,0 +1,8 @@
+# Nixpacks configuration for Railway deployment
+# Installs FFmpeg for discord.py voice/audio support
+
+[phases.setup]
+nixPkgs = ["ffmpeg"]
+
+[start]
+cmd = "python main.py"

@@ -91,8 +91,8 @@ class Status(commands.Cog):
         if not self._rotate_status.is_running():
             self._rotate_status.start()
 
-    @commands.command(name="preview_status")
-    async def preview_status(self, ctx: commands.Context, aliases=["ps"]):
+    @commands.command(name="preview_status", aliases=["ps"])
+    async def preview_status(self, ctx: commands.Context):
         """Show previous, current, and next songs, with current line highlighted red."""
         if not self._entries:
             emb = discord.Embed(
