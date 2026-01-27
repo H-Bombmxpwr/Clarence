@@ -45,7 +45,7 @@ except ImportError:
 
 # yt-dlp options
 YTDL_OPTIONS = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio[ext=m4a]/bestaudio/best',
     'noplaylist': True,
     'nocheckcertificate': True,
     'ignoreerrors': False,
@@ -55,6 +55,8 @@ YTDL_OPTIONS = {
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
     'extract_flat': False,
+    # Try to work around YouTube SABR streaming issues
+    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
 }
 
 # FFmpeg options for streaming
@@ -121,9 +123,32 @@ class Song:
             print(f"[music] Using first search result: {data.get('title', 'Unknown')}")
 
         stream_url = data.get('url', '')
+
+        # If no direct URL, try to get from formats (YouTube SABR workaround)
+        if not stream_url:
+            print(f"[music] No direct URL, checking formats...")
+            formats = data.get('formats', [])
+            # Look for audio-only formats first, then any format with a URL
+            for fmt in reversed(formats):  # reversed to get best quality first
+                if fmt.get('url') and fmt.get('acodec') != 'none':
+                    stream_url = fmt['url']
+                    print(f"[music] Found URL in format: {fmt.get('format_id')} ({fmt.get('ext')})")
+                    break
+
+            # If still no URL, try requested_formats
+            if not stream_url:
+                requested = data.get('requested_formats', [])
+                for fmt in requested:
+                    if fmt.get('url'):
+                        stream_url = fmt['url']
+                        print(f"[music] Found URL in requested_formats: {fmt.get('format_id')}")
+                        break
+
         if not stream_url:
             print(f"[music] WARNING: No stream URL found for {data.get('title', 'Unknown')}")
             print(f"[music] Available keys: {list(data.keys())}")
+            if 'formats' in data:
+                print(f"[music] Number of formats: {len(data['formats'])}")
         else:
             print(f"[music] Got stream URL ({len(stream_url)} chars) for: {data.get('title', 'Unknown')}")
 
