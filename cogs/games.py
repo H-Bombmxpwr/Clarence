@@ -7,7 +7,7 @@ from datetime import date
 import requests
 from discord import NotFound
 from contextlib import suppress
-from storage.Lists_Storage import emojis
+from constants.lists import emojis
 import random
 import json
 from PIL import Image
@@ -246,7 +246,7 @@ class Fun(commands.Cog):
             return await ctx.send("Max 30 lines!")
         
         try:
-            with open("storage/paradigm.txt", "r") as f:
+            with open("constants/paradigm.txt", "r") as f:
                 lines = [l.strip() for l in f.readlines() if l.strip() and l.strip() != "\n"]
             
             for i in range(min(number, len(lines))):

@@ -4,7 +4,7 @@ import random
 import discord
 from discord.ext import commands, tasks
 
-LYRICS_PATH = "storage/lyrics.json"
+LYRICS_PATH = "constants/lyrics.json"
 STATUS_SPACER = "               "
 OWNER_ID = 239605426033786881
 
@@ -97,7 +97,7 @@ class Status(commands.Cog):
         if not self._entries:
             emb = discord.Embed(
                 title="Status Rotation Preview",
-                description="No lyrics found in storage/lyrics.json",
+                description="No lyrics found in constants/lyrics.json",
                 color=0x00A38D,
             )
             return await ctx.send(embed=emb)

@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import os
 from functionality.days import check_day
-from storage.Lists_Storage import thedan, flag_emoji_dict, table
+from constants.lists import thedan, flag_emoji_dict, table
 from cogs.help import NewHelpName
 from functionality.functions import check_carrot, get_insult
 import json
@@ -43,7 +43,7 @@ trie = Trie()
 
 def buildTrie():
     try:
-        with open("storage/words.txt", 'r') as file:
+        with open("constants/words.txt", 'r') as file:
             for line in file:
                 line = line.strip()
                 if line:

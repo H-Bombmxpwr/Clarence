@@ -7,18 +7,41 @@ import discord
 from discord.ext import commands
 import asyncio
 import re
+import shutil
+import subprocess
 from typing import Optional, Dict
 from collections import deque
 import requests
 from urllib.parse import quote
 
+# Check for FFmpeg
+FFMPEG_PATH = shutil.which('ffmpeg')
+if FFMPEG_PATH:
+    print(f"[music] FFmpeg found at: {FFMPEG_PATH}")
+    # Test FFmpeg
+    try:
+        result = subprocess.run([FFMPEG_PATH, '-version'], capture_output=True, text=True, timeout=5)
+        print(f"[music] FFmpeg version: {result.stdout.split(chr(10))[0]}")
+    except Exception as e:
+        print(f"[music] FFmpeg test failed: {e}")
+else:
+    print("[music] WARNING: FFmpeg not found in PATH! Audio playback will fail.")
+
 # Try to import yt-dlp
 try:
     import yt_dlp
     YTDL_AVAILABLE = True
+    print(f"[music] yt-dlp version: {yt_dlp.version.__version__}")
 except ImportError:
     YTDL_AVAILABLE = False
     print("[music] yt-dlp not installed - run: pip install yt-dlp")
+
+# Check for PyNaCl (voice support)
+try:
+    import nacl
+    print(f"[music] PyNaCl available for voice support")
+except ImportError:
+    print("[music] WARNING: PyNaCl not installed - voice may not work")
 
 # yt-dlp options
 YTDL_OPTIONS = {
@@ -27,16 +50,17 @@ YTDL_OPTIONS = {
     'nocheckcertificate': True,
     'ignoreerrors': False,
     'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
+    'quiet': False,  # Enable output for debugging
+    'no_warnings': False,  # Show warnings for debugging
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
+    'extract_flat': False,
 }
 
 # FFmpeg options for streaming
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin',
+    'options': '-vn -loglevel warning'
 }
 
 
@@ -66,30 +90,47 @@ class Song:
         """Search/extract song info from query"""
         loop = loop or asyncio.get_event_loop()
         ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
-        
+
         # Add search prefix if not a URL
+        original_query = query
         if not re.match(r'^https?://', query):
             query = f'ytsearch:{query}'
-        
+
+        print(f"[music] Extracting info for: {query}")
+
         # Extract info in executor
-        data = await loop.run_in_executor(
-            None, 
-            lambda: ytdl.extract_info(query, download=False)
-        )
-        
-        if not data:
+        try:
+            data = await loop.run_in_executor(
+                None,
+                lambda: ytdl.extract_info(query, download=False)
+            )
+        except Exception as e:
+            print(f"[music] yt-dlp extraction error: {e}")
             return None
-        
+
+        if not data:
+            print(f"[music] No data returned for query: {original_query}")
+            return None
+
         # Handle search results
         if 'entries' in data:
             if not data['entries']:
+                print(f"[music] No entries found for search: {original_query}")
                 return None
             data = data['entries'][0]
-        
+            print(f"[music] Using first search result: {data.get('title', 'Unknown')}")
+
+        stream_url = data.get('url', '')
+        if not stream_url:
+            print(f"[music] WARNING: No stream URL found for {data.get('title', 'Unknown')}")
+            print(f"[music] Available keys: {list(data.keys())}")
+        else:
+            print(f"[music] Got stream URL ({len(stream_url)} chars) for: {data.get('title', 'Unknown')}")
+
         return cls(
             title=data.get('title', 'Unknown'),
             url=data.get('webpage_url', query),
-            stream_url=data.get('url', ''),
+            stream_url=stream_url,
             duration=data.get('duration', 0),
             requester=requester,
             thumbnail=data.get('thumbnail')
@@ -97,7 +138,12 @@ class Song:
 
     def create_source(self, volume: float = 0.5) -> discord.PCMVolumeTransformer:
         """Create a fresh audio source"""
+        print(f"[music] Creating FFmpeg source for: {self.title}")
+        print(f"[music] Stream URL length: {len(self.stream_url) if self.stream_url else 0}")
+        if not self.stream_url:
+            raise ValueError("No stream URL available")
         source = discord.FFmpegPCMAudio(self.stream_url, **FFMPEG_OPTIONS)
+        print(f"[music] FFmpegPCMAudio created successfully")
         return discord.PCMVolumeTransformer(source, volume=volume)
 
 
@@ -111,6 +157,16 @@ class Music(commands.Cog):
         self.current: Dict[int, Optional[Song]] = {}  # guild_id -> current Song
         self.volumes: Dict[int, float] = {}  # guild_id -> volume (0.0-1.0)
         self.loop_mode: Dict[int, bool] = {}  # guild_id -> loop enabled
+        print("[music] Music cog initialized")
+
+    async def cog_unload(self):
+        """Cleanup when cog is unloaded"""
+        print("[music] Unloading music cog, disconnecting from all voice channels...")
+        for vc in self.bot.voice_clients:
+            try:
+                await vc.disconnect(force=True)
+            except Exception as e:
+                print(f"[music] Error disconnecting: {e}")
 
     def get_queue(self, guild_id: int) -> deque:
         if guild_id not in self.queues:
@@ -131,35 +187,61 @@ class Music(commands.Cog):
         """Play the next song in queue"""
         guild_id = ctx.guild.id
         queue = self.get_queue(guild_id)
-        
+        print(f"[music] play_next called for guild {guild_id}, queue size: {len(queue)}")
+
         # Check if we should loop
         if self.loop_mode.get(guild_id) and self.current.get(guild_id):
             queue.appendleft(self.current[guild_id])
-        
+
         if not queue:
+            print(f"[music] Queue empty, nothing to play")
             self.current[guild_id] = None
             return
-        
+
         song = queue.popleft()
         self.current[guild_id] = song
-        
+        print(f"[music] Attempting to play: {song.title}")
+
         vc = self.get_voice_client(ctx)
-        if not vc or not vc.is_connected():
+        if not vc:
+            print(f"[music] No voice client found!")
             self.current[guild_id] = None
             return
-        
+        if not vc.is_connected():
+            print(f"[music] Voice client not connected!")
+            self.current[guild_id] = None
+            return
+
+        print(f"[music] Voice client connected to: {vc.channel.name}")
+
         try:
             # Re-fetch stream URL (they expire!)
+            print(f"[music] Re-fetching stream URL for: {song.url}")
             fresh_song = await Song.from_query(song.url, song.requester, self.bot.loop)
             if fresh_song:
-                song = fresh_song
-                self.current[guild_id] = song
-            
+                if fresh_song.stream_url:
+                    song = fresh_song
+                    self.current[guild_id] = song
+                    print(f"[music] Got fresh stream URL")
+                else:
+                    print(f"[music] Fresh song has no stream URL, using original")
+            else:
+                print(f"[music] Failed to get fresh song info")
+
+            if not song.stream_url:
+                print(f"[music] ERROR: No stream URL available!")
+                await ctx.send(f"❌ Could not get audio stream for **{song.title}**")
+                await self.play_next(ctx)
+                return
+
             source = song.create_source(self.get_volume(guild_id))
-            
+            print(f"[music] Audio source created, starting playback...")
+
             def after_playing(error):
                 if error:
                     print(f"[music] Playback error: {error}")
+                else:
+                    print(f"[music] Playback finished normally")
                 # Schedule next song
                 coro = self.play_next(ctx)
                 fut = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
@@ -167,9 +249,10 @@ class Music(commands.Cog):
                     fut.result()
                 except Exception as e:
                     print(f"[music] Error scheduling next: {e}")
-            
+
             vc.play(source, after=after_playing)
-            
+            print(f"[music] vc.play() called successfully, is_playing: {vc.is_playing()}")
+
             # Send now playing embed
             embed = discord.Embed(
                 title="🎵 Now Playing",
@@ -180,11 +263,13 @@ class Music(commands.Cog):
             embed.add_field(name="Requested by", value=song.requester.mention, inline=True)
             if song.thumbnail:
                 embed.set_thumbnail(url=song.thumbnail)
-            
+
             await ctx.send(embed=embed)
-            
+
         except Exception as e:
+            import traceback
             print(f"[music] Error playing: {e}")
+            print(f"[music] Traceback: {traceback.format_exc()}")
             await ctx.send(f"❌ Error playing **{song.title}**: {e}")
             # Try next song
             await self.play_next(ctx)
@@ -211,6 +296,8 @@ class Music(commands.Cog):
         """Leave the voice channel"""
         if not ctx.voice_client:
             return await ctx.send("❌ I'm not in a voice channel!")
+
+        print(f"[music] Leaving voice channel in guild {ctx.guild.id}")
         
         # Clear queue
         guild_id = ctx.guild.id
@@ -224,30 +311,51 @@ class Music(commands.Cog):
     async def play(self, ctx, *, query: str):
         """
         Play a song from YouTube
-        
+
         Usage: play <song name or URL>
         """
+        print(f"[music] Play command received: {query}")
+
         if not YTDL_AVAILABLE:
             return await ctx.send("❌ yt-dlp not installed. Run: `pip install yt-dlp`")
-        
+
+        if not FFMPEG_PATH:
+            return await ctx.send("❌ FFmpeg not found. Audio playback unavailable.")
+
         # Auto-join if not in voice
         if not ctx.voice_client:
             if not ctx.author.voice:
                 return await ctx.send("❌ You need to be in a voice channel!")
-            await ctx.author.voice.channel.connect()
-        
+            print(f"[music] Connecting to voice channel: {ctx.author.voice.channel.name}")
+            try:
+                await ctx.author.voice.channel.connect(timeout=10.0, reconnect=True)
+                print(f"[music] Connected to voice channel successfully")
+            except Exception as e:
+                print(f"[music] Failed to connect to voice: {e}")
+                return await ctx.send(f"❌ Could not join voice channel: {e}")
+
         async with ctx.typing():
             try:
+                print(f"[music] Searching for: {query}")
                 song = await Song.from_query(query, ctx.author, self.bot.loop)
-                
+
                 if not song:
+                    print(f"[music] No song found for query: {query}")
                     return await ctx.send(f"❌ Could not find: **{query}**")
-                
+
+                print(f"[music] Found song: {song.title}, stream_url: {'yes' if song.stream_url else 'NO!'}")
+
                 queue = self.get_queue(ctx.guild.id)
                 queue.append(song)
-                
+                print(f"[music] Added to queue, queue size: {len(queue)}")
+
                 # If not playing, start playback
-                if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+                is_playing = ctx.voice_client.is_playing()
+                is_paused = ctx.voice_client.is_paused()
+                print(f"[music] Voice state - is_playing: {is_playing}, is_paused: {is_paused}")
+
+                if not is_playing and not is_paused:
+                    print(f"[music] Starting playback...")
                     await self.play_next(ctx)
                 else:
                     # Added to queue
@@ -261,9 +369,11 @@ class Music(commands.Cog):
                     if song.thumbnail:
                         embed.set_thumbnail(url=song.thumbnail)
                     await ctx.send(embed=embed)
-                    
+
             except Exception as e:
+                import traceback
                 print(f"[music] Play error: {e}")
+                print(f"[music] Traceback: {traceback.format_exc()}")
                 await ctx.send(f"❌ Error: {e}")
 
     @commands.command(name="skip", aliases=["s", "next"])
@@ -511,7 +621,7 @@ class Music(commands.Cog):
     async def musichelp(self, ctx):
         """Show music commands"""
         embed = discord.Embed(title="🎵 Music Commands", color=0x1db954)
-        
+
         cmds = [
             ("`play <song>`", "Play a song"),
             ("`skip`", "Skip current"),
@@ -525,10 +635,53 @@ class Music(commands.Cog):
             ("`lyrics [song]`", "Get lyrics"),
             ("`join` / `leave`", "Voice control"),
         ]
-        
+
         for name, val in cmds:
             embed.add_field(name=name, value=val, inline=True)
-        
+
+        await ctx.send(embed=embed)
+
+    @commands.command(name="musicdebug", aliases=["mdebug"], hidden=True)
+    @commands.is_owner()
+    async def musicdebug(self, ctx):
+        """Debug command to check music system status"""
+        embed = discord.Embed(title="🔧 Music Debug Info", color=0xff9900)
+
+        # Check dependencies
+        embed.add_field(name="yt-dlp", value="✅ Available" if YTDL_AVAILABLE else "❌ Missing", inline=True)
+        embed.add_field(name="FFmpeg", value=f"✅ {FFMPEG_PATH}" if FFMPEG_PATH else "❌ Not found", inline=True)
+
+        try:
+            import nacl
+            nacl_status = "✅ Available"
+        except ImportError:
+            nacl_status = "❌ Missing"
+        embed.add_field(name="PyNaCl", value=nacl_status, inline=True)
+
+        # Voice client status
+        vc = ctx.voice_client
+        if vc:
+            embed.add_field(name="Voice Connected", value=f"✅ {vc.channel.name}", inline=True)
+            embed.add_field(name="Is Playing", value=str(vc.is_playing()), inline=True)
+            embed.add_field(name="Is Paused", value=str(vc.is_paused()), inline=True)
+        else:
+            embed.add_field(name="Voice Connected", value="❌ Not connected", inline=True)
+
+        # Queue status
+        guild_id = ctx.guild.id
+        queue = self.get_queue(guild_id)
+        current = self.current.get(guild_id)
+        embed.add_field(name="Queue Size", value=str(len(queue)), inline=True)
+        embed.add_field(name="Current Song", value=current.title[:50] if current else "None", inline=True)
+
+        # Test yt-dlp
+        if YTDL_AVAILABLE:
+            try:
+                ytdl = yt_dlp.YoutubeDL({'quiet': True})
+                embed.add_field(name="yt-dlp Version", value=yt_dlp.version.__version__, inline=True)
+            except Exception as e:
+                embed.add_field(name="yt-dlp Test", value=f"❌ {e}", inline=True)
+
         await ctx.send(embed=embed)
 
 
