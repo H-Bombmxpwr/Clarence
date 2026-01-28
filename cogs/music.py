@@ -157,9 +157,11 @@ class Song:
                 print(f"[music] No entries found for search: {original_query}", flush=True)
                 return None
             data = entries[0]
+            print(f"[music] Entry[0] type: {type(data)}", flush=True)
             if data is None:
                 print(f"[music] First entry is None!", flush=True)
                 return None
+            print(f"[music] Entry[0] keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}", flush=True)
             print(f"[music] Using first search result: {data.get('title', 'Unknown')}", flush=True)
 
         stream_url = data.get('url', '')
