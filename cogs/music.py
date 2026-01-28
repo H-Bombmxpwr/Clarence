@@ -456,6 +456,8 @@ class Music(commands.Cog):
 
         # NOW connect to voice (after search is done)
         vc = self.get_voice_client(ctx.guild)
+        print(f"[music] Current vc: {vc}, connected: {vc.is_connected() if vc else 'N/A'}", flush=True)
+
         if not vc or not vc.is_connected():
             print(f"[music] Connecting to voice channel: {voice_channel.name}", flush=True)
             try:
@@ -468,18 +470,23 @@ class Music(commands.Cog):
                         pass
                     await asyncio.sleep(0.5)
 
-                vc = await voice_channel.connect(timeout=15.0, reconnect=True, self_deaf=True)
+                vc = await voice_channel.connect(timeout=15.0, reconnect=True)
+                print(f"[music] Voice connect returned: {vc}", flush=True)
+                print(f"[music] vc.is_connected(): {vc.is_connected()}", flush=True)
                 print(f"[music] Connected to voice channel successfully", flush=True)
             except Exception as e:
                 import traceback
                 print(f"[music] Failed to connect to voice: {e}", flush=True)
                 print(f"[music] Voice connect traceback: {traceback.format_exc()}", flush=True)
                 return await ctx.send(f"❌ Could not join voice channel: {e}")
+        else:
+            print(f"[music] Already connected to voice", flush=True)
 
         # Add to queue
+        print(f"[music] About to add to queue...", flush=True)
         queue = self.get_queue(ctx.guild.id)
         queue.append(song)
-        print(f"[music] Added to queue, queue size: {len(queue)}")
+        print(f"[music] Added to queue, queue size: {len(queue)}", flush=True)
 
         # If not playing, start playback
         is_playing = vc.is_playing()
