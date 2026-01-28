@@ -116,6 +116,7 @@ class Song:
     @classmethod
     async def from_query(cls, query: str, requester: discord.Member, loop=None):
         """Search/extract song info from query"""
+        import sys
         loop = loop or asyncio.get_event_loop()
         ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
@@ -124,64 +125,71 @@ class Song:
         if not re.match(r'^https?://', query):
             query = f'ytsearch:{query}'
 
-        print(f"[music] Extracting info for: {query}")
+        print(f"[music] Extracting info for: {query}", flush=True)
 
-        # Extract info in executor
+        # Extract info in executor with timeout
         try:
-            data = await loop.run_in_executor(
-                None,
-                lambda: ytdl.extract_info(query, download=False)
+            data = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: ytdl.extract_info(query, download=False)
+                ),
+                timeout=30.0  # 30 second timeout
             )
+            print(f"[music] Extraction completed", flush=True)
+        except asyncio.TimeoutError:
+            print(f"[music] yt-dlp extraction timed out after 30s", flush=True)
+            return None
         except Exception as e:
-            print(f"[music] yt-dlp extraction error: {e}")
+            print(f"[music] yt-dlp extraction error: {e}", flush=True)
             return None
 
         if not data:
-            print(f"[music] No data returned for query: {original_query}")
+            print(f"[music] No data returned for query: {original_query}", flush=True)
             return None
 
         # Handle search results
-        print(f"[music] Data received, keys: {list(data.keys())}")
+        print(f"[music] Data received, keys: {list(data.keys())}", flush=True)
         if 'entries' in data:
             entries = data['entries']
-            print(f"[music] Found {len(entries) if entries else 0} entries")
+            print(f"[music] Found {len(entries) if entries else 0} entries", flush=True)
             if not entries:
-                print(f"[music] No entries found for search: {original_query}")
+                print(f"[music] No entries found for search: {original_query}", flush=True)
                 return None
             data = entries[0]
             if data is None:
-                print(f"[music] First entry is None!")
+                print(f"[music] First entry is None!", flush=True)
                 return None
-            print(f"[music] Using first search result: {data.get('title', 'Unknown')}")
+            print(f"[music] Using first search result: {data.get('title', 'Unknown')}", flush=True)
 
         stream_url = data.get('url', '')
-        print(f"[music] Direct URL present: {bool(stream_url)}")
+        print(f"[music] Direct URL present: {bool(stream_url)}", flush=True)
 
         # If no direct URL, try to get from formats (YouTube SABR workaround)
         if not stream_url:
-            print(f"[music] No direct URL, checking formats...")
+            print(f"[music] No direct URL, checking formats...", flush=True)
             formats = data.get('formats', [])
-            print(f"[music] Number of formats available: {len(formats)}")
+            print(f"[music] Number of formats available: {len(formats)}", flush=True)
 
             # Look for audio formats with URLs
             audio_formats = [f for f in formats if f.get('url') and f.get('acodec') != 'none']
-            print(f"[music] Audio formats with URLs: {len(audio_formats)}")
+            print(f"[music] Audio formats with URLs: {len(audio_formats)}", flush=True)
 
             if audio_formats:
                 # Sort by quality (prefer higher abr)
                 audio_formats.sort(key=lambda x: x.get('abr', 0) or 0, reverse=True)
                 fmt = audio_formats[0]
                 stream_url = fmt['url']
-                print(f"[music] Selected format: {fmt.get('format_id')} ({fmt.get('ext')}, {fmt.get('abr')}kbps)")
+                print(f"[music] Selected format: {fmt.get('format_id')} ({fmt.get('ext')}, {fmt.get('abr')}kbps)", flush=True)
 
             # If still no URL, try requested_formats
             if not stream_url:
                 requested = data.get('requested_formats', [])
-                print(f"[music] Checking requested_formats: {len(requested)} items")
+                print(f"[music] Checking requested_formats: {len(requested)} items", flush=True)
                 for fmt in requested:
                     if fmt.get('url'):
                         stream_url = fmt['url']
-                        print(f"[music] Found URL in requested_formats: {fmt.get('format_id')}")
+                        print(f"[music] Found URL in requested_formats: {fmt.get('format_id')}", flush=True)
                         break
 
             # Last resort: any format with a URL
@@ -189,7 +197,7 @@ class Song:
                 for fmt in formats:
                     if fmt.get('url'):
                         stream_url = fmt['url']
-                        print(f"[music] Last resort - using format: {fmt.get('format_id')}")
+                        print(f"[music] Last resort - using format: {fmt.get('format_id')}", flush=True)
                         break
 
         if not stream_url:
