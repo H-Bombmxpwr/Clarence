@@ -219,7 +219,7 @@ async def main():
         await client.load_extension('cogs.math')
         await client.load_extension('cogs.translate')
         await client.load_extension('cogs.trivia')
-        await client.load_extension('cogs.music')
+        # await client.load_extension('cogs.music')
         await client.load_extension('cogs.owner')
         await client.load_extension('status')
         await client.start(TOKEN)
