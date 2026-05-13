@@ -7,7 +7,7 @@ import os
 import random
 
 OWNER_ID = 239605426033786881
-TARGET_ID = 300580474290569216
+TARGET_ID = 368894819109568533
 STORAGE_PATH = "storage/birthday_watch.json"
 
 TZ_OFFSET_HOURS = -6  # CST
@@ -96,14 +96,25 @@ class Birthday(commands.Cog):
     def _is_owner(self, user_id: int) -> bool:
         return user_id == OWNER_ID
 
-    async def _ask_target(self) -> bool:
+    async def _ask_target(self) -> tuple[bool, str]:
         try:
-            user = self.client.get_user(TARGET_ID) or await self.client.fetch_user(TARGET_ID)
-            await user.send("Hey — is it your birthday today?", view=BirthdayView())
-            return True
+            user = self.client.get_user(TARGET_ID)
+            if user is None:
+                user = await self.client.fetch_user(TARGET_ID)
+        except discord.NotFound:
+            return False, f"user id {TARGET_ID} not found"
         except Exception as e:
-            print(f"[birthday] failed to DM target: {e}")
-            return False
+            return False, f"fetch_user error: {type(e).__name__}: {e}"
+
+        try:
+            await user.send("Hey — is it your birthday today?", view=BirthdayView())
+            return True, f"sent to {user} ({user.id})"
+        except discord.Forbidden:
+            return False, f"{user} has DMs closed or blocked the bot"
+        except discord.HTTPException as e:
+            return False, f"HTTP {e.status}: {e.text}"
+        except Exception as e:
+            return False, f"{type(e).__name__}: {e}"
 
     @commands.command(name="bday_start", hidden=True)
     async def bday_start(self, ctx: commands.Context):
@@ -160,14 +171,14 @@ class Birthday(commands.Cog):
         if message.content.strip().lower() != "ask":
             return
 
-        sent = await self._ask_target()
+        sent, reason = await self._ask_target()
         if sent:
             state = _load_state()
             state["last_asked_date"] = _now_local().date().isoformat()
             _save_state(state)
-            await message.channel.send("✅ Sent.")
+            await message.channel.send(f"✅ {reason}")
         else:
-            await message.channel.send("❌ DM failed.")
+            await message.channel.send(f"❌ DM failed: {reason}")
 
     @tasks.loop(minutes=1)
     async def scheduler(self):
@@ -189,9 +200,11 @@ class Birthday(commands.Cog):
 
         today_str = now.date().isoformat()
         if state.get("last_asked_date") != today_str:
-            sent = await self._ask_target()
+            sent, reason = await self._ask_target()
             if sent:
                 state["last_asked_date"] = today_str
+            else:
+                print(f"[birthday] scheduled ask failed: {reason}")
 
         state["next_ask_iso"] = _schedule_next(now).isoformat()
         _save_state(state)
