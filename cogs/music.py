@@ -13,6 +13,7 @@ import asyncio
 import logging
 import os
 import re
+import time
 from typing import Optional, cast
 
 import discord
@@ -34,6 +35,9 @@ if not URL_RE.match(LAVALINK_URI):
 LAVALINK_PASSWORD = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
 MAX_PLAYLIST = 500
 EMBED_COLOR = 0x1db954
+# Discord rate-limits message edits, and Lavalink only reports the position every 5s anyway
+PROGRESS_INTERVAL = 5
+RESTART_THRESHOLD_MS = 5000  # Previous restarts the song if we're further in than this
 
 # Searches tried, in order, for plain-text queries
 SEARCH_SOURCES = [wavelink.TrackSource.YouTubeMusic, wavelink.TrackSource.YouTube, wavelink.TrackSource.SoundCloud]
@@ -90,14 +94,29 @@ class MusicPlayer(wavelink.Player):
         super().__init__(*args, **kwargs)
         self.home: Optional[discord.abc.Messageable] = None
         self.np_message: Optional[discord.Message] = None
+        self.progress_task: Optional[asyncio.Task] = None
         self.filter_name: str = "off"
+
+    def stop_progress(self):
+        if self.progress_task:
+            self.progress_task.cancel()
+            self.progress_task = None
 
 
 class NowPlayingControls(discord.ui.View):
-    def __init__(self, cog: "Music", guild_id: int):
+    """Previous / pause-play / next / loop / queue. Buttons update the now-playing embed in place."""
+
+    def __init__(self, cog: "Music", player: MusicPlayer):
         super().__init__(timeout=None)
         self.cog = cog
-        self.guild_id = guild_id
+        self.sync(player)
+
+    def sync(self, player: MusicPlayer):
+        """Make the button icons reflect the player's state."""
+        self.pause_resume.emoji = "▶️" if player.paused else "⏸️"
+        mode = player.queue.mode
+        self.loop.emoji = "🔂" if mode is wavelink.QueueMode.loop else "🔁"
+        self.loop.style = discord.ButtonStyle.secondary if mode is wavelink.QueueMode.normal else discord.ButtonStyle.success
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         player = cast(MusicPlayer, interaction.guild.voice_client) if interaction.guild else None
@@ -109,40 +128,64 @@ class NowPlayingControls(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(emoji="⏯️", style=discord.ButtonStyle.secondary)
+    async def refresh(self, interaction: discord.Interaction, player: MusicPlayer):
+        self.sync(player)
+        if player.current:
+            await interaction.response.edit_message(embed=self.cog.now_playing_embed(player), view=self)
+        else:
+            await interaction.response.edit_message(view=self)
+
+    @discord.ui.button(emoji="⏮️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        player = cast(MusicPlayer, interaction.guild.voice_client)
+        history = player.queue.history
+        # Like most players: restart the song unless we're near its start and there's one before it.
+        # history[-1] is the current track (wavelink adds tracks to history as they start).
+        if not player.current or player.position > RESTART_THRESHOLD_MS or len(history) < 2:
+            if player.current and player.current.is_seekable:
+                await player.seek(0)
+            return await self.refresh(interaction, player)
+        await interaction.response.defer()
+        previous = history[-2]
+        player.queue.put_at(0, player.current)  # so Next comes back to it
+        del history[-2:]  # play() re-adds the previous track
+        await player.play(previous)  # track_start updates the embed
+
+    @discord.ui.button(emoji="⏸️", style=discord.ButtonStyle.primary)
     async def pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         await player.pause(not player.paused)
-        await interaction.response.send_message(f"{'Paused' if player.paused else 'Resumed'} by {interaction.user.mention}",
-                                                allowed_mentions=discord.AllowedMentions.none())
+        await self.refresh(interaction, player)
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
-    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
-        skipped = await player.skip(force=True)
-        await interaction.response.send_message(f"{interaction.user.mention} skipped **{skipped.title if skipped else 'the track'}**",
-                                                allowed_mentions=discord.AllowedMentions.none())
-
-    @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger)
-    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
-        player = cast(MusicPlayer, interaction.guild.voice_client)
-        await self.cog.stop_player(player)
-        await interaction.response.send_message(f"Stopped and cleared the queue ({interaction.user.mention})",
-                                                allowed_mentions=discord.AllowedMentions.none())
+        if player.queue:
+            # Play the next track directly: skip() would repeat the current song in loop-track mode
+            await interaction.response.defer()
+            track = player.queue.peek(0)
+            player.queue.delete(0)
+            await player.play(track)  # track_start updates the embed
+        elif player.autoplay is wavelink.AutoPlayMode.enabled:
+            await interaction.response.defer()
+            await player.skip(force=True)
+        else:
+            await player.skip(force=True)
+            player.stop_progress()
+            embed = discord.Embed(title="Queue finished", color=EMBED_COLOR, description="Add more with `/play`.")
+            await interaction.response.edit_message(embed=embed, view=None)
 
     @discord.ui.button(emoji="🔁", style=discord.ButtonStyle.secondary)
     async def loop(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         order = [wavelink.QueueMode.normal, wavelink.QueueMode.loop, wavelink.QueueMode.loop_all]
         player.queue.mode = order[(order.index(player.queue.mode) + 1) % 3]
-        label = {wavelink.QueueMode.normal: "off", wavelink.QueueMode.loop: "track", wavelink.QueueMode.loop_all: "queue"}
-        await interaction.response.send_message(f"Loop: **{label[player.queue.mode]}**")
+        await self.refresh(interaction, player)
 
-    @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
-    async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(emoji="📜", style=discord.ButtonStyle.secondary)
+    async def show_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
-        player.queue.shuffle()
-        await interaction.response.send_message("Queue shuffled")
+        await Paginator(self.cog.queue_pages(player), interaction.user.id).send(interaction, ephemeral=True)
 
 
 class Music(commands.Cog):
@@ -239,7 +282,7 @@ class Music(commands.Cog):
         player.autoplay = wavelink.AutoPlayMode.partial
         await player.skip(force=True)
 
-    async def enqueue(self, interaction: discord.Interaction, query: str, *, front: bool = False):
+    async def enqueue(self, interaction: discord.Interaction, query: str, *, front: bool = False, skip_current: bool = False):
         await interaction.response.defer()
         player = await self.get_player(interaction, connect=True)
         if not player:
@@ -274,7 +317,7 @@ class Music(commands.Cog):
                 player.queue.put_at(0, track)
             else:
                 player.queue.put(track)
-            starting = not player.playing
+            starting = not player.playing or skip_current
             position = 1 if front else player.queue.count
             embed = discord.Embed(title="Starting" if starting else "Added to queue", color=EMBED_COLOR,
                                   description=track_line(track))
@@ -290,7 +333,12 @@ class Music(commands.Cog):
 
         # two quick /play calls must not both start playback
         async with self._play_locks.setdefault(interaction.guild.id, asyncio.Lock()):
-            if not player.playing and player.queue:
+            if skip_current and player.playing and player.queue:
+                # Take the new track off the front directly: queue.get() would repeat the current song in loop mode
+                track = player.queue.peek(0)
+                player.queue.delete(0)
+                await player.play(track)
+            elif not player.playing and player.queue:
                 await player.play(player.queue.get(), volume=self.volume_for(interaction.guild.id))
 
     def now_playing_embed(self, player: MusicPlayer) -> discord.Embed:
@@ -300,7 +348,14 @@ class Music(commands.Cog):
         if track.artwork:
             embed.set_thumbnail(url=track.artwork)
         length = "LIVE" if track.is_stream else fmt_ms(track.length)
-        embed.add_field(name="Progress", value=f"{progress_bar(player.position, track.length)}\n`{fmt_ms(player.position)} / {length}`", inline=False)
+        progress = f"{progress_bar(player.position, track.length)}\n`{fmt_ms(player.position)} / {length}`"
+        if player.paused:
+            progress += " • paused"
+        elif not track.is_stream:
+            # Discord renders this as a live countdown on each viewer's screen
+            ends_at = int(time.time() + max(track.length - player.position, 0) / 1000)
+            progress += f" • ends <t:{ends_at}:R>"
+        embed.add_field(name="Progress", value=progress, inline=False)
         requester = getattr(track.extras, "requester", None)
         embed.add_field(name="Requested by", value=f"<@{requester}>" if requester else "Autoplay")
         mode = {wavelink.QueueMode.normal: "off", wavelink.QueueMode.loop: "track", wavelink.QueueMode.loop_all: "queue"}[player.queue.mode]
@@ -316,6 +371,22 @@ class Music(commands.Cog):
         embed.set_footer(text=" • ".join(footer))
         return embed
 
+    def queue_pages(self, player: MusicPlayer) -> list[discord.Embed]:
+        tracks = list(player.queue)
+        total = sum(t.length for t in tracks) + ((player.current.length - player.position) if player.current else 0)
+        header = f"**Now playing:** {track_line(player.current)}\n\n" if player.current else ""
+        mode = {wavelink.QueueMode.normal: "off", wavelink.QueueMode.loop: "track", wavelink.QueueMode.loop_all: "queue"}[player.queue.mode]
+        footer = f"{len(tracks)} tracks • {fmt_ms(total)} total • loop: {mode}"
+
+        pages = []
+        for start in range(0, max(len(tracks), 1), 10):
+            lines = [track_line(t, i) for i, t in enumerate(tracks[start:start + 10], start + 1)]
+            embed = discord.Embed(title="Queue", color=EMBED_COLOR,
+                                  description=header + ("\n".join(lines) if lines else "*Nothing queued after this.*"))
+            embed.set_footer(text=footer)
+            pages.append(embed)
+        return pages
+
     # ------------------------------------------------------------------ wavelink events
 
     @commands.Cog.listener()
@@ -325,18 +396,51 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_wavelink_track_start(self, payload: wavelink.TrackStartEventPayload):
         player = cast(Optional[MusicPlayer], payload.player)
-        if not player or not player.home:
+        if not player:
             return
-        if player.np_message:
+        # wavelink stops auto-advancing for good after 3 consecutive failed tracks, and only
+        # clears the count on paths it never reaches once stuck. A track playing means we're healthy.
+        player._error_count = 0
+        if not player.home:
+            return
+        player.stop_progress()
+        embed, view = self.now_playing_embed(player), NowPlayingControls(self, player)
+        old = player.np_message
+        # Edit in place while it's still the latest message in the channel; otherwise re-post at the bottom
+        if old and getattr(player.home, "last_message_id", None) == old.id:
             try:
-                await player.np_message.delete()
+                await old.edit(embed=embed, view=view)
             except discord.HTTPException:
-                pass
-        try:
-            player.np_message = await player.home.send(embed=self.now_playing_embed(player),
-                                                       view=NowPlayingControls(self, player.guild.id))
-        except discord.HTTPException:
-            player.np_message = None
+                player.np_message = None
+        else:
+            if old:
+                try:
+                    await old.delete()
+                except discord.HTTPException:
+                    pass
+            try:
+                player.np_message = await player.home.send(embed=embed, view=view)
+            except discord.HTTPException:
+                player.np_message = None
+        if player.np_message:
+            player.progress_task = asyncio.create_task(self._update_progress(player))
+
+    async def _update_progress(self, player: MusicPlayer):
+        """Keep the now-playing progress bar moving until the track changes."""
+        track = player.current
+        while True:
+            await asyncio.sleep(PROGRESS_INTERVAL)
+            if not player.connected or player.current is not track or not player.np_message:
+                return
+            if player.paused:
+                continue
+            try:
+                await player.np_message.edit(embed=self.now_playing_embed(player))
+            except discord.NotFound:
+                player.np_message = None
+                return
+            except discord.HTTPException as e:
+                log.debug("Progress update failed: %s", e)
 
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: wavelink.TrackExceptionEventPayload):
@@ -347,25 +451,43 @@ class Music(commands.Cog):
         message = (payload.exception or {}).get("message", "unknown error")
         log.warning("Track exception for %s (%s): %s", track.title, track.source, message)
 
-        # YouTube often blocks server IPs — try the same song on SoundCloud instead
-        if track.source != "soundcloud" and not getattr(track.extras, "fallback", False):
-            try:
-                alt = await wavelink.Playable.search(f"{track.author} {track.title}", source=wavelink.TrackSource.SoundCloud)
-            except wavelink.LavalinkLoadException:
-                alt = []
-            if alt:
-                fallback = alt[0]
-                fallback.extras = {"requester": getattr(track.extras, "requester", None), "fallback": True}
-                player.queue.put_at(0, fallback)
-                # Autoplay already ran on the failed track's end event (with an empty queue),
-                # so start the fallback ourselves if nothing is playing
-                if player.current is None:
-                    await player.play(player.queue.get())
-                if player.home:
-                    await player.home.send(f"Couldn't stream **{track.title}** from {track.source}; trying SoundCloud instead.")
-                return
-        if player.home:
-            await player.home.send(f"Couldn't play **{track.title}**: {message}")
+        # Lavalink follows this with a track-end event, and wavelink's autoplay would react to it
+        # before our SoundCloud search finishes: in loop-track mode it replays the broken track forever,
+        # otherwise it jumps ahead in the queue. Pause autoplay (synchronously, before any await, so it's
+        # in place before that event is handled) and pick the next track ourselves.
+        autoplay = player.autoplay
+        player.autoplay = wavelink.AutoPlayMode.disabled
+        try:
+            fallback = None
+            # YouTube often blocks server IPs — try the same song on SoundCloud instead
+            if track.source != "soundcloud" and not getattr(track.extras, "fallback", False):
+                try:
+                    alt = await wavelink.Playable.search(f"{track.author} {track.title}", source=wavelink.TrackSource.SoundCloud)
+                except wavelink.LavalinkLoadException:
+                    alt = []
+                if alt:
+                    fallback = alt[0]
+                    fallback.extras = {"requester": getattr(track.extras, "requester", None), "fallback": True}
+
+            if player.home:
+                note = (f"Couldn't stream **{track.title}** from {track.source}; trying SoundCloud instead."
+                        if fallback else f"Couldn't play **{track.title}**: {message}")
+                try:
+                    await player.home.send(note)
+                except discord.HTTPException:
+                    pass
+
+            if player.current is not None:
+                return  # something else (e.g. /playskip) already started a track
+            if fallback:
+                await player.play(fallback)  # in loop-track mode this becomes the looped track
+            elif player.queue:
+                # Take it off the front directly: queue.get() would hand back the broken track in loop mode
+                nxt = player.queue.peek(0)
+                player.queue.delete(0)
+                await player.play(nxt)
+        finally:
+            player.autoplay = autoplay
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
@@ -442,6 +564,12 @@ class Music(commands.Cog):
     async def playnext(self, interaction: discord.Interaction, query: str):
         await self.enqueue(interaction, query, front=True)
 
+    @app_commands.command(description="Skip the current song and play this one right away")
+    @app_commands.describe(query="Song name or URL")
+    @app_commands.autocomplete(query=query_autocomplete)
+    async def playskip(self, interaction: discord.Interaction, query: str):
+        await self.enqueue(interaction, query, front=True, skip_current=True)
+
     @app_commands.command(description="Join your voice channel")
     async def join(self, interaction: discord.Interaction):
         player = await self.get_player(interaction, connect=True)
@@ -503,27 +631,14 @@ class Music(commands.Cog):
         player = cast(Optional[MusicPlayer], interaction.guild.voice_client)
         if not player or not player.current:
             return await interaction.response.send_message("Nothing is playing.", ephemeral=True)
-        await interaction.response.send_message(embed=self.now_playing_embed(player), view=NowPlayingControls(self, interaction.guild.id))
+        await interaction.response.send_message(embed=self.now_playing_embed(player), view=NowPlayingControls(self, player))
 
     @app_commands.command(description="Show the queue")
     async def queue(self, interaction: discord.Interaction):
         player = cast(Optional[MusicPlayer], interaction.guild.voice_client)
         if not player or (not player.current and not player.queue):
             return await interaction.response.send_message("The queue is empty. Add something with `/play`.", ephemeral=True)
-        tracks = list(player.queue)
-        total = sum(t.length for t in tracks) + ((player.current.length - player.position) if player.current else 0)
-        header = f"**Now playing:** {track_line(player.current)}\n\n" if player.current else ""
-        mode = {wavelink.QueueMode.normal: "off", wavelink.QueueMode.loop: "track", wavelink.QueueMode.loop_all: "queue"}[player.queue.mode]
-        footer = f"{len(tracks)} tracks • {fmt_ms(total)} total • loop: {mode}"
-
-        pages = []
-        for start in range(0, max(len(tracks), 1), 10):
-            lines = [track_line(t, i) for i, t in enumerate(tracks[start:start + 10], start + 1)]
-            embed = discord.Embed(title="Queue", color=EMBED_COLOR,
-                                  description=header + ("\n".join(lines) if lines else "*Nothing queued after this.*"))
-            embed.set_footer(text=footer)
-            pages.append(embed)
-        await Paginator(pages, interaction.user.id).send(interaction)
+        await Paginator(self.queue_pages(player), interaction.user.id).send(interaction)
 
     @app_commands.command(description="Shuffle the queue")
     async def shuffle(self, interaction: discord.Interaction):

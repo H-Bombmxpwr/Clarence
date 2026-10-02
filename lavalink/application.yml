@@ -71,10 +71,10 @@ lavalink:
       rotation: true
       channelMix: true
       lowPass: true
-    bufferDurationMs: 400
+    bufferDurationMs: 1000      # larger buffer rides out CPU/GC hiccups instead of skipping
     frameBufferDurationMs: 5000
     opusEncodingQuality: 10
-    resamplingQuality: HIGH
+    resamplingQuality: LOW      # inaudible through Discord, much cheaper on a small instance
     trackStuckThresholdMs: 10000
     useSeekGhosting: true
     youtubePlaylistLoadLimit: 6

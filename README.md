@@ -85,6 +85,7 @@ Spotify tracks are matched and played from YouTube Music or SoundCloud. Apple Mu
 |---|---|
 | `/play <song or URL>` | Search (with autocomplete) or paste a YouTube / SoundCloud / Spotify / Apple Music link or playlist |
 | `/playnext <song>` | Put a song at the front of the queue |
+| `/playskip <song>` | Skip the current song and play this one now |
 | `/queue` | Paginated queue with total length |
 | `/nowplaying` | Current song, progress bar, and ⏯️ ⏭️ ⏹️ 🔁 🔀 buttons (also posted automatically when each song starts) |
 | `/skip`, `/skipto <n>`, `/pause`, `/resume`, `/stop`, `/replay` | Playback control |
