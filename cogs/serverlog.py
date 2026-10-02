@@ -33,7 +33,7 @@ def render_template(template: str, member: discord.Member) -> str:
 
 
 class ServerLog(commands.Cog):
-    """📋 Server logging, welcome messages and configuration"""
+    """Server logging, welcome messages and configuration"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -44,7 +44,7 @@ class ServerLog(commands.Cog):
     async def on_message_delete(self, message: discord.Message):
         if not message.guild or message.author.bot or message.channel.id in ms.log_channel_ids(message.guild.id):
             return
-        embed = discord.Embed(title="🗑️ Message deleted", color=0xe67e22, timestamp=_now())
+        embed = discord.Embed(title="Message deleted", color=0xe67e22, timestamp=_now())
         embed.set_author(name=str(message.author), icon_url=message.author.display_avatar.url)
         embed.add_field(name="Channel", value=message.channel.mention)
         embed.add_field(name="Author", value=message.author.mention)
@@ -61,7 +61,7 @@ class ServerLog(commands.Cog):
         guild = messages[0].guild
         if messages[0].channel.id in ms.log_channel_ids(guild.id):
             return
-        embed = discord.Embed(title="🗑️ Bulk delete", color=0xe67e22, timestamp=_now(),
+        embed = discord.Embed(title="Bulk delete", color=0xe67e22, timestamp=_now(),
                               description=f"**{len(messages)}** messages deleted in {messages[0].channel.mention}")
         await ms.send_eventlog(guild, embed)
 
@@ -69,7 +69,7 @@ class ServerLog(commands.Cog):
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if not before.guild or before.author.bot or before.content == after.content:
             return
-        embed = discord.Embed(title="✏️ Message edited", color=0x3498db, timestamp=_now(),
+        embed = discord.Embed(title="Message edited", color=0x3498db, timestamp=_now(),
                               description=f"[Jump to message]({after.jump_url}) in {after.channel.mention}")
         embed.set_author(name=str(before.author), icon_url=before.author.display_avatar.url)
         embed.add_field(name="Before", value=(before.content or "(empty)")[:1024], inline=False)
@@ -85,11 +85,11 @@ class ServerLog(commands.Cog):
         cfg = ms.guild_config(guild.id)
 
         age = _now() - member.created_at
-        embed = discord.Embed(title="📥 Member joined", color=0x2ecc71, timestamp=_now(),
+        embed = discord.Embed(title="Member joined", color=0x2ecc71, timestamp=_now(),
                               description=f"{member.mention} ({member})")
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.add_field(name="Account created", value=f"<t:{int(member.created_at.timestamp())}:R>"
-                        + (" ⚠️ **new account**" if age < timedelta(days=7) else ""))
+                        + (" **(new account)**" if age < timedelta(days=7) else ""))
         embed.add_field(name="Member count", value=str(guild.member_count))
         embed.set_footer(text=f"User ID: {member.id}")
         await ms.send_eventlog(guild, embed)
@@ -117,7 +117,7 @@ class ServerLog(commands.Cog):
     async def on_member_remove(self, member: discord.Member):
         guild = member.guild
         roles = [r.mention for r in member.roles[1:]]
-        embed = discord.Embed(title="📤 Member left", color=0xe74c3c, timestamp=_now(), description=f"{member.mention} ({member})")
+        embed = discord.Embed(title="Member left", color=0xe74c3c, timestamp=_now(), description=f"{member.mention} ({member})")
         if member.joined_at:
             embed.add_field(name="Joined", value=f"<t:{int(member.joined_at.timestamp())}:R>")
         embed.add_field(name="Roles", value=" ".join(roles)[:1024] or "None", inline=False)
@@ -151,19 +151,19 @@ class ServerLog(commands.Cog):
                 changes.append("**Timeout removed**")
         if not changes:
             return
-        embed = discord.Embed(title="👤 Member updated", color=0x9b59b6, timestamp=_now(),
+        embed = discord.Embed(title="Member updated", color=0x9b59b6, timestamp=_now(),
                               description=f"{after.mention}\n" + "\n".join(changes))
         embed.set_footer(text=f"User ID: {after.id}")
         await ms.send_eventlog(after.guild, embed)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(title="🔨 User banned", description=f"{user.mention} ({user})", color=0xe74c3c, timestamp=_now())
+        embed = discord.Embed(title="User banned", description=f"{user.mention} ({user})", color=0xe74c3c, timestamp=_now())
         await ms.send_eventlog(guild, embed)
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: discord.User):
-        embed = discord.Embed(title="🔓 User unbanned", description=f"{user.mention} ({user})", color=0x2ecc71, timestamp=_now())
+        embed = discord.Embed(title="User unbanned", description=f"{user.mention} ({user})", color=0x2ecc71, timestamp=_now())
         await ms.send_eventlog(guild, embed)
 
     @commands.Cog.listener()
@@ -176,28 +176,28 @@ class ServerLog(commands.Cog):
             desc, color = f"{member.mention} left {before.channel.mention}", 0xe74c3c
         else:
             desc, color = f"{member.mention} moved {before.channel.mention} → {after.channel.mention}", 0x3498db
-        await ms.send_eventlog(member.guild, discord.Embed(title="🔊 Voice", description=desc, color=color, timestamp=_now()))
+        await ms.send_eventlog(member.guild, discord.Embed(title="Voice", description=desc, color=color, timestamp=_now()))
 
     # ------------------------------------------------------------------ channel / role events
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
-        await ms.send_eventlog(channel.guild, discord.Embed(title="📁 Channel created", color=0x2ecc71, timestamp=_now(),
+        await ms.send_eventlog(channel.guild, discord.Embed(title="Channel created", color=0x2ecc71, timestamp=_now(),
                                                             description=f"{channel.mention} (`{channel.name}`)"))
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
-        await ms.send_eventlog(channel.guild, discord.Embed(title="📁 Channel deleted", color=0xe74c3c, timestamp=_now(),
+        await ms.send_eventlog(channel.guild, discord.Embed(title="Channel deleted", color=0xe74c3c, timestamp=_now(),
                                                             description=f"`#{channel.name}`"))
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
-        await ms.send_eventlog(role.guild, discord.Embed(title="🏷️ Role created", color=0x2ecc71, timestamp=_now(),
+        await ms.send_eventlog(role.guild, discord.Embed(title="Role created", color=0x2ecc71, timestamp=_now(),
                                                          description=f"{role.mention} (`{role.name}`)"))
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
-        await ms.send_eventlog(role.guild, discord.Embed(title="🏷️ Role deleted", color=0xe74c3c, timestamp=_now(),
+        await ms.send_eventlog(role.guild, discord.Embed(title="Role deleted", color=0xe74c3c, timestamp=_now(),
                                                          description=f"`{role.name}`"))
 
     # ------------------------------------------------------------------ /config
@@ -212,7 +212,7 @@ class ServerLog(commands.Cog):
     async def view(self, interaction: discord.Interaction):
         cfg = ms.guild_config(interaction.guild.id)
         ch = lambda cid: f"<#{cid}>" if cid else "not set"
-        embed = discord.Embed(title=f"⚙️ Configuration — {interaction.guild.name}", color=0x3498db)
+        embed = discord.Embed(title=f"Configuration — {interaction.guild.name}", color=0x3498db)
         embed.add_field(name="Mod log", value=ch(cfg.get("log_channel_id")))
         embed.add_field(name="Event log", value=ch(cfg.get("event_log_channel_id")) + (" (using mod log)" if not cfg.get("event_log_channel_id") and cfg.get("log_channel_id") else ""))
         w, g = cfg.get("welcome", {}), cfg.get("goodbye", {})
@@ -250,7 +250,7 @@ class ServerLog(commands.Cog):
         for role in mod_roles:
             overwrites[role] = read_only
 
-        category = await guild.create_category("🔒 Clarence Logs", overwrites=overwrites, reason=f"Logging enabled by {interaction.user}")
+        category = await guild.create_category("Clarence Logs", overwrites=overwrites, reason=f"Logging enabled by {interaction.user}")
         modlog = existing[0] or await guild.create_text_channel(
             "mod-log", category=category, topic="Moderation actions, AutoMod hits and cases", reason="Clarence logging")
         eventlog = existing[1] or await guild.create_text_channel(
@@ -262,9 +262,9 @@ class ServerLog(commands.Cog):
 
         roles_text = ", ".join(r.mention for r in mod_roles) or "only admins (no moderator roles found)"
         await interaction.followup.send(
-            f"✅ Logging enabled.\n• {modlog.mention} — moderation actions\n• {eventlog.mention} — server events\n"
+            f"Logging enabled.\n• {modlog.mention} — moderation actions\n• {eventlog.mention} — server events\n"
             f"Visible to: {roles_text}\nUse `/config logging addrole` to give another role access.", ephemeral=True)
-        await modlog.send(embed=discord.Embed(title="📋 Logging enabled", color=0x2ecc71,
+        await modlog.send(embed=discord.Embed(title="Logging enabled", color=0x2ecc71,
                                               description=f"Set up by {interaction.user.mention}. Moderation actions will appear here."))
 
     @logging.command(name="disable", description="Stop logging (optionally delete the log channels)")
@@ -291,11 +291,11 @@ class ServerLog(commands.Cog):
         targets = [interaction.guild.get_channel(cfg.get(k) or 0) for k in ("log_category_id", "log_channel_id", "event_log_channel_id")]
         targets = [t for t in targets if t]
         if not targets:
-            return await interaction.response.send_message("❌ Logging isn't enabled. Use `/config logging enable`.", ephemeral=True)
+            return await interaction.response.send_message("Logging isn't enabled. Use `/config logging enable`.", ephemeral=True)
         overwrite = None if remove else discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=False)
         for t in targets:
             await t.set_permissions(role, overwrite=overwrite, reason=f"By {interaction.user}")
-        await interaction.response.send_message(f"✅ {role.mention} {'can no longer' if remove else 'can now'} see the logs.", ephemeral=True)
+        await interaction.response.send_message(f"{role.mention} {'can no longer' if remove else 'can now'} see the logs.", ephemeral=True)
 
     @logging.command(name="channels", description="Use existing channels for logs instead of creating new ones")
     @app_commands.describe(modlog="Channel for moderation actions", eventlog="Channel for server events (empty = same as modlog)")
@@ -339,13 +339,13 @@ class ServerLog(commands.Cog):
     @app_commands.describe(for_bots="Apply to bots instead of humans")
     async def autorole_add(self, interaction: discord.Interaction, role: discord.Role, for_bots: bool = False):
         if role.managed or role.is_default() or role >= interaction.guild.me.top_role:
-            return await interaction.response.send_message("❌ I can't assign that role (it's managed or above my top role).", ephemeral=True)
+            return await interaction.response.send_message("I can't assign that role (it's managed or above my top role).", ephemeral=True)
         key = "autoroles_bots" if for_bots else "autoroles"
         lst = ms.guild_config(interaction.guild.id).setdefault(key, [])
         if role.id not in lst:
             lst.append(role.id)
         ms.save_config()
-        await interaction.response.send_message(f"✅ {role.mention} will be given to new {'bots' if for_bots else 'members'}.", ephemeral=True)
+        await interaction.response.send_message(f"{role.mention} will be given to new {'bots' if for_bots else 'members'}.", ephemeral=True)
 
     @autorole.command(name="remove", description="Stop giving a role on join")
     async def autorole_remove(self, interaction: discord.Interaction, role: discord.Role):
@@ -354,7 +354,7 @@ class ServerLog(commands.Cog):
             if role.id in cfg.get(key, []):
                 cfg[key].remove(role.id)
         ms.save_config()
-        await interaction.response.send_message(f"✅ {role.mention} removed from autoroles.", ephemeral=True)
+        await interaction.response.send_message(f"{role.mention} removed from autoroles.", ephemeral=True)
 
     @staticmethod
     def _escalation_text(cfg: dict) -> str:
@@ -378,19 +378,19 @@ class ServerLog(commands.Cog):
         if action.value in ("timeout", "tempban"):
             td = parse_duration(duration or ("1h" if action.value == "timeout" else "1d"))
             if not td or (action.value == "timeout" and td > timedelta(days=28)):
-                return await interaction.response.send_message("❌ Invalid duration (timeouts max 28d).", ephemeral=True)
+                return await interaction.response.send_message("Invalid duration (timeouts max 28d).", ephemeral=True)
             rule["duration"] = int(td.total_seconds())
         cfg = ms.guild_config(interaction.guild.id)
         cfg.setdefault("escalation", {})[str(warnings)] = rule
         ms.save_config()
-        await interaction.response.send_message(f"✅ Escalation rules:\n{self._escalation_text(cfg)}", ephemeral=True)
+        await interaction.response.send_message(f"Escalation rules:\n{self._escalation_text(cfg)}", ephemeral=True)
 
     @escalation.command(name="remove", description="Remove the rule for a warning count")
     async def escalation_remove(self, interaction: discord.Interaction, warnings: int):
         cfg = ms.guild_config(interaction.guild.id)
         cfg.get("escalation", {}).pop(str(warnings), None)
         ms.save_config()
-        await interaction.response.send_message(f"✅ Escalation rules:\n{self._escalation_text(cfg)}", ephemeral=True)
+        await interaction.response.send_message(f"Escalation rules:\n{self._escalation_text(cfg)}", ephemeral=True)
 
     @escalation.command(name="list", description="Show escalation rules")
     async def escalation_list(self, interaction: discord.Interaction):

@@ -36,7 +36,7 @@ class ServerSelectView(discord.ui.View):
     def get_embed(self) -> discord.Embed:
         """Generate the current page embed"""
         embed = discord.Embed(
-            title="🤖 Bot Dashboard",
+            title="Bot Dashboard",
             description=f"Managing **{len(self.servers)}** servers",
             color=0x9b59b6,
             timestamp=datetime.now(timezone.utc)
@@ -162,7 +162,7 @@ class ServerSelectMenu(discord.ui.View):
             return await interaction.response.send_message("Server not found.", ephemeral=True)
         
         embed = discord.Embed(
-            title=f"📋 {guild.name}",
+            title=f"{guild.name}",
             color=0x3498db
         )
         
@@ -182,7 +182,7 @@ class ServerSelectMenu(discord.ui.View):
         text_channels = [c for c in guild.channels if isinstance(c, discord.TextChannel)][:5]
         if text_channels:
             channel_list = "\n".join([f"#{c.name}" for c in text_channels])
-            embed.add_field(name="📝 Sample Channels", value=channel_list, inline=False)
+            embed.add_field(name="Sample Channels", value=channel_list, inline=False)
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -195,7 +195,7 @@ class Owner(commands.Cog):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != OWNER_ID:
-            await interaction.response.send_message("❌ This command is owner-only.", ephemeral=True)
+            await interaction.response.send_message("This command is owner-only.", ephemeral=True)
             return False
         return True
 
@@ -213,7 +213,7 @@ class Owner(commands.Cog):
     async def guildinfo(self, interaction: discord.Interaction, guild_id: str):
         guild = self.client.get_guild(int(guild_id)) if guild_id.isdigit() else None
         if not guild:
-            return await interaction.response.send_message("❌ Server not found.", ephemeral=True)
+            return await interaction.response.send_message("Server not found.", ephemeral=True)
         embed = discord.Embed(title=guild.name, color=0x3498db)
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
@@ -228,23 +228,23 @@ class Owner(commands.Cog):
     async def leaveserver(self, interaction: discord.Interaction, guild_id: str):
         guild = self.client.get_guild(int(guild_id)) if guild_id.isdigit() else None
         if not guild:
-            return await interaction.response.send_message("❌ Server not found.", ephemeral=True)
+            return await interaction.response.send_message("Server not found.", ephemeral=True)
         view = ConfirmView(interaction.user.id)
         await interaction.response.send_message(f"Leave **{guild.name}**?", view=view, ephemeral=True)
         await view.wait()
         if view.value:
             await guild.leave()
-            await interaction.followup.send(f"✅ Left **{guild.name}**", ephemeral=True)
+            await interaction.followup.send(f"Left **{guild.name}**", ephemeral=True)
 
     @app_commands.command(description="DM a message to every server owner")
     async def broadcast(self, interaction: discord.Interaction, message: str):
         view = ConfirmView(interaction.user.id)
-        await interaction.response.send_message(f"⚠️ This will DM all **{len(self.client.guilds)}** server owners.",
+        await interaction.response.send_message(f"This will DM all **{len(self.client.guilds)}** server owners.",
                                                 view=view, ephemeral=True)
         await view.wait()
         if not view.value:
             return
-        embed = discord.Embed(title="📢 Message from Bot Owner", description=message, color=0x3498db,
+        embed = discord.Embed(title="Message from Bot Owner", description=message, color=0x3498db,
                               timestamp=datetime.now(timezone.utc))
         embed.set_footer(text=f"From {interaction.user}")
         success = failed = 0
@@ -254,7 +254,7 @@ class Owner(commands.Cog):
                 success += 1
             except Exception:
                 failed += 1
-        await interaction.followup.send(f"✅ Sent to **{success}** owners. Failed: **{failed}**", ephemeral=True)
+        await interaction.followup.send(f"Sent to **{success}** owners. Failed: **{failed}**", ephemeral=True)
 
     @app_commands.command(description="Reload an extension")
     @app_commands.autocomplete(extension=extension_autocomplete)
@@ -262,9 +262,9 @@ class Owner(commands.Cog):
         try:
             await self.client.reload_extension(extension)
             await self.client.sync_commands()
-            await interaction.response.send_message(f"✅ Reloaded `{extension}`", ephemeral=True)
+            await interaction.response.send_message(f"Reloaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
+            await interaction.response.send_message(f"{type(e).__name__}: {e}", ephemeral=True)
 
     @app_commands.command(description="Load an extension")
     @app_commands.autocomplete(extension=extension_autocomplete)
@@ -272,26 +272,26 @@ class Owner(commands.Cog):
         try:
             await self.client.load_extension(extension)
             await self.client.sync_commands()
-            await interaction.response.send_message(f"✅ Loaded `{extension}`", ephemeral=True)
+            await interaction.response.send_message(f"Loaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
+            await interaction.response.send_message(f"{type(e).__name__}: {e}", ephemeral=True)
 
     @app_commands.command(description="Unload an extension")
     @app_commands.autocomplete(extension=extension_autocomplete)
     async def unload(self, interaction: discord.Interaction, extension: str):
         if extension == "cogs.owner":
-            return await interaction.response.send_message("❌ Unloading the owner cog would lock you out.", ephemeral=True)
+            return await interaction.response.send_message("Unloading the owner cog would lock you out.", ephemeral=True)
         try:
             await self.client.unload_extension(extension)
             await self.client.sync_commands()
-            await interaction.response.send_message(f"✅ Unloaded `{extension}`", ephemeral=True)
+            await interaction.response.send_message(f"Unloaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
+            await interaction.response.send_message(f"{type(e).__name__}: {e}", ephemeral=True)
 
     @app_commands.command(description="List loaded extensions and cogs")
     async def cogs(self, interaction: discord.Interaction):
-        embed = discord.Embed(title="🔧 Loaded", color=0x2ecc71,
-                              description="**Extensions**\n" + "\n".join(f"✅ `{e}`" for e in self.client.extensions)
+        embed = discord.Embed(title="Loaded", color=0x2ecc71,
+                              description="**Extensions**\n" + "\n".join(f"`{e}`" for e in self.client.extensions)
                                           + "\n\n**Cogs**\n" + ", ".join(self.client.cogs))
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -299,13 +299,13 @@ class Owner(commands.Cog):
     async def sync(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         await self.client.sync_commands(force=True)
-        await interaction.followup.send(f"✅ Synced {len(self.client.command_ids)} global commands.", ephemeral=True)
+        await interaction.followup.send(f"Synced {len(self.client.command_ids)} global commands.", ephemeral=True)
 
     @app_commands.command(description="Reshuffle the lyric status rotation")
     async def reloadlyrics(self, interaction: discord.Interaction):
         status = self.client.get_cog("Status")
         if not status:
-            return await interaction.response.send_message("❌ Status cog not loaded.", ephemeral=True)
+            return await interaction.response.send_message("Status cog not loaded.", ephemeral=True)
         status.reshuffle()
         await interaction.response.send_message("Lyric status order reshuffled.", ephemeral=True)
 
@@ -315,7 +315,7 @@ class Owner(commands.Cog):
         await interaction.response.send_message("Shut down the bot?", view=view, ephemeral=True)
         await view.wait()
         if view.value:
-            await interaction.followup.send("👋 Shutting down...", ephemeral=True)
+            await interaction.followup.send("Shutting down...", ephemeral=True)
             await self.client.close()
 
 

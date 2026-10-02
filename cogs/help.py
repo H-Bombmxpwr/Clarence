@@ -13,20 +13,20 @@ OWNER_ID = 239605426033786881
 
 # Display order + labels for the help menu (keyed by cog qualified_name)
 CATEGORIES = {
-    "Music": "🎵 Music",
-    "Moderation": "🛡️ Moderation",
-    "AutoMod": "🤖 AutoMod",
-    "ServerLog": "⚙️ Server Config & Logging",
-    "Flight": "✈️ Aviation",
-    "Poker": "🎰 Poker",
-    "Fun": "🎮 Games",
-    "Trivia": "❓ Trivia",
-    "Translation": "🌐 Translation",
-    "Math": "🧮 Math",
-    "Misc": "🔧 Utility",
-    "Api": "🌐 Fun APIs",
-    "Help": "ℹ️ Info",
-    "Status": "🎶 Status",
+    "Music": "Music",
+    "Moderation": "Moderation",
+    "AutoMod": "AutoMod",
+    "ServerLog": "Server Config & Logging",
+    "Flight": "Aviation",
+    "Poker": "Poker",
+    "Fun": "Games",
+    "Trivia": "Trivia",
+    "Translation": "Translation",
+    "Math": "Math",
+    "Misc": "Utility",
+    "Api": "Fun APIs",
+    "Help": "Info",
+    "Status": "Status",
 }
 
 
@@ -105,7 +105,7 @@ def category_embed(bot: commands.Bot, cog: str, cmds: list) -> discord.Embed:
 
 
 class Help(commands.Cog):
-    """ℹ️ Help and information"""
+    """Help and information"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -121,7 +121,7 @@ class Help(commands.Cog):
         if command:
             found = next((c for cmds in grouped.values() for c in cmds if c.qualified_name == command.lower().lstrip("/")), None)
             if not found:
-                return await interaction.response.send_message(f"❌ No command named `{command}`.", ephemeral=True)
+                return await interaction.response.send_message(f"No command named `{command}`.", ephemeral=True)
             embed = discord.Embed(title=f"/{found.qualified_name}", description=found.description, color=0x3498db)
             for p in found.parameters:
                 kind = p.type.name

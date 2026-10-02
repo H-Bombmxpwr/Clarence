@@ -68,7 +68,7 @@ def _load_builtin_words() -> set[str]:
 
 
 class AutoMod(commands.Cog):
-    """🤖 Automatic moderation"""
+    """Automatic moderation"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -196,11 +196,11 @@ class AutoMod(commands.Cog):
                 pass
 
         try:
-            await message.channel.send(f"🚫 {member.mention}, your message was removed: **{reason}**.", delete_after=6)
+            await message.channel.send(f"{member.mention}, your message was removed: **{reason}**.", delete_after=6)
         except discord.HTTPException:
             pass
 
-        embed = discord.Embed(title="🤖 AutoMod", color=0xe67e22, timestamp=datetime.now(timezone.utc))
+        embed = discord.Embed(title="AutoMod", color=0xe67e22, timestamp=datetime.now(timezone.utc))
         embed.add_field(name="User", value=f"{member.mention} (`{member.id}`)")
         embed.add_field(name="Channel", value=message.channel.mention)
         embed.add_field(name="Trigger", value=reason)
@@ -220,7 +220,7 @@ class AutoMod(commands.Cog):
         cfg = automod_config(interaction.guild.id)
         f = cfg["filters"]
         on = lambda b: "✅" if b else "❌"
-        embed = discord.Embed(title="🤖 AutoMod", color=0x2ecc71 if cfg["enabled"] else 0x95a5a6,
+        embed = discord.Embed(title="AutoMod", color=0x2ecc71 if cfg["enabled"] else 0x95a5a6,
                               description=f"**{'Enabled' if cfg['enabled'] else 'Disabled'}** • action: **{cfg['action']}**"
                                           + (f" ({format_duration(timedelta(seconds=cfg['timeout_seconds']))})" if cfg["action"] == "timeout" else ""))
         embed.add_field(name=f"{on(f['spam']['enabled'])} spam", value=f"{f['spam']['messages']} msgs / {f['spam']['seconds']}s")
@@ -245,7 +245,7 @@ class AutoMod(commands.Cog):
                 cfg["filters"][name]["enabled"] = True
             note = "\nTurned on the **spam**, **mentions** and **invites** filters to start. Adjust with `/automod filter`."
         ms.save_config()
-        await interaction.response.send_message(f"🤖 AutoMod **{'enabled' if enabled else 'disabled'}** for this server.{note}", ephemeral=True)
+        await interaction.response.send_message(f"AutoMod **{'enabled' if enabled else 'disabled'}** for this server.{note}", ephemeral=True)
 
     @automod.command(name="filter", description="Enable or disable an individual filter")
     @app_commands.choices(name=FILTER_CHOICES)
@@ -268,7 +268,7 @@ class AutoMod(commands.Cog):
         if timeout:
             td = parse_duration(timeout)
             if not td or td > timedelta(days=28):
-                return await interaction.response.send_message("❌ Invalid timeout (e.g. `5m`, `1h`, max 28d).", ephemeral=True)
+                return await interaction.response.send_message("Invalid timeout (e.g. `5m`, `1h`, max 28d).", ephemeral=True)
             cfg["timeout_seconds"] = int(td.total_seconds())
         ms.save_config()
         await interaction.response.send_message(f"AutoMod action set to **{action.name}**.", ephemeral=True)

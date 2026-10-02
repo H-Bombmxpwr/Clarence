@@ -62,7 +62,7 @@ def resolve_language(text: str) -> Optional[str]:
 
 
 class Translation(commands.Cog, name="Translation"):
-    """🌐 Translate text — or react to a message with a flag!"""
+    """Translate text — or react to a message with a flag!"""
 
     def __init__(self, client):
         self.client = client
@@ -86,7 +86,7 @@ class Translation(commands.Cog, name="Translation"):
             return None
 
     def _embed(self, original: str, result: dict, footer: str) -> discord.Embed:
-        embed = discord.Embed(title="🌐 Translation", color=0x3498db)
+        embed = discord.Embed(title="Translation", color=0x3498db)
         embed.add_field(name=f"Original ({result['src_name']})", value=original[:1024], inline=False)
         embed.add_field(name=f"Translated ({result['dest_name']})", value=result['text'][:1024], inline=False)
         embed.set_footer(text=footer)
@@ -103,11 +103,11 @@ class Translation(commands.Cog, name="Translation"):
     async def translate(self, interaction: discord.Interaction, language: str, text: str):
         code = resolve_language(language)
         if not code:
-            return await interaction.response.send_message(f"❌ Unknown language: `{language}`. See `/languages`.", ephemeral=True)
+            return await interaction.response.send_message(f"Unknown language: `{language}`. See `/languages`.", ephemeral=True)
         await interaction.response.defer()
         result = await self._translate_text(text, code)
         if result is None:
-            return await interaction.followup.send("❌ Translation failed. Please try again.")
+            return await interaction.followup.send("Translation failed. Please try again.")
         await interaction.followup.send(embed=self._embed(text, result, f"Requested by {interaction.user.display_name}"))
 
     async def translate_context(self, interaction: discord.Interaction, message: discord.Message):
@@ -116,14 +116,14 @@ class Translation(commands.Cog, name="Translation"):
         await interaction.response.defer(ephemeral=True)
         result = await self._translate_text(message.content, "en")
         if result is None:
-            return await interaction.followup.send("❌ Translation failed.", ephemeral=True)
+            return await interaction.followup.send("Translation failed.", ephemeral=True)
         await interaction.followup.send(embed=self._embed(message.content, result, f"Message from {message.author.display_name}"),
                                         ephemeral=True)
 
     @app_commands.command(description="List all supported languages")
     async def languages(self, interaction: discord.Interaction):
         lines = [f"`{code}` — {name.title()}" for code, name in sorted(LANGUAGES.items(), key=lambda x: x[1])]
-        pages = [discord.Embed(title="🌐 Supported Languages", description=c, color=0x3498db)
+        pages = [discord.Embed(title="Supported Languages", description=c, color=0x3498db)
                  .set_footer(text=f"{len(LANGUAGES)} languages") for c in chunk_lines(lines, 900)]
         await Paginator(pages, interaction.user.id).send(interaction, ephemeral=True)
 
@@ -132,9 +132,9 @@ class Translation(commands.Cog, name="Translation"):
         try:
             detected = await asyncio.to_thread(self.translator.detect, text)
         except Exception as e:
-            return await interaction.response.send_message(f"❌ Detection failed: {e}", ephemeral=True)
+            return await interaction.response.send_message(f"Detection failed: {e}", ephemeral=True)
         lang = detected.lang if isinstance(detected.lang, str) else detected.lang[0]
-        embed = discord.Embed(title="🔍 Language Detection", color=0x3498db)
+        embed = discord.Embed(title="Language Detection", color=0x3498db)
         embed.add_field(name="Text", value=text[:500], inline=False)
         embed.add_field(name="Detected Language", value=f"{language_name(lang)} (`{lang}`)", inline=True)
         confidence = detected.confidence if isinstance(detected.confidence, (int, float)) else None

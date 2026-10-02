@@ -58,7 +58,7 @@ class FizzBuzzView(View):
         self.message: Optional[discord.Message] = None
 
     def embed(self, note: str = "") -> discord.Embed:
-        e = discord.Embed(title="🎮 FizzBuzz", color=0x5865f2,
+        e = discord.Embed(title="FizzBuzz", color=0x5865f2,
                           description=f"What comes next?\n\n# {self.count}?\n\n{note}")
         e.set_footer(text="Multiple of 3 → Fizz • of 5 → Buzz • of both → FizzBuzz • otherwise → Number")
         return e
@@ -75,11 +75,11 @@ class FizzBuzzView(View):
             correct = "Number"
         if guess == correct:
             self.count += 1
-            await interaction.response.edit_message(embed=self.embed(f"✅ Score: **{self.count - 1}**"), view=self)
+            await interaction.response.edit_message(embed=self.embed(f"Score: **{self.count - 1}**"), view=self)
         else:
             self.stop()
             await interaction.response.edit_message(
-                embed=discord.Embed(title="❌ Game over", color=0xe74c3c,
+                embed=discord.Embed(title="Game over", color=0xe74c3c,
                                     description=f"**{self.count}** was **{correct}**, not {guess}.\nYou reached **{self.count - 1}**!"),
                 view=None)
 
@@ -102,14 +102,14 @@ class FizzBuzzView(View):
     async def on_timeout(self):
         if self.message:
             try:
-                await self.message.edit(embed=discord.Embed(title="⏰ Time's up!", color=0x95a5a6,
+                await self.message.edit(embed=discord.Embed(title="Time's up!", color=0x95a5a6,
                                                             description=f"You reached **{self.count - 1}**."), view=None)
             except discord.HTTPException:
                 pass
 
 
 class Fun(commands.Cog):
-    """🎮 Fun Games and Entertainment"""
+    """Fun Games and Entertainment"""
 
     def __init__(self, client):
         self.client = client
@@ -154,7 +154,7 @@ class Fun(commands.Cog):
         if member.id == interaction.user.id:
             return await interaction.response.send_message("Who would want to play this game with themselves?")
 
-        await interaction.response.send_message(f"🃏 {member.mention}, 52 card pickup!")
+        await interaction.response.send_message(f"{member.mention}, 52 card pickup!")
         async with self.session.get(f"{DECK_API_BASE}/new/draw/?count=52") as r:
             cards = (await r.json()).get("cards", [])
         if len(cards) < 52:
@@ -177,7 +177,7 @@ class Fun(commands.Cog):
                 data = await r.json(content_type=None)
             await interaction.response.send_message(f"**Idea:** {data['activity']} *({data.get('type', 'misc')})*")
         except Exception:
-            await interaction.response.send_message("❌ Couldn't fetch an activity. Try again!", ephemeral=True)
+            await interaction.response.send_message("Couldn't fetch an activity. Try again!", ephemeral=True)
 
     async def ratio_context(self, interaction: discord.Interaction, message: discord.Message):
         await interaction.response.send_message("Ratio'd!", ephemeral=True)
@@ -190,7 +190,7 @@ class Fun(commands.Cog):
     @app_commands.command(description="Count to a number by typing each number in chat")
     async def count(self, interaction: discord.Interaction, endpoint: app_commands.Range[int, 1, 1000]):
         count, mistakes = 1, 0
-        await interaction.response.send_message(f"🔢 {interaction.user.mention}, count to **{endpoint}**! Type each number. Type `give up` to quit.")
+        await interaction.response.send_message(f"{interaction.user.mention}, count to **{endpoint}**! Type each number. Type `give up` to quit.")
 
         def check(m):
             return m.author == interaction.user and m.channel == interaction.channel
@@ -199,19 +199,19 @@ class Fun(commands.Cog):
             try:
                 msg = await self.client.wait_for("message", check=check, timeout=60)
             except asyncio.TimeoutError:
-                return await interaction.channel.send("⏰ Time's up!")
+                return await interaction.channel.send("Time's up!")
             if msg.content.lower() == 'give up':
-                return await interaction.channel.send(f"😔 You gave up at **{count}**")
+                return await interaction.channel.send(f"You gave up at **{count}**")
             if msg.content.strip() == str(count):
                 await msg.add_reaction('✅')
                 count += 1
             else:
                 await msg.add_reaction('❌')
                 mistakes += 1
-                await interaction.channel.send(f"❌ Wrong! You're on **{count}**")
+                await interaction.channel.send(f"Wrong! You're on **{count}**")
                 if mistakes >= 20:
                     return await interaction.channel.send("Too many mistakes. Game over!")
-        await interaction.channel.send(embed=discord.Embed(title="🎉 CONGRATS!", description=f"You counted to **{endpoint}**!", color=0xFFD700))
+        await interaction.channel.send(embed=discord.Embed(title="CONGRATS!", description=f"You counted to **{endpoint}**!", color=0xFFD700))
 
     @app_commands.command(description="Random quotes from 2070 Paradigm Shift")
     async def paradigm(self, interaction: discord.Interaction, number: app_commands.Range[int, 1, 30] = 1):
@@ -219,7 +219,7 @@ class Fun(commands.Cog):
             with open("constants/paradigm.txt", "r") as f:
                 lines = [l.strip() for l in f if l.strip()]
         except OSError:
-            return await interaction.response.send_message("❌ Could not load paradigm file", ephemeral=True)
+            return await interaction.response.send_message("Could not load paradigm file", ephemeral=True)
         picked = "\n".join(f"**{i + 1}:** {random.choice(lines)}" for i in range(number))
         await interaction.response.send_message(picked[:2000])
 
@@ -265,15 +265,15 @@ class Fun(commands.Cog):
             rows = ["".join(closest(img.getpixel((x, y))) for x in range(size)) for y in range(size)]
             await interaction.followup.send("\n".join(rows)[:2000])
         except Exception as e:
-            await interaction.followup.send(f"❌ Error: {e}")
+            await interaction.followup.send(f"Error: {e}")
 
     @app_commands.command(description="Roll a die")
     async def dice(self, interaction: discord.Interaction, sides: app_commands.Range[int, 2, 1000] = 6):
-        await interaction.response.send_message(f"🎲 You rolled a **{random.randint(1, sides)}** (d{sides})")
+        await interaction.response.send_message(f"You rolled a **{random.randint(1, sides)}** (d{sides})")
 
     @app_commands.command(description="Flip a coin")
     async def coinflip(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"🪙 **{random.choice(['Heads', 'Tails'])}!**")
+        await interaction.response.send_message(f"**{random.choice(['Heads', 'Tails'])}!**")
 
     @app_commands.command(name="8ball", description="Ask the magic 8-ball a question")
     async def eightball(self, interaction: discord.Interaction, question: str):
@@ -284,7 +284,7 @@ class Fun(commands.Cog):
             "Concentrate and ask again.", "Don't count on it.", "My reply is no.", "My sources say no.",
             "Outlook not so good.", "Very doubtful.",
         ]
-        embed = discord.Embed(title="🎱 Magic 8-Ball", color=0x000000)
+        embed = discord.Embed(title="Magic 8-Ball", color=0x000000)
         embed.add_field(name="Question", value=question[:1024], inline=False)
         embed.add_field(name="Answer", value=random.choice(responses), inline=False)
         await interaction.response.send_message(embed=embed)

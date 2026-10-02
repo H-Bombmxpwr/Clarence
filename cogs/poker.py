@@ -227,11 +227,11 @@ class RaiseModal(discord.ui.Modal, title="Raise"):
         try:
             value = int(str(self.amount).replace(",", "").replace("$", "").strip())
         except ValueError:
-            return await interaction.response.send_message("❌ Enter a number.", ephemeral=True)
+            return await interaction.response.send_message("Enter a number.", ephemeral=True)
         if value >= hi:
             value = hi
         elif value < lo:
-            return await interaction.response.send_message(f"❌ The minimum raise is to **{lo}**.", ephemeral=True)
+            return await interaction.response.send_message(f"The minimum raise is to **{lo}**.", ephemeral=True)
         await interaction.response.defer()
         self.table.resolve(self.seat, ("raise", value))
 
@@ -341,7 +341,7 @@ class TableView(discord.ui.View):
         t = self.table
         if interaction.user.id != t.host.id and not interaction.user.guild_permissions.manage_messages:
             return await interaction.response.send_message("Only the host can cancel.", ephemeral=True)
-        await interaction.response.edit_message(content="🚫 Game cancelled.", embed=None, view=None, attachments=[])
+        await interaction.response.edit_message(content="Game cancelled.", embed=None, view=None, attachments=[])
         t.cog.tables.pop(t.channel.id, None)
 
 
@@ -394,11 +394,11 @@ class Table:
         seat = Seat(member=user, stack=balance, sat_with=balance)
         if self.state == "playing":
             self.waiting.append(seat)
-            await interaction.response.send_message("🪑 You'll be dealt in next hand.", ephemeral=True)
+            await interaction.response.send_message("You'll be dealt in next hand.", ephemeral=True)
         else:
             self.seats.append(seat)
             await interaction.response.defer()
-        self.log.append(f"🪑 **{seat.name}** sat down with {balance}")
+        self.log.append(f"**{seat.name}** sat down with {balance}")
         await self.update()
 
     async def leave(self, interaction: discord.Interaction):
@@ -418,7 +418,7 @@ class Table:
             self.seats.remove(seat)
             self.settle_seat(seat)
         await interaction.response.defer()
-        self.log.append(f"👋 **{seat.name}** left with {seat.stack}")
+        self.log.append(f"**{seat.name}** left with {seat.stack}")
         if self.state == "lobby" and seat.id == self.host.id and self.seats:
             self.host = self.seats[0].member
         await self.update()
@@ -450,14 +450,14 @@ class Table:
 
     def embed(self) -> discord.Embed:
         if self.state == "lobby":
-            e = discord.Embed(title="🎰 Texas Hold'em — waiting for players", color=GREEN,
+            e = discord.Embed(title="Texas Hold'em — waiting for players", color=GREEN,
                               description=f"Blinds **{self.sb}/{self.bb}** • host {self.host.mention}\n"
                                           f"Press **Join** to sit down with your chip balance. The host presses **Start** (2–{MAX_PLAYERS} players).")
             e.add_field(name=f"Players ({len(self.seats)})",
-                        value="\n".join(f"🪑 {s.member.mention} — {s.stack}" for s in self.seats) or "Nobody yet", inline=False)
+                        value="\n".join(f"{s.member.mention} — {s.stack}" for s in self.seats) or "Nobody yet", inline=False)
             return e
 
-        title = f"🎰 Hand #{self.hand_no}" + (f" — {self.street}" if self.street else "")
+        title = f"Hand #{self.hand_no}" + (f" — {self.street}" if self.street else "")
         e = discord.Embed(title=title, color=GREEN)
         e.description = f"**Board:** {cards_str(self.board)}\n**Pot:** {self.pot_total()}" + (
             f" • to call: {self.current_bet}" if self.current_bet else "")
@@ -475,12 +475,12 @@ class Table:
             name = f"~~{s.name}~~" if s.folded else f"**{s.name}**"
             lines.append(f"{''.join(tags)} {name} — {s.stack}{bet}" + (f" • *{status}*" if status else ""))
         for s in self.waiting:
-            lines.append(f"⏳ {s.name} — {s.stack} • *next hand*")
+            lines.append(f"{s.name} — {s.stack} • *next hand*")
         e.add_field(name="Table", value="\n".join(lines)[:1024], inline=False)
         if self.log:
             e.add_field(name="Action", value="\n".join(self.log)[:1024], inline=False)
         if self.state == "playing" and self.current:
-            e.set_footer(text=f"{self.current.name} to act • {TURN_TIMEOUT}s • press 🃏 My cards to see your hand")
+            e.set_footer(text=f"{self.current.name} to act • {TURN_TIMEOUT}s • press My cards to see your hand")
         elif self.state == "between":
             e.set_footer(text=f"Next hand in {BETWEEN_HANDS}s • join or leave now")
         if self.board:
@@ -519,7 +519,7 @@ class Table:
                 for s in [s for s in self.seats if s.stack < self.bb or s.leaving]:
                     self.seats.remove(s)
                     self.settle_seat(s)
-                    self.log.append(f"👋 **{s.name}** left the table with {s.stack}")
+                    self.log.append(f"**{s.name}** left the table with {s.stack}")
                 if len(self.seats) < 2:
                     break
                 await self.play_hand()
@@ -531,7 +531,7 @@ class Table:
                 await asyncio.sleep(BETWEEN_HANDS)
         except Exception as e:
             print(f"[poker] game crashed: {e!r}")
-            await self.channel.send("⚠️ The poker game hit an error and ended. Balances from completed hands were saved.")
+            await self.channel.send("The poker game hit an error and ended. Balances from completed hands were saved.")
         finally:
             await self.finish()
 
@@ -543,7 +543,7 @@ class Table:
         self.cog.tables.pop(self.channel.id, None)
         everyone = self.seats + self.waiting
         if everyone:
-            e = discord.Embed(title="🏆 Game over — final stacks", color=0xffd700)
+            e = discord.Embed(title="Game over — final stacks", color=0xffd700)
             for i, s in enumerate(sorted(everyone, key=lambda s: s.stack, reverse=True), 1):
                 medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
                 delta = s.stack - s.sat_with
@@ -591,7 +591,7 @@ class Table:
         for _ in range(2):
             for s in self.in_hand:
                 s.hole.append(self.deck.pop())
-        self.log.append("🎴 Cards dealt — tap **🃏 My cards** to see yours (only you can see it)")
+        self.log.append("Cards dealt — tap **My cards** to see yours (only you can see it)")
 
         # pre-flop: first to act is left of the big blind (heads-up that's the button/small blind)
         self.street = "Pre-flop"
@@ -648,22 +648,22 @@ class Table:
 
             if action == "fold":
                 seat.folded = True
-                self.log.append(f"❌ {seat.name} folds")
+                self.log.append(f"{seat.name} folds")
             elif action == "check" and to_call == 0:
-                self.log.append(f"✅ {seat.name} checks")
+                self.log.append(f"{seat.name} checks")
             elif action in ("call", "check"):
                 paid = seat.pay(to_call)
-                self.log.append(f"📞 {seat.name} calls {paid}" + (" (all-in)" if seat.all_in else ""))
+                self.log.append(f"{seat.name} calls {paid}" + (" (all-in)" if seat.all_in else ""))
             elif action in ("raise", "allin"):
                 target = seat.street_bet + seat.stack if action == "allin" else amount
                 if target <= self.current_bet:  # all-in for less than a call
                     paid = seat.pay(target - seat.street_bet)
-                    self.log.append(f"🔥 {seat.name} calls all-in for {paid}")
+                    self.log.append(f"{seat.name} calls all-in for {paid}")
                     continue
                 raise_size = target - self.current_bet
                 seat.pay(target - seat.street_bet)
                 verb = "bets" if self.current_bet == 0 else "raises to"
-                self.log.append(f"💰 {seat.name} {verb} {target}" + (" (all-in)" if seat.all_in else ""))
+                self.log.append(f"{seat.name} {verb} {target}" + (" (all-in)" if seat.all_in else ""))
                 if raise_size >= self.min_raise:
                     # full raise: everyone else gets to act again
                     self.min_raise = raise_size
@@ -696,10 +696,10 @@ class Table:
         except asyncio.TimeoutError:
             seat.timeouts += 1
             result = ("check", 0) if self.to_call(seat) == 0 else ("fold", 0)
-            self.log.append(f"⏰ {seat.name} timed out")
+            self.log.append(f"{seat.name} timed out")
             if seat.timeouts >= 2:
                 seat.leaving = True
-                self.log.append(f"💤 {seat.name} will be removed for inactivity")
+                self.log.append(f"{seat.name} will be removed for inactivity")
         if ping:
             try:
                 await ping.delete()
@@ -738,7 +738,7 @@ class Table:
             winner = live[0]
             winnings[winner.id] = total_pot
             winner.stack += total_pot
-            self.log.append(f"🏆 {winner.name} wins {total_pot} (everyone folded)")
+            self.log.append(f"{winner.name} wins {total_pot} (everyone folded)")
             ranks = {}
         else:
             ranks = {s.id: best_hand(s.hole + self.board) for s in live}
@@ -754,20 +754,20 @@ class Table:
                     winnings[w.id] = winnings.get(w.id, 0) + won
 
         # results message
-        e = discord.Embed(title=f"🃏 Hand #{self.hand_no} results", color=0xffd700,
+        e = discord.Embed(title=f"Hand #{self.hand_no} results", color=0xffd700,
                           description=f"**Board:** {cards_str(self.board)}\n**Pot:** {total_pot}")
         for s in self.in_hand:
             won = winnings.get(s.id, 0)
             if s.folded:
                 continue
             hand = describe(ranks[s.id]) if ranks else ""
-            e.add_field(name=f"{'🏆 ' if won else ''}{s.name}" + (f" +{won}" if won else ""),
+            e.add_field(name=f"{s.name}" + (f" +{won}" if won else ""),
                         value=f"{cards_str(s.hole) if ranks else '(cards hidden)'}\n{hand}", inline=True)
         await self.channel.send(embed=e)
         for wid, amount in winnings.items():
             name = next(s.name for s in self.in_hand if s.id == wid)
             if ranks:
-                self.log.append(f"🏆 {name} wins {amount}")
+                self.log.append(f"{name} wins {amount}")
 
         # persist balances and stats
         for s in self.in_hand:
@@ -785,7 +785,7 @@ class Table:
 # ============================================================================ cog
 
 class Poker(commands.Cog):
-    """🎰 Texas Hold'em"""
+    """Texas Hold'em"""
 
     poker = app_commands.Group(name="poker", description="Texas Hold'em poker", guild_only=True)
 
@@ -809,7 +809,7 @@ class Poker(commands.Cog):
     @app_commands.choices(small_blind=[app_commands.Choice(name=f"{v}/{v * 2}", value=v) for v in (5, 10, 25, 50, 100)])
     async def start(self, interaction: discord.Interaction, small_blind: Optional[app_commands.Choice[int]] = None):
         if interaction.channel.id in self.tables:
-            return await interaction.response.send_message("⚠️ There's already a table in this channel.", ephemeral=True)
+            return await interaction.response.send_message("There's already a table in this channel.", ephemeral=True)
         sb = small_blind.value if small_blind else 10
         balance = account(interaction.guild.id, interaction.user.id)["balance"]
         table = Table(self, interaction.channel, interaction.user, sb)
@@ -828,10 +828,10 @@ class Poker(commands.Cog):
             return await interaction.response.send_message("Only the host or a moderator can end the game.", ephemeral=True)
         if table.state == "lobby":
             self.tables.pop(interaction.channel.id, None)
-            await table.message.edit(content="🚫 Game cancelled.", embed=None, view=None)
+            await table.message.edit(content="Game cancelled.", embed=None, view=None)
             return await interaction.response.send_message("Cancelled.", ephemeral=True)
         table.ending = True
-        await interaction.response.send_message("🛑 The game will end after this hand.")
+        await interaction.response.send_message("The game will end after this hand.")
         if table.state == "between" and table._task:
             table._task.cancel()
 
@@ -840,7 +840,7 @@ class Poker(commands.Cog):
         member = member or interaction.user
         acct = account(interaction.guild.id, member.id)
         bank.save()
-        e = discord.Embed(title=f"💰 {member.display_name}", color=0xffd700)
+        e = discord.Embed(title=f"{member.display_name}", color=0xffd700)
         e.add_field(name="Chips", value=f"{acct['balance']:,}")
         e.add_field(name="Hands played", value=str(acct["hands"]))
         e.add_field(name="Hands won", value=str(acct["won"]))
@@ -860,7 +860,7 @@ class Poker(commands.Cog):
             return await interaction.response.send_message("Nobody has played yet. `/poker start`!", ephemeral=True)
         lines = [f"{['🥇', '🥈', '🥉'][i] if i < 3 else f'`{i + 1}.`'} <@{uid}> — **{bal:,}** ({a['won']}/{a['hands']} hands won)"
                  for i, (bal, uid, a) in enumerate(rows[:15])]
-        await interaction.response.send_message(embed=discord.Embed(title="🏆 Poker leaderboard", description="\n".join(lines), color=0xffd700),
+        await interaction.response.send_message(embed=discord.Embed(title="Poker leaderboard", description="\n".join(lines), color=0xffd700),
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @poker.command(name="refill", description=f"Broke? Get {REFILL_AMOUNT} chips (once a day)")
@@ -876,7 +876,7 @@ class Poker(commands.Cog):
         acct["balance"] = REFILL_AMOUNT
         acct["last_refill"] = time.time()
         bank.save()
-        await interaction.response.send_message(f"💵 Refilled to **{REFILL_AMOUNT}** chips.")
+        await interaction.response.send_message(f"Refilled to **{REFILL_AMOUNT}** chips.")
 
     @poker.command(name="give", description="Give chips to a player (admin)")
     @app_commands.default_permissions(administrator=True)
@@ -887,7 +887,7 @@ class Poker(commands.Cog):
         acct = account(interaction.guild.id, member.id)
         acct["balance"] = max(0, acct["balance"] + amount)
         bank.save()
-        await interaction.response.send_message(f"💵 {member.mention} now has **{acct['balance']:,}** chips.")
+        await interaction.response.send_message(f"{member.mention} now has **{acct['balance']:,}** chips.")
 
 
 async def setup(bot: commands.Bot):

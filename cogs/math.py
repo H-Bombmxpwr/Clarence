@@ -23,7 +23,7 @@ def render_latex(expr: str) -> BytesIO:
 
 
 class Math(commands.Cog):
-    """🧮 Math"""
+    """Math"""
 
     def __init__(self, client):
         self.client = client
@@ -35,7 +35,7 @@ class Math(commands.Cog):
             buf = await asyncio.to_thread(render_latex, expression)
             await interaction.followup.send(file=discord.File(buf, filename="latex.png"))
         except Exception as e:
-            await interaction.followup.send(f"❌ Couldn't render that: `{str(e).splitlines()[0][:200]}`")
+            await interaction.followup.send(f"Couldn't render that: `{str(e).splitlines()[0][:200]}`")
 
     @app_commands.command(description="Convert between binary, hex, decimal and ASCII")
     @app_commands.describe(kind="What kind of value you're giving", value="The value to convert, e.g. 35, 0x23, 100011, #")
@@ -43,9 +43,9 @@ class Math(commands.Cog):
         bit = Bits(kind, value)
         decimal = bit.to_decimal(kind[0], value.removeprefix("0x").removeprefix("0b") if kind != "ascii" else value)
         if decimal is None:
-            return await interaction.response.send_message("❌ Invalid value for that type", ephemeral=True)
+            return await interaction.response.send_message("Invalid value for that type", ephemeral=True)
         decimal, ascii_val, hexa, binary = bit.from_decimal(decimal)
-        embed = discord.Embed(title="🔢 Number Conversion", color=0x3498db)
+        embed = discord.Embed(title="Number Conversion", color=0x3498db)
         embed.add_field(name="Binary", value=f"`{binary}`", inline=True)
         embed.add_field(name="Hex", value=f"`{hexa}`", inline=True)
         embed.add_field(name="Decimal", value=f"`{decimal}`", inline=True)

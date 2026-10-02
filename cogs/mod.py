@@ -73,7 +73,7 @@ class WarnModal(discord.ui.Modal, title="Warn member"):
 
 
 class Moderation(commands.Cog):
-    """🛡️ Server moderation"""
+    """Server moderation"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -156,14 +156,14 @@ class Moderation(commands.Cog):
 
     async def warn_and_respond(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         if member.bot:
-            return await interaction.response.send_message("❌ You can't warn bots.", ephemeral=True)
+            return await interaction.response.send_message("You can't warn bots.", ephemeral=True)
         if err := hierarchy_error(interaction, member):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         await interaction.response.defer()
         case, escalation = await self.issue_warning(interaction.guild, member, interaction.user, reason)
         total = len(ms.user_cases(interaction.guild.id, member.id, "warn", active_only=True))
         embed = discord.Embed(
-            title=f"⚠️ {member} warned",
+            title=f"{member} warned",
             description=f"**Reason:** {reason}\n**Active warnings:** {total}",
             color=0xf1c40f,
         )
@@ -186,7 +186,7 @@ class Moderation(commands.Cog):
             flag = " ~~pardoned~~" if c["action"] == "warn" and not c.get("active", True) else ""
             lines.append(f"`#{c['id']}` **{c['action']}**{flag} <t:{ts}:d> by <@{c['moderator_id']}>\n└ {c['reason'][:150]}")
         if notes:
-            lines.append("\n**📝 Notes**")
+            lines.append("\n**Notes**")
             for n in notes:
                 lines.append(f"`{n['id']}.` {n['text'][:200]} — <@{n['moderator_id']}>")
 
@@ -202,7 +202,7 @@ class Moderation(commands.Cog):
 
     async def warn_context(self, interaction: discord.Interaction, member: discord.Member):
         if not interaction.user.guild_permissions.moderate_members:
-            return await interaction.response.send_message("❌ You need Moderate Members.", ephemeral=True)
+            return await interaction.response.send_message("You need Moderate Members.", ephemeral=True)
         await interaction.response.send_modal(WarnModal(self, member))
 
     async def history_context(self, interaction: discord.Interaction, member: discord.Member):
@@ -221,12 +221,12 @@ class Moderation(commands.Cog):
     async def ban(self, interaction: discord.Interaction, user: discord.User, reason: Optional[str] = None,
                   duration: Optional[str] = None, delete_messages: Optional[app_commands.Choice[int]] = None):
         if err := hierarchy_error(interaction, user):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         td = None
         if duration:
             td = parse_duration(duration)
             if not td:
-                return await interaction.response.send_message("❌ Invalid duration. Try `1d`, `12h`, `1w`.", ephemeral=True)
+                return await interaction.response.send_message("Invalid duration. Try `1d`, `12h`, `1w`.", ephemeral=True)
         reason = reason or "No reason provided"
         await interaction.response.defer()
 
@@ -262,11 +262,11 @@ class Moderation(commands.Cog):
     @app_commands.checks.bot_has_permissions(ban_members=True)
     async def unban(self, interaction: discord.Interaction, user: str, reason: Optional[str] = None):
         if not user.isdigit():
-            return await interaction.response.send_message("❌ Pick a user from the list or paste their ID.", ephemeral=True)
+            return await interaction.response.send_message("Pick a user from the list or paste their ID.", ephemeral=True)
         try:
             ban_entry = await interaction.guild.fetch_ban(discord.Object(int(user)))
         except discord.NotFound:
-            return await interaction.response.send_message("❌ That user isn't banned.", ephemeral=True)
+            return await interaction.response.send_message("That user isn't banned.", ephemeral=True)
         reason = reason or "No reason provided"
         await interaction.guild.unban(ban_entry.user, reason=f"{interaction.user}: {reason}")
         self._close_tempbans(interaction.guild.id, ban_entry.user.id)
@@ -280,7 +280,7 @@ class Moderation(commands.Cog):
     @app_commands.checks.bot_has_permissions(ban_members=True)
     async def softban(self, interaction: discord.Interaction, member: discord.Member, reason: Optional[str] = None):
         if err := hierarchy_error(interaction, member):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         reason = reason or "No reason provided"
         await interaction.response.defer()
         await dm_user(member, interaction.guild, "kicked (softban)", reason)
@@ -296,7 +296,7 @@ class Moderation(commands.Cog):
     @app_commands.checks.bot_has_permissions(kick_members=True)
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: Optional[str] = None):
         if err := hierarchy_error(interaction, member):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         reason = reason or "No reason provided"
         await interaction.response.defer()
         await dm_user(member, interaction.guild, "kicked", reason)
@@ -312,10 +312,10 @@ class Moderation(commands.Cog):
     async def timeout(self, interaction: discord.Interaction, member: discord.Member, duration: str,
                       reason: Optional[str] = None):
         if err := hierarchy_error(interaction, member):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         td = parse_duration(duration)
         if not td or td > MAX_TIMEOUT:
-            return await interaction.response.send_message("❌ Duration must be like `10m`, `2h`, `1d` and at most 28 days.", ephemeral=True)
+            return await interaction.response.send_message("Duration must be like `10m`, `2h`, `1d` and at most 28 days.", ephemeral=True)
         reason = reason or "No reason provided"
         await member.timeout(td, reason=f"{interaction.user}: {reason}")
         await dm_user(member, interaction.guild, "timed out", reason, format_duration(td))
@@ -329,7 +329,7 @@ class Moderation(commands.Cog):
     @app_commands.checks.bot_has_permissions(moderate_members=True)
     async def untimeout(self, interaction: discord.Interaction, member: discord.Member, reason: Optional[str] = None):
         if not member.is_timed_out():
-            return await interaction.response.send_message(f"❌ {member.mention} isn't timed out.", ephemeral=True)
+            return await interaction.response.send_message(f"{member.mention} isn't timed out.", ephemeral=True)
         reason = reason or "No reason provided"
         await member.timeout(None, reason=f"{interaction.user}: {reason}")
         case = await self.record(interaction.guild, "untimeout", member, interaction.user, reason)
@@ -359,7 +359,7 @@ class Moderation(commands.Cog):
             flag = " ~~pardoned~~" if not w.get("active", True) else ""
             lines.append(f"`#{w['id']}`{flag} <t:{ts}:R> by <@{w['moderator_id']}>\n└ {w['reason'][:200]}")
         active = sum(1 for w in warns if w.get("active", True))
-        pages = [discord.Embed(title=f"⚠️ Warnings for {member}", description=chunk, color=0xf1c40f)
+        pages = [discord.Embed(title=f"Warnings for {member}", description=chunk, color=0xf1c40f)
                  .set_footer(text=f"{active} active") for chunk in chunk_lines(lines, 3800)]
         await Paginator(pages, interaction.user.id).send(interaction, ephemeral=True)
 
@@ -368,9 +368,9 @@ class Moderation(commands.Cog):
     async def warnings_remove(self, interaction: discord.Interaction, case_id: int):
         case = ms.get_case(interaction.guild.id, case_id)
         if not case or case["action"] != "warn":
-            return await interaction.response.send_message("❌ No warning with that case number.", ephemeral=True)
+            return await interaction.response.send_message("No warning with that case number.", ephemeral=True)
         ms.update_case(interaction.guild.id, case_id, active=False)
-        await interaction.response.send_message(f"✅ Pardoned warning `#{case_id}` for <@{case['user_id']}>.")
+        await interaction.response.send_message(f"Pardoned warning `#{case_id}` for <@{case['user_id']}>.")
 
     @warnings.command(name="clear", description="Pardon all of a member's warnings")
     @app_commands.describe(member="Whose warnings to clear")
@@ -379,7 +379,7 @@ class Moderation(commands.Cog):
         for w in warns:
             w["active"] = False
         ms.cases.save()
-        await interaction.response.send_message(f"✅ Cleared {len(warns)} warning(s) from {member.mention}.")
+        await interaction.response.send_message(f"Cleared {len(warns)} warning(s) from {member.mention}.")
 
     # ------------------------------------------------------------------ cases
 
@@ -390,15 +390,15 @@ class Moderation(commands.Cog):
     async def case_view(self, interaction: discord.Interaction, case_id: int):
         case = ms.get_case(interaction.guild.id, case_id)
         if not case:
-            return await interaction.response.send_message("❌ Case not found.", ephemeral=True)
+            return await interaction.response.send_message("Case not found.", ephemeral=True)
         await interaction.response.send_message(embed=ms.case_embed(case, interaction.guild), ephemeral=True)
 
     @case.command(name="reason", description="Edit the reason on a case")
     async def case_reason(self, interaction: discord.Interaction, case_id: int, reason: str):
         case = ms.update_case(interaction.guild.id, case_id, reason=reason)
         if not case:
-            return await interaction.response.send_message("❌ Case not found.", ephemeral=True)
-        await interaction.response.send_message(f"✅ Updated reason for case `#{case_id}`.", embed=ms.case_embed(case, interaction.guild))
+            return await interaction.response.send_message("Case not found.", ephemeral=True)
+        await interaction.response.send_message(f"Updated reason for case `#{case_id}`.", embed=ms.case_embed(case, interaction.guild))
 
     @case.command(name="history", description="Full moderation history (cases + notes) for a user")
     async def case_history(self, interaction: discord.Interaction, user: discord.User):
@@ -412,7 +412,7 @@ class Moderation(commands.Cog):
     @note.command(name="add", description="Add a private note to a user")
     async def note_add(self, interaction: discord.Interaction, user: discord.User, text: app_commands.Range[str, 1, 1000]):
         n = ms.add_note(interaction.guild.id, user.id, interaction.user.id, text)
-        await interaction.response.send_message(f"📝 Added note `{n['id']}` to {user.mention}.", ephemeral=True)
+        await interaction.response.send_message(f"Added note `{n['id']}` to {user.mention}.", ephemeral=True)
 
     @note.command(name="list", description="List notes on a user")
     async def note_list(self, interaction: discord.Interaction, user: discord.User):
@@ -421,13 +421,13 @@ class Moderation(commands.Cog):
             return await interaction.response.send_message(f"No notes on {user}.", ephemeral=True)
         lines = [f"`{n['id']}.` <t:{int(datetime.fromisoformat(n['timestamp']).timestamp())}:d> <@{n['moderator_id']}>\n{n['text']}"
                  for n in notes]
-        pages = [discord.Embed(title=f"📝 Notes on {user}", description=c, color=0x95a5a6) for c in chunk_lines(lines, 3800)]
+        pages = [discord.Embed(title=f"Notes on {user}", description=c, color=0x95a5a6) for c in chunk_lines(lines, 3800)]
         await Paginator(pages, interaction.user.id).send(interaction, ephemeral=True)
 
     @note.command(name="remove", description="Delete a note")
     async def note_remove(self, interaction: discord.Interaction, user: discord.User, note_id: int):
         ok = ms.remove_note(interaction.guild.id, user.id, note_id)
-        await interaction.response.send_message("✅ Note removed." if ok else "❌ Note not found.", ephemeral=True)
+        await interaction.response.send_message("Note removed." if ok else "Note not found.", ephemeral=True)
 
     # ------------------------------------------------------------------ messages / channels
 
@@ -458,7 +458,7 @@ class Moderation(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
         deleted = await interaction.channel.purge(limit=amount, check=check, reason=f"Purge by {interaction.user}")
-        await interaction.followup.send(f"🧹 Deleted **{len(deleted)}** message(s).", ephemeral=True)
+        await interaction.followup.send(f"Deleted **{len(deleted)}** message(s).", ephemeral=True)
         embed = discord.Embed(title="Messages purged", color=0xe67e22, timestamp=datetime.now(timezone.utc),
                               description=f"**{len(deleted)}** messages in {interaction.channel.mention} by {interaction.user.mention}")
         await ms.send_modlog(interaction.guild, embed)
@@ -473,7 +473,7 @@ class Moderation(commands.Cog):
         channel = channel or interaction.channel
         await channel.edit(slowmode_delay=seconds)
         msg = "disabled" if seconds == 0 else f"set to **{seconds}s**"
-        await interaction.response.send_message(f"🐢 Slowmode {msg} in {channel.mention}.")
+        await interaction.response.send_message(f"Slowmode {msg} in {channel.mention}.")
 
     async def _set_send(self, channel: discord.TextChannel, value: Optional[bool], reason: str):
         everyone = channel.guild.default_role
@@ -492,7 +492,7 @@ class Moderation(commands.Cog):
                    reason: Optional[str] = None):
         channel = channel or interaction.channel
         await self._set_send(channel, False, f"Locked by {interaction.user}: {reason or 'no reason'}")
-        await interaction.response.send_message(f"🔒 {channel.mention} locked." + (f"\n**Reason:** {reason}" if reason else ""))
+        await interaction.response.send_message(f"{channel.mention} locked." + (f"\n**Reason:** {reason}" if reason else ""))
 
     @app_commands.command(description="Unlock a channel")
     @app_commands.default_permissions(manage_channels=True)
@@ -501,7 +501,7 @@ class Moderation(commands.Cog):
     async def unlock(self, interaction: discord.Interaction, channel: Optional[discord.TextChannel] = None):
         channel = channel or interaction.channel
         await self._set_send(channel, None, f"Unlocked by {interaction.user}")
-        await interaction.response.send_message(f"🔓 {channel.mention} unlocked.")
+        await interaction.response.send_message(f"{channel.mention} unlocked.")
 
     lockdown = app_commands.Group(name="lockdown", description="Lock every text channel at once", guild_only=True,
                                   default_permissions=discord.Permissions(manage_guild=True))
@@ -511,9 +511,9 @@ class Moderation(commands.Cog):
     async def lockdown_start(self, interaction: discord.Interaction, reason: Optional[str] = None):
         cfg = ms.guild_config(interaction.guild.id)
         if cfg.get("lockdown"):
-            return await interaction.response.send_message("❌ The server is already in lockdown. Use `/lockdown end` first.", ephemeral=True)
+            return await interaction.response.send_message("The server is already in lockdown. Use `/lockdown end` first.", ephemeral=True)
         view = ConfirmView(interaction.user.id)
-        await interaction.response.send_message("⚠️ Lock **every** text channel?", view=view, ephemeral=True)
+        await interaction.response.send_message("Lock **every** text channel?", view=view, ephemeral=True)
         await view.wait()
         if not view.value:
             return
@@ -530,8 +530,8 @@ class Moderation(commands.Cog):
                 saved.pop(str(channel.id))
         cfg["lockdown"] = saved
         ms.save_config()
-        await interaction.channel.send(f"🚨 **Server lockdown** — {len(saved)} channels locked." + (f"\n**Reason:** {reason}" if reason else ""))
-        await ms.send_modlog(interaction.guild, discord.Embed(title="🚨 Lockdown started", color=0xe74c3c,
+        await interaction.channel.send(f"**Server lockdown** — {len(saved)} channels locked." + (f"\n**Reason:** {reason}" if reason else ""))
+        await ms.send_modlog(interaction.guild, discord.Embed(title="Lockdown started", color=0xe74c3c,
                              description=f"By {interaction.user.mention}: {reason or 'no reason'}"))
 
     @lockdown.command(name="end", description="Restore channels locked by /lockdown start")
@@ -540,7 +540,7 @@ class Moderation(commands.Cog):
         cfg = ms.guild_config(interaction.guild.id)
         saved = cfg.get("lockdown")
         if not saved:
-            return await interaction.response.send_message("❌ The server isn't in lockdown.", ephemeral=True)
+            return await interaction.response.send_message("The server isn't in lockdown.", ephemeral=True)
         await interaction.response.defer()
         restored = 0
         for cid, previous in saved.items():
@@ -553,8 +553,8 @@ class Moderation(commands.Cog):
                     pass
         cfg.pop("lockdown", None)
         ms.save_config()
-        await interaction.followup.send(f"✅ Lockdown ended — {restored} channels restored.")
-        await ms.send_modlog(interaction.guild, discord.Embed(title="✅ Lockdown ended", color=0x2ecc71,
+        await interaction.followup.send(f"Lockdown ended — {restored} channels restored.")
+        await ms.send_modlog(interaction.guild, discord.Embed(title="Lockdown ended", color=0x2ecc71,
                              description=f"By {interaction.user.mention}"))
 
     # ------------------------------------------------------------------ members / roles
@@ -567,10 +567,10 @@ class Moderation(commands.Cog):
     async def nick(self, interaction: discord.Interaction, member: discord.Member,
                    nickname: Optional[app_commands.Range[str, 1, 32]] = None):
         if member.id != interaction.user.id and (err := hierarchy_error(interaction, member)):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         await member.edit(nick=nickname, reason=f"By {interaction.user}")
         await interaction.response.send_message(
-            f"✅ {'Set' if nickname else 'Reset'} nickname for {member.mention}" + (f" to **{nickname}**." if nickname else "."))
+            f"{'Set' if nickname else 'Reset'} nickname for {member.mention}" + (f" to **{nickname}**." if nickname else "."))
 
     role = app_commands.Group(name="role", description="Role management", guild_only=True,
                               default_permissions=discord.Permissions(manage_roles=True))
@@ -579,18 +579,18 @@ class Moderation(commands.Cog):
     @app_commands.checks.bot_has_permissions(manage_roles=True)
     async def role_add(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role):
         if err := role_error(interaction, role):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         await member.add_roles(role, reason=f"By {interaction.user}")
-        await interaction.response.send_message(f"✅ Gave {role.mention} to {member.mention}.",
+        await interaction.response.send_message(f"Gave {role.mention} to {member.mention}.",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @role.command(name="remove", description="Remove a role from a member")
     @app_commands.checks.bot_has_permissions(manage_roles=True)
     async def role_remove(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role):
         if err := role_error(interaction, role):
-            return await interaction.response.send_message(f"❌ {err}", ephemeral=True)
+            return await interaction.response.send_message(f"{err}", ephemeral=True)
         await member.remove_roles(role, reason=f"By {interaction.user}")
-        await interaction.response.send_message(f"✅ Removed {role.mention} from {member.mention}.",
+        await interaction.response.send_message(f"Removed {role.mention} from {member.mention}.",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @role.command(name="info", description="Show information about a role")
@@ -621,9 +621,9 @@ class Moderation(commands.Cog):
 
     async def _vc_edit(self, interaction: discord.Interaction, member: discord.Member, done: str, **kwargs):
         if not member.voice:
-            return await interaction.response.send_message(f"❌ {member.mention} isn't in a voice channel.", ephemeral=True)
+            return await interaction.response.send_message(f"{member.mention} isn't in a voice channel.", ephemeral=True)
         await member.edit(reason=f"By {interaction.user}", **kwargs)
-        await interaction.response.send_message(f"✅ {done} {member.mention}.")
+        await interaction.response.send_message(f"{done} {member.mention}.")
 
     @vc.command(name="move", description="Move a member to another voice channel")
     @app_commands.checks.bot_has_permissions(move_members=True)
@@ -641,7 +641,7 @@ class Moderation(commands.Cog):
                 moved += 1
             except discord.HTTPException:
                 pass
-        await interaction.followup.send(f"✅ Moved {moved} member(s) from {source.mention} to {destination.mention}.")
+        await interaction.followup.send(f"Moved {moved} member(s) from {source.mention} to {destination.mention}.")
 
     @vc.command(name="disconnect", description="Disconnect a member from voice")
     @app_commands.checks.bot_has_permissions(move_members=True)

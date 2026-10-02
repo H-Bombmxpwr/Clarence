@@ -26,9 +26,12 @@ from functionality.ui import Paginator, chunk_lines, guild_only_cog
 
 log = logging.getLogger("clarence.music")
 
-LAVALINK_URI = os.getenv("LAVALINK_URI", "http://localhost:2333")
-LAVALINK_PASSWORD = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
 URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+LAVALINK_URI = os.getenv("LAVALINK_URI", "http://localhost:2333").strip().rstrip("/")
+if not URL_RE.match(LAVALINK_URI):
+    # e.g. "lavalink.railway.internal:2333" — aiohttp needs a scheme
+    LAVALINK_URI = f"http://{LAVALINK_URI}"
+LAVALINK_PASSWORD = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
 MAX_PLAYLIST = 500
 EMBED_COLOR = 0x1db954
 
@@ -66,7 +69,7 @@ def parse_timestamp(text: str) -> Optional[int]:
 
 def progress_bar(position: int, length: int, width: int = 18) -> str:
     if not length:
-        return "🔴 LIVE"
+        return "LIVE"
     filled = int(width * min(position / length, 1))
     return "▬" * filled + "🔘" + "▬" * (width - filled)
 
@@ -110,21 +113,21 @@ class NowPlayingControls(discord.ui.View):
     async def pause_resume(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         await player.pause(not player.paused)
-        await interaction.response.send_message(f"{'⏸️ Paused' if player.paused else '▶️ Resumed'} by {interaction.user.mention}",
+        await interaction.response.send_message(f"{'Paused' if player.paused else 'Resumed'} by {interaction.user.mention}",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         skipped = await player.skip(force=True)
-        await interaction.response.send_message(f"⏭️ {interaction.user.mention} skipped **{skipped.title if skipped else 'the track'}**",
+        await interaction.response.send_message(f"{interaction.user.mention} skipped **{skipped.title if skipped else 'the track'}**",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger)
     async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         await self.cog.stop_player(player)
-        await interaction.response.send_message(f"⏹️ Stopped and cleared the queue ({interaction.user.mention})",
+        await interaction.response.send_message(f"Stopped and cleared the queue ({interaction.user.mention})",
                                                 allowed_mentions=discord.AllowedMentions.none())
 
     @discord.ui.button(emoji="🔁", style=discord.ButtonStyle.secondary)
@@ -133,17 +136,17 @@ class NowPlayingControls(discord.ui.View):
         order = [wavelink.QueueMode.normal, wavelink.QueueMode.loop, wavelink.QueueMode.loop_all]
         player.queue.mode = order[(order.index(player.queue.mode) + 1) % 3]
         label = {wavelink.QueueMode.normal: "off", wavelink.QueueMode.loop: "track", wavelink.QueueMode.loop_all: "queue"}
-        await interaction.response.send_message(f"🔁 Loop: **{label[player.queue.mode]}**")
+        await interaction.response.send_message(f"Loop: **{label[player.queue.mode]}**")
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
     async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = cast(MusicPlayer, interaction.guild.voice_client)
         player.queue.shuffle()
-        await interaction.response.send_message("🔀 Queue shuffled")
+        await interaction.response.send_message("Queue shuffled")
 
 
 class Music(commands.Cog):
-    """🎵 Music player — play songs in voice with a queue"""
+    """Music player — play songs in voice with a queue"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -182,9 +185,9 @@ class Music(commands.Cog):
         """Validate voice state and return the guild's player (optionally connecting). Sends an error and returns None on failure."""
         async def fail(msg: str):
             if interaction.response.is_done():
-                await interaction.followup.send(f"❌ {msg}", ephemeral=True)
+                await interaction.followup.send(f"{msg}", ephemeral=True)
             else:
-                await interaction.response.send_message(f"❌ {msg}", ephemeral=True)
+                await interaction.response.send_message(f"{msg}", ephemeral=True)
 
         if not self.node_ready():
             await fail("The music server (Lavalink) isn't connected right now. Try again in a minute.")
@@ -246,9 +249,9 @@ class Music(commands.Cog):
         try:
             results = await self.search(query)
         except wavelink.LavalinkLoadException as e:
-            return await interaction.followup.send(f"❌ Couldn't load that: {e.error}")
+            return await interaction.followup.send(f"Couldn't load that: {e.error}")
         if not results:
-            return await interaction.followup.send(f"❌ No results for **{discord.utils.escape_markdown(query)}**.")
+            return await interaction.followup.send(f"No results for **{discord.utils.escape_markdown(query)}**.")
 
         requester = {"requester": interaction.user.id}
         if isinstance(results, wavelink.Playlist):
@@ -260,7 +263,7 @@ class Music(commands.Cog):
                     player.queue.put_at(0, t)
             else:
                 player.queue.put(tracks)
-            embed = discord.Embed(title="📃 Playlist queued", color=EMBED_COLOR,
+            embed = discord.Embed(title="Playlist queued", color=EMBED_COLOR,
                                   description=f"**[{results.name}]({results.url or query})** — {len(tracks)} tracks")
             if results.artwork:
                 embed.set_thumbnail(url=results.artwork)
@@ -273,7 +276,7 @@ class Music(commands.Cog):
                 player.queue.put(track)
             starting = not player.playing
             position = 1 if front else player.queue.count
-            embed = discord.Embed(title="▶️ Starting" if starting else "➕ Added to queue", color=EMBED_COLOR,
+            embed = discord.Embed(title="Starting" if starting else "Added to queue", color=EMBED_COLOR,
                                   description=track_line(track))
             if not starting:
                 embed.add_field(name="Position", value=str(position))
@@ -292,7 +295,7 @@ class Music(commands.Cog):
 
     def now_playing_embed(self, player: MusicPlayer) -> discord.Embed:
         track = player.current
-        embed = discord.Embed(title="🎶 Now Playing", color=EMBED_COLOR,
+        embed = discord.Embed(title="Now Playing", color=EMBED_COLOR,
                               description=f"**[{discord.utils.escape_markdown(track.title)}]({track.uri})**\nby {track.author}")
         if track.artwork:
             embed.set_thumbnail(url=track.artwork)
@@ -354,11 +357,15 @@ class Music(commands.Cog):
                 fallback = alt[0]
                 fallback.extras = {"requester": getattr(track.extras, "requester", None), "fallback": True}
                 player.queue.put_at(0, fallback)
+                # Autoplay already ran on the failed track's end event (with an empty queue),
+                # so start the fallback ourselves if nothing is playing
+                if player.current is None:
+                    await player.play(player.queue.get())
                 if player.home:
-                    await player.home.send(f"⚠️ Couldn't stream **{track.title}** from {track.source}; trying SoundCloud instead.")
+                    await player.home.send(f"Couldn't stream **{track.title}** from {track.source}; trying SoundCloud instead.")
                 return
         if player.home:
-            await player.home.send(f"❌ Couldn't play **{track.title}**: {message}")
+            await player.home.send(f"Couldn't play **{track.title}**: {message}")
 
     @commands.Cog.listener()
     async def on_wavelink_track_stuck(self, payload: wavelink.TrackStuckEventPayload):
@@ -370,7 +377,7 @@ class Music(commands.Cog):
         player = cast(MusicPlayer, player)
         if player.home:
             try:
-                await player.home.send("👋 Left the voice channel after 5 minutes of inactivity.")
+                await player.home.send("Left the voice channel after 5 minutes of inactivity.")
             except discord.HTTPException:
                 pass
         await player.disconnect()
@@ -396,7 +403,7 @@ class Music(commands.Cog):
             await asyncio.sleep(120)
             if player.channel and not any(not m.bot for m in player.channel.members):
                 if player.home:
-                    await player.home.send("👋 Everyone left, so I did too.")
+                    await player.home.send("Everyone left, so I did too.")
                 await player.disconnect()
         except asyncio.CancelledError:
             pass
@@ -440,14 +447,14 @@ class Music(commands.Cog):
         player = await self.get_player(interaction, connect=True)
         if player:
             player.home = interaction.channel
-            await interaction.response.send_message(f"👋 Joined {player.channel.mention}")
+            await interaction.response.send_message(f"Joined {player.channel.mention}")
 
     @app_commands.command(description="Leave the voice channel and clear the queue")
     async def leave(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player:
             await player.disconnect()
-            await interaction.response.send_message("👋 Disconnected.")
+            await interaction.response.send_message("Disconnected.")
 
     @app_commands.command(description="Skip the current song")
     async def skip(self, interaction: discord.Interaction):
@@ -455,9 +462,9 @@ class Music(commands.Cog):
         if not player:
             return
         if not player.current:
-            return await interaction.response.send_message("❌ Nothing is playing.", ephemeral=True)
+            return await interaction.response.send_message("Nothing is playing.", ephemeral=True)
         skipped = await player.skip(force=True)
-        await interaction.response.send_message(f"⏭️ Skipped **{skipped.title}**")
+        await interaction.response.send_message(f"Skipped **{skipped.title}**")
 
     @app_commands.command(description="Skip to a position in the queue")
     async def skipto(self, interaction: discord.Interaction, position: app_commands.Range[int, 1, 10000]):
@@ -465,37 +472,37 @@ class Music(commands.Cog):
         if not player:
             return
         if position > player.queue.count:
-            return await interaction.response.send_message(f"❌ The queue only has {player.queue.count} tracks.", ephemeral=True)
+            return await interaction.response.send_message(f"The queue only has {player.queue.count} tracks.", ephemeral=True)
         del player.queue[: position - 1]
         await player.skip(force=True)
-        await interaction.response.send_message(f"⏭️ Skipped to **{player.queue.peek(0).title if player.queue else 'position %d' % position}**")
+        await interaction.response.send_message(f"Skipped to **{player.queue.peek(0).title if player.queue else 'position %d' % position}**")
 
     @app_commands.command(description="Pause playback")
     async def pause(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player:
             await player.pause(True)
-            await interaction.response.send_message("⏸️ Paused.")
+            await interaction.response.send_message("Paused.")
 
     @app_commands.command(description="Resume playback")
     async def resume(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player:
             await player.pause(False)
-            await interaction.response.send_message("▶️ Resumed.")
+            await interaction.response.send_message("Resumed.")
 
     @app_commands.command(description="Stop playback and clear the queue (stays in the channel)")
     async def stop(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player:
             await self.stop_player(player)
-            await interaction.response.send_message("⏹️ Stopped and cleared the queue.")
+            await interaction.response.send_message("Stopped and cleared the queue.")
 
     @app_commands.command(description="Show what's playing")
     async def nowplaying(self, interaction: discord.Interaction):
         player = cast(Optional[MusicPlayer], interaction.guild.voice_client)
         if not player or not player.current:
-            return await interaction.response.send_message("❌ Nothing is playing.", ephemeral=True)
+            return await interaction.response.send_message("Nothing is playing.", ephemeral=True)
         await interaction.response.send_message(embed=self.now_playing_embed(player), view=NowPlayingControls(self, interaction.guild.id))
 
     @app_commands.command(description="Show the queue")
@@ -512,7 +519,7 @@ class Music(commands.Cog):
         pages = []
         for start in range(0, max(len(tracks), 1), 10):
             lines = [track_line(t, i) for i, t in enumerate(tracks[start:start + 10], start + 1)]
-            embed = discord.Embed(title="🎵 Queue", color=EMBED_COLOR,
+            embed = discord.Embed(title="Queue", color=EMBED_COLOR,
                                   description=header + ("\n".join(lines) if lines else "*Nothing queued after this.*"))
             embed.set_footer(text=footer)
             pages.append(embed)
@@ -523,7 +530,7 @@ class Music(commands.Cog):
         player = await self.get_player(interaction)
         if player:
             player.queue.shuffle()
-            await interaction.response.send_message("🔀 Queue shuffled.")
+            await interaction.response.send_message("Queue shuffled.")
 
     @app_commands.command(description="Set loop mode")
     @app_commands.choices(mode=[app_commands.Choice(name="Off", value="off"),
@@ -534,7 +541,7 @@ class Music(commands.Cog):
         if player:
             player.queue.mode = {"off": wavelink.QueueMode.normal, "track": wavelink.QueueMode.loop,
                                  "queue": wavelink.QueueMode.loop_all}[mode.value]
-            await interaction.response.send_message(f"🔁 Loop: **{mode.name}**")
+            await interaction.response.send_message(f"Loop: **{mode.name}**")
 
     @app_commands.command(description="Remove a track from the queue")
     async def remove(self, interaction: discord.Interaction, position: app_commands.Range[int, 1, 10000]):
@@ -542,10 +549,10 @@ class Music(commands.Cog):
         if not player:
             return
         if position > player.queue.count:
-            return await interaction.response.send_message(f"❌ The queue only has {player.queue.count} tracks.", ephemeral=True)
+            return await interaction.response.send_message(f"The queue only has {player.queue.count} tracks.", ephemeral=True)
         track = player.queue.peek(position - 1)
         player.queue.delete(position - 1)
-        await interaction.response.send_message(f"🗑️ Removed **{track.title}**")
+        await interaction.response.send_message(f"Removed **{track.title}**")
 
     @app_commands.command(description="Move a track to a different position in the queue")
     async def move(self, interaction: discord.Interaction, from_position: app_commands.Range[int, 1, 10000],
@@ -555,18 +562,18 @@ class Music(commands.Cog):
             return
         count = player.queue.count
         if from_position > count or to_position > count:
-            return await interaction.response.send_message(f"❌ The queue only has {count} tracks.", ephemeral=True)
+            return await interaction.response.send_message(f"The queue only has {count} tracks.", ephemeral=True)
         track = player.queue.peek(from_position - 1)
         player.queue.delete(from_position - 1)
         player.queue.put_at(to_position - 1, track)
-        await interaction.response.send_message(f"↕️ Moved **{track.title}** to position {to_position}.")
+        await interaction.response.send_message(f"Moved **{track.title}** to position {to_position}.")
 
     @app_commands.command(description="Clear the queue (keeps the current song)")
     async def clearqueue(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player:
             player.queue.clear()
-            await interaction.response.send_message("🗑️ Queue cleared.")
+            await interaction.response.send_message("Queue cleared.")
 
     @app_commands.command(description="Set the volume (0-150)")
     async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 150]):
@@ -575,7 +582,7 @@ class Music(commands.Cog):
             await player.set_volume(level)
             self.settings.guild(interaction.guild.id)["volume"] = level
             self.settings.save()
-            await interaction.response.send_message(f"🔊 Volume set to **{level}%**")
+            await interaction.response.send_message(f"Volume set to **{level}%**")
 
     @app_commands.command(description="Jump to a time in the current song (e.g. 1:30)")
     async def seek(self, interaction: discord.Interaction, position: str):
@@ -583,26 +590,26 @@ class Music(commands.Cog):
         if not player:
             return
         if not player.current or not player.current.is_seekable:
-            return await interaction.response.send_message("❌ This track can't be seeked.", ephemeral=True)
+            return await interaction.response.send_message("This track can't be seeked.", ephemeral=True)
         ms = parse_timestamp(position)
         if ms is None or ms > player.current.length:
-            return await interaction.response.send_message("❌ Give a time like `1:30` within the song length.", ephemeral=True)
+            return await interaction.response.send_message("Give a time like `1:30` within the song length.", ephemeral=True)
         await player.seek(ms)
-        await interaction.response.send_message(f"⏩ Seeked to `{fmt_ms(ms)}`")
+        await interaction.response.send_message(f"Seeked to `{fmt_ms(ms)}`")
 
     @app_commands.command(description="Restart the current song")
     async def replay(self, interaction: discord.Interaction):
         player = await self.get_player(interaction)
         if player and player.current:
             await player.seek(0)
-            await interaction.response.send_message("⏮️ Restarted the song.")
+            await interaction.response.send_message("Restarted the song.")
 
     @app_commands.command(description="When the queue runs out, keep playing similar songs")
     async def autoplay(self, interaction: discord.Interaction, enabled: bool):
         player = await self.get_player(interaction)
         if player:
             player.autoplay = wavelink.AutoPlayMode.enabled if enabled else wavelink.AutoPlayMode.partial
-            await interaction.response.send_message(f"📻 Autoplay **{'on' if enabled else 'off'}**.")
+            await interaction.response.send_message(f"Autoplay **{'on' if enabled else 'off'}**.")
 
     @app_commands.command(description="Apply an audio filter")
     @app_commands.choices(preset=[app_commands.Choice(name=v, value=k) for k, v in FILTER_PRESETS.items()])
@@ -626,7 +633,7 @@ class Music(commands.Cog):
             filters.low_pass.set(smoothing=20.0)
         await player.set_filters(filters, seek=True)
         player.filter_name = preset.value
-        await interaction.response.send_message(f"🎛️ Filter: **{preset.name}**")
+        await interaction.response.send_message(f"Filter: **{preset.name}**")
 
     # ------------------------------------------------------------------ lyrics
 
@@ -643,16 +650,16 @@ class Music(commands.Cog):
                 result = await fetch_lyrics(self.bot.session, title=t.title, artist=t.author, duration_s=t.length // 1000)
                 song = f"{t.author} - {t.title}"
             else:
-                return await interaction.followup.send("❌ Nothing is playing — give me a song name, e.g. `/lyrics song:Peg Steely Dan`.")
+                return await interaction.followup.send("Nothing is playing — give me a song name, e.g. `/lyrics song:Peg Steely Dan`.")
         except asyncio.TimeoutError:
-            return await interaction.followup.send("❌ The lyrics service timed out. Try again.")
+            return await interaction.followup.send("The lyrics service timed out. Try again.")
 
         if not result:
-            return await interaction.followup.send(f"❌ No lyrics found for **{discord.utils.escape_markdown(song)}**. "
+            return await interaction.followup.send(f"No lyrics found for **{discord.utils.escape_markdown(song)}**. "
                                                    "Try `Artist - Song`.")
-        title = f"🎤 {result['artist']} — {result['title']}"[:256]
+        title = f"{result['artist']} — {result['title']}"[:256]
         if result["instrumental"] and not result["lyrics"]:
-            return await interaction.followup.send(embed=discord.Embed(title=title, description="🎼 *Instrumental*", color=EMBED_COLOR))
+            return await interaction.followup.send(embed=discord.Embed(title=title, description="*Instrumental*", color=EMBED_COLOR))
 
         pages = []
         for chunk in chunk_lines(result["lyrics"].split("\n"), 3500):

@@ -49,8 +49,8 @@ class TriviaView(discord.ui.View):
             correct = idx == self.correct_idx
             self.reveal(idx)
             u = bump_stats(self.guild_id, self.player.id, correct) if self.guild_id else None
-            streak = f" • streak {u['streak']}🔥" if u and correct and u["streak"] > 1 else ""
-            text = f"✅ Correct!{streak}" if correct else f"❌ Wrong! It was **{self.answers[self.correct_idx]}**"
+            streak = f" • streak {u['streak']}" if u and correct and u["streak"] > 1 else ""
+            text = f"Correct!{streak}" if correct else f"Wrong! It was **{self.answers[self.correct_idx]}**"
             await interaction.response.edit_message(content=text, view=self)
         return callback
 
@@ -68,13 +68,13 @@ class TriviaView(discord.ui.View):
             bump_stats(self.guild_id, self.player.id, False)
         if self.message:
             try:
-                await self.message.edit(content=f"⏰ Time's up! It was **{self.answers[self.correct_idx]}**", view=self)
+                await self.message.edit(content=f"Time's up! It was **{self.answers[self.correct_idx]}**", view=self)
             except discord.HTTPException:
                 pass
 
 
 class Trivia(commands.Cog):
-    """❓ Trivia Games"""
+    """Trivia Games"""
 
     trivia = app_commands.Group(name="trivia", description="Trivia questions")
 
@@ -92,7 +92,7 @@ class Trivia(commands.Cog):
                 data = await r.json(content_type=None)
             q = data["results"][0]
         except Exception:
-            return await interaction.response.send_message("❌ The trivia API is busy — try again in a few seconds.", ephemeral=True)
+            return await interaction.response.send_message("The trivia API is busy — try again in a few seconds.", ephemeral=True)
 
         correct = html.unescape(q["correct_answer"])
         answers = [correct] + [html.unescape(a) for a in q["incorrect_answers"]]
@@ -110,7 +110,7 @@ class Trivia(commands.Cog):
         member = member or interaction.user
         s = stats.guild(interaction.guild_id).get(str(member.id), {"correct": 0, "attempts": 0})
         pct = (100.0 * s["correct"] / s["attempts"]) if s["attempts"] else 0.0
-        embed = discord.Embed(title="📊 Trivia Stats", description=f"Stats for {member.display_name}", color=0x2e8b57)
+        embed = discord.Embed(title="Trivia Stats", description=f"Stats for {member.display_name}", color=0x2e8b57)
         embed.add_field(name="Correct", value=str(s["correct"]))
         embed.add_field(name="Attempts", value=str(s["attempts"]))
         embed.add_field(name="Accuracy", value=f"{pct:.1f}%")
@@ -125,7 +125,7 @@ class Trivia(commands.Cog):
             return await interaction.response.send_message("Nobody has played yet!", ephemeral=True)
         lines = [f"`{i}.` <@{uid}> — **{s['correct']}** correct ({100 * s['correct'] / max(s['attempts'], 1):.0f}%)"
                  for i, (uid, s) in enumerate(rows, 1)]
-        await interaction.response.send_message(embed=discord.Embed(title="🏆 Trivia leaderboard", description="\n".join(lines), color=0xffd700),
+        await interaction.response.send_message(embed=discord.Embed(title="Trivia leaderboard", description="\n".join(lines), color=0xffd700),
                                                 allowed_mentions=discord.AllowedMentions.none())
 
 

@@ -25,7 +25,7 @@ COMPLIMENTS = [
 
 
 def user_info_embed(target: discord.Member | discord.User) -> discord.Embed:
-    embed = discord.Embed(title="👤 User Information", color=getattr(target, "color", None) or 0x3498db)
+    embed = discord.Embed(title="User Information", color=getattr(target, "color", None) or 0x3498db)
     embed.set_thumbnail(url=target.display_avatar.url)
     embed.add_field(name="Name", value=str(target), inline=True)
     embed.add_field(name="ID", value=target.id, inline=True)
@@ -46,7 +46,7 @@ def user_info_embed(target: discord.Member | discord.User) -> discord.Embed:
 
 
 class Misc(commands.Cog, name="Misc"):
-    """🔧 Local Utility Commands"""
+    """Local Utility Commands"""
 
     def __init__(self, client):
         self.client = client
@@ -74,7 +74,7 @@ class Misc(commands.Cog, name="Misc"):
     async def bug(self, interaction: discord.Interaction, member: discord.Member, times: app_commands.Range[int, 1, 30],
                   message: str = "we need you"):
         if member.id == self.client.user.id:
-            return await interaction.response.send_message("❌ I'm not gonna bug myself!", ephemeral=True)
+            return await interaction.response.send_message("I'm not gonna bug myself!", ephemeral=True)
         await interaction.response.send_message(f"Hey {member.mention} {message}, 1!")
         for i in range(2, times + 1):
             await interaction.channel.send(f"Hey {member.mention} {message}, {i}!")
@@ -88,11 +88,11 @@ class Misc(commands.Cog, name="Misc"):
 
     @app_commands.command(description="Check the bot's latency")
     async def ping(self, interaction: discord.Interaction):
-        await interaction.response.send_message(f"🏓 Pong! `{round(self.client.latency * 1000)}ms`")
+        await interaction.response.send_message(f"Pong! `{round(self.client.latency * 1000)}ms`")
 
 
 class Api(commands.Cog, name="Api"):
-    """🌐 API-powered Commands"""
+    """API-powered Commands"""
 
     def __init__(self, client):
         self.client = client
@@ -105,7 +105,7 @@ class Api(commands.Cog, name="Api"):
     async def ai(self, interaction: discord.Interaction, prompt: str):
         api_key = os.getenv('ai')
         if not api_key:
-            return await interaction.response.send_message("❌ AI generation not configured", ephemeral=True)
+            return await interaction.response.send_message("AI generation not configured", ephemeral=True)
         await interaction.response.defer()
         try:
             async with self.session.post("https://api.deepai.org/api/text2img", data={'text': prompt},
@@ -116,9 +116,9 @@ class Api(commands.Cog, name="Api"):
                 embed.set_image(url=data['output_url'])
                 await interaction.followup.send(embed=embed)
             else:
-                await interaction.followup.send("❌ Generation failed")
+                await interaction.followup.send("Generation failed")
         except Exception as e:
-            await interaction.followup.send(f"❌ Error: {e}")
+            await interaction.followup.send(f"Error: {e}")
 
     @app_commands.command(description="Search Wikipedia")
     async def wikipedia(self, interaction: discord.Interaction, query: str):
@@ -139,18 +139,18 @@ class Api(commands.Cog, name="Api"):
             await interaction.followup.send(embed=embed, view=view)
         except wikipedia.exceptions.DisambiguationError as e:
             options = "\n".join(f"• {o}" for o in e.options[:8])
-            await interaction.followup.send(f"❓ **{query}** could mean:\n{options}\n\nBe more specific!")
+            await interaction.followup.send(f"**{query}** could mean:\n{options}\n\nBe more specific!")
         except wikipedia.exceptions.PageError:
-            await interaction.followup.send(f"❌ No Wikipedia page found for **{query}**.")
+            await interaction.followup.send(f"No Wikipedia page found for **{query}**.")
         except Exception as e:
-            await interaction.followup.send(f"❌ Error: {e}")
+            await interaction.followup.send(f"Error: {e}")
 
     @app_commands.command(description="Get an insult")
     async def insult(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
         try:
             quote_ = await asyncio.to_thread(funcs.get_insult)
         except Exception:
-            return await interaction.response.send_message("❌ Insult API is down", ephemeral=True)
+            return await interaction.response.send_message("Insult API is down", ephemeral=True)
         await interaction.response.send_message(f"{member.mention}, {quote_}" if member else quote_)
 
     @app_commands.command(description="Give someone a compliment")
@@ -164,9 +164,9 @@ class Api(commands.Cog, name="Api"):
             async with self.session.get("https://rizzapi.vercel.app/random", timeout=10) as r:
                 line = (await r.json(content_type=None))["text"]
         except Exception:
-            return await interaction.response.send_message("❌ Pickup line API is down", ephemeral=True)
+            return await interaction.response.send_message("Pickup line API is down", ephemeral=True)
         target = f"Hey {member.mention}, " if member else ""
-        await interaction.response.send_message(f"💕 {target}{line}")
+        await interaction.response.send_message(f"{target}{line}")
 
     @app_commands.command(description="Get a joke")
     async def joke(self, interaction: discord.Interaction):
@@ -177,7 +177,7 @@ class Api(commands.Cog, name="Api"):
                                   description=f"{joke['setup']}\n\n||{joke['delivery']}||", color=0xffa500)
             await interaction.response.send_message(embed=embed)
         except Exception:
-            await interaction.response.send_message("❌ Joke API is down", ephemeral=True)
+            await interaction.response.send_message("Joke API is down", ephemeral=True)
 
     @app_commands.command(description="Get the latest or a random xkcd comic")
     async def xkcd(self, interaction: discord.Interaction, mode: Literal["latest", "random"] = "latest"):
@@ -189,7 +189,7 @@ class Api(commands.Cog, name="Api"):
             embed.set_footer(text=comic.getAltText())
             await interaction.followup.send(embed=embed)
         except Exception as e:
-            await interaction.followup.send(f"❌ Error: {e}")
+            await interaction.followup.send(f"Error: {e}")
 
     @app_commands.command(description="Get a random animal picture")
     async def animal(self, interaction: discord.Interaction, animal: Literal["dog", "cat", "fox", "duck"] = "dog"):
@@ -204,8 +204,8 @@ class Api(commands.Cog, name="Api"):
             async with self.session.get(url, timeout=10) as r:
                 image = pick(await r.json(content_type=None))
         except Exception:
-            return await interaction.response.send_message("❌ Animal API error", ephemeral=True)
-        embed = discord.Embed(title=f"🐾 {animal.title()}", color=0x088f8f)
+            return await interaction.response.send_message("Animal API error", ephemeral=True)
+        embed = discord.Embed(title=f"{animal.title()}", color=0x088f8f)
         embed.set_image(url=image)
         await interaction.response.send_message(embed=embed)
 
@@ -213,7 +213,7 @@ class Api(commands.Cog, name="Api"):
     async def gif(self, interaction: discord.Interaction, query: str):
         tenor_key = os.getenv('TENORKEY')
         if not tenor_key:
-            return await interaction.response.send_message("❌ GIF search not configured", ephemeral=True)
+            return await interaction.response.send_message("GIF search not configured", ephemeral=True)
         try:
             async with self.session.get(f"https://tenor.googleapis.com/v2/search?q={quote(query)}&key={tenor_key}&limit=1&contentfilter=medium",
                                         timeout=10) as r:
@@ -221,9 +221,9 @@ class Api(commands.Cog, name="Api"):
             if data.get("results"):
                 await interaction.response.send_message(data["results"][0]["url"])
             else:
-                await interaction.response.send_message("❌ No GIFs found", ephemeral=True)
+                await interaction.response.send_message("No GIFs found", ephemeral=True)
         except Exception:
-            await interaction.response.send_message("❌ GIF search failed", ephemeral=True)
+            await interaction.response.send_message("GIF search failed", ephemeral=True)
 
 
 async def setup(client):

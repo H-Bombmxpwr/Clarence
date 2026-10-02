@@ -12,7 +12,7 @@ from functionality import aviation as av
 from functionality.ui import Paginator, chunk_lines
 
 BLUE = 0x1e90ff
-NO_KEY_MSG = ("❌ Schedules need a free AeroDataBox key. Sign up at <https://rapidapi.com/aedbx-aedbx/api/aerodatabox> "
+NO_KEY_MSG = ("Schedules need a free AeroDataBox key. Sign up at <https://rapidapi.com/aedbx-aedbx/api/aerodatabox> "
               "(Basic plan is free), then set `AERODATABOX_KEY` in keys.env / Railway variables.")
 STATUS_EMOJI = {
     "Expected": "🕒", "CheckIn": "🛄", "Boarding": "🚶", "GateClosed": "🚪", "Departed": "🛫", "EnRoute": "✈️",
@@ -120,7 +120,7 @@ def live_fields(embed: discord.Embed, ac: dict, dest: Optional[dict] = None):
             embed.add_field(name="To destination", value=f"{int(remaining):,} nm • ETA ~<t:{int(eta.timestamp())}:t>",
                             inline=False)
     if ac.get("emergency") and ac["emergency"] != "none":
-        embed.add_field(name="🚨 Emergency", value=ac["emergency"], inline=False)
+        embed.add_field(name="Emergency", value=ac["emergency"], inline=False)
 
 
 class TrackLinks(discord.ui.View):
@@ -136,7 +136,7 @@ class TrackLinks(discord.ui.View):
 
 
 class Flight(commands.Cog):
-    """✈️ Flights, airports and aviation weather"""
+    """Flights, airports and aviation weather"""
 
     flight = app_commands.Group(name="flight", description="Track flights and look up schedules")
     airport = app_commands.Group(name="airport", description="Airport information and weather")
@@ -162,7 +162,7 @@ class Flight(commands.Cog):
         await av.airport_db.ensure_loaded(self.session)
         ap = av.airport_db.lookup(query)
         if not ap:
-            await interaction.followup.send(f"❌ Couldn't find an airport matching **{query}**.")
+            await interaction.followup.send(f"Couldn't find an airport matching **{query}**.")
         return ap
 
     async def airport_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -174,7 +174,7 @@ class Flight(commands.Cog):
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         original = getattr(error, "original", error)
         if isinstance(original, (av.ApiError, asyncio.TimeoutError)):
-            msg = NO_KEY_MSG if isinstance(original, av.NoApiKey) else f"❌ {original or 'The data provider timed out.'}"
+            msg = NO_KEY_MSG if isinstance(original, av.NoApiKey) else f"{original or 'The data provider timed out.'}"
             if interaction.response.is_done():
                 await interaction.followup.send(msg)
             else:
@@ -212,9 +212,9 @@ class Flight(commands.Cog):
 
         if not route and not ac and not aircraft:
             hint = "\nFor scheduled flights that aren't airborne yet, try `/flight status`." if av.aerodatabox_enabled() else ""
-            return await interaction.followup.send(f"❌ Nothing found for **{query}**. It may not be airborne or in ADS-B coverage.{hint}")
+            return await interaction.followup.send(f"Nothing found for **{query}**. It may not be airborne or in ADS-B coverage.{hint}")
 
-        title = "✈️ " + " / ".join(dict.fromkeys(x for x in (iata_number, callsign) if x)) if callsign else f"🛩️ {q}"
+        title = " / ".join(dict.fromkeys(x for x in (iata_number, callsign) if x)) if callsign else q
         embed = discord.Embed(title=title, color=BLUE)
         if route:
             airline = route.get("airline") or {}
@@ -229,12 +229,12 @@ class Flight(commands.Cog):
             d = None
 
         if ac:
-            embed.add_field(name="Status", value="🟢 Live" + (" (on ground)" if ac.get("alt_baro") == "ground" else " — in flight"), inline=False)
+            embed.add_field(name="Status", value="Live" + (" (on ground)" if ac.get("alt_baro") == "ground" else " — in flight"), inline=False)
             live_fields(embed, ac, d)
             seen = ac.get("seen_pos") or ac.get("seen")
             embed.set_footer(text=f"Live data: adsb.lol • updated {seen:.0f}s ago" if seen is not None else "Live data: adsb.lol")
         else:
-            embed.add_field(name="Status", value="⚪ Not currently tracked (on the ground, not yet departed, or out of coverage)", inline=False)
+            embed.add_field(name="Status", value="Not currently tracked (on the ground, not yet departed, or out of coverage)", inline=False)
             embed.set_footer(text="Route data: adsbdb • routes are typical routes for this callsign")
 
         reg = (ac or {}).get("r") or (aircraft or {}).get("registration")
@@ -259,10 +259,10 @@ class Flight(commands.Cog):
         info = await av.aircraft_info(self.session, q)
         live = await (av.live_by_hex(self.session, q) if av.HEX_RE.match(q) else av.live_by_reg(self.session, q))
         if not info and not live:
-            return await interaction.followup.send(f"❌ No aircraft found for **{registration}**.")
+            return await interaction.followup.send(f"No aircraft found for **{registration}**.")
         info = info or {}
         ac = live[0] if live else None
-        embed = discord.Embed(title=f"🛩️ {info.get('registration') or (ac or {}).get('r') or q}", color=BLUE,
+        embed = discord.Embed(title=f"{info.get('registration') or (ac or {}).get('r') or q}", color=BLUE,
                               description=f"{info.get('manufacturer', '')} {info.get('type', '') or (ac or {}).get('t', '')}".strip())
         embed.add_field(name="ICAO type", value=info.get("icao_type") or (ac or {}).get("t") or "—")
         embed.add_field(name="Mode S hex", value=f"`{(info.get('mode_s') or (ac or {}).get('hex') or '—').upper()}`")
@@ -270,10 +270,10 @@ class Flight(commands.Cog):
         embed.add_field(name="Registered in", value=f"{av.flag(info.get('registered_owner_country_iso_name'))} {info.get('registered_owner_country_name', '—')}")
         if ac:
             cs = (ac.get("flight") or "").strip()
-            embed.add_field(name="Currently", value=f"🟢 Flying as **{cs or 'no callsign'}**", inline=False)
+            embed.add_field(name="Currently", value=f"Flying as **{cs or 'no callsign'}**", inline=False)
             live_fields(embed, ac)
         else:
-            embed.add_field(name="Currently", value="⚪ Not being tracked right now", inline=False)
+            embed.add_field(name="Currently", value="Not being tracked right now", inline=False)
         if info.get("url_photo"):
             embed.set_image(url=info["url_photo"])
         hex_code = info.get("mode_s") or (ac or {}).get("hex")
@@ -305,7 +305,7 @@ class Flight(commands.Cog):
             vr = a.get("baro_rate") or 0
             trend = "↗" if vr > 300 else "↘" if vr < -300 else ""
             lines.append(f"**{cs}** `{a.get('t', '?')}` {alt}{trend} {gs} • {dist}")
-        pages = [discord.Embed(title=f"📡 {len(aircraft)} aircraft near {ap.iata or ap.code}", description=c, color=BLUE)
+        pages = [discord.Embed(title=f"{len(aircraft)} aircraft near {ap.iata or ap.code}", description=c, color=BLUE)
                  .set_footer(text=f"Within {radius} nm of {ap.name} • adsb.lol") for c in chunk_lines(lines, 3500)]
         await Paginator(pages, interaction.user.id).send(interaction)
 
@@ -320,20 +320,20 @@ class Flight(commands.Cog):
             try:
                 date.fromisoformat(day)
             except ValueError:
-                return await interaction.response.send_message("❌ Date must be YYYY-MM-DD.", ephemeral=True)
+                return await interaction.response.send_message("Date must be YYYY-MM-DD.", ephemeral=True)
         await interaction.response.defer()
         flights = await av.flight_status(self.session, number, day)
         if not flights:
-            return await interaction.followup.send(f"❌ No schedule found for **{number.upper()}**" + (f" on {day}" if day else " today") + ".")
+            return await interaction.followup.send(f"No schedule found for **{number.upper()}**" + (f" on {day}" if day else " today") + ".")
 
         pages = []
         for f in flights:
             status = f.get("status", "Unknown")
             airline = (f.get("airline") or {}).get("name", "")
-            embed = discord.Embed(title=f"{STATUS_EMOJI.get(status, '✈️')} {f.get('number', number.upper())} — {status}",
+            embed = discord.Embed(title=f"{f.get('number', number.upper())} — {status}",
                                   description=airline, color=0xe74c3c if status in ("Canceled", "Diverted") else BLUE)
-            embed.add_field(name="🛫 Departure", value=_movement_line(f.get("departure"), "dep"))
-            embed.add_field(name="🛬 Arrival", value=_movement_line(f.get("arrival"), "arr"))
+            embed.add_field(name="Departure", value=_movement_line(f.get("departure"), "dep"))
+            embed.add_field(name="Arrival", value=_movement_line(f.get("arrival"), "arr"))
             delay = _delay_minutes(f.get("departure"))
             if delay and delay >= 5:
                 embed.add_field(name="Delay", value=f"{delay} min late departing", inline=False)
@@ -357,13 +357,13 @@ class Flight(commands.Cog):
         if not ap:
             return
         if not ap.icao:
-            return await interaction.followup.send(f"❌ {ap.name} has no ICAO code, so no schedule data is available.")
+            return await interaction.followup.send(f"{ap.name} has no ICAO code, so no schedule data is available.")
         data = await av.airport_board_relative(self.session, ap.icao, -30, hours * 60, direction)
         flights = data.get("departures" if direction == "Departure" else "arrivals") or []
         if not flights:
             return await interaction.followup.send(f"No {direction.lower()}s found for **{ap.label}** in the next {hours}h.")
         lines = [_board_line(f, direction) for f in flights]
-        icon = "🛫 Departures" if direction == "Departure" else "🛬 Arrivals"
+        icon = "Departures" if direction == "Departure" else "Arrivals"
         pages = []
         for chunk in chunk_lines(lines, 3000):
             embed = discord.Embed(title=f"{icon} — {ap.iata or ap.code}", description=chunk, color=BLUE)
@@ -395,14 +395,14 @@ class Flight(commands.Cog):
             try:
                 date.fromisoformat(day)
             except ValueError:
-                return await interaction.response.send_message("❌ Date must be YYYY-MM-DD.", ephemeral=True)
+                return await interaction.response.send_message("Date must be YYYY-MM-DD.", ephemeral=True)
         await interaction.response.defer()
         org = await self.resolve_airport(interaction, origin)
         dst = org and await self.resolve_airport(interaction, destination)
         if not org or not dst:
             return
         if not org.icao:
-            return await interaction.followup.send(f"❌ {org.name} has no ICAO code, so no schedule data is available.")
+            return await interaction.followup.send(f"{org.name} has no ICAO code, so no schedule data is available.")
 
         if day:
             boards = await asyncio.gather(
@@ -433,7 +433,7 @@ class Flight(commands.Cog):
             lines.append(f"{STATUS_EMOJI.get(status, '')} **{f.get('number')}** {airline}\n"
                          f"└ `{_local_hm(dep.get('scheduledTime'))}` → `{_local_hm(arr.get('scheduledTime'))}` local"
                          f"{' • ' + model if model else ''}{gate} • {status}")
-        pages = [discord.Embed(title=f"🗺️ {org.iata or org.code} → {dst.iata or dst.code}", description=c, color=BLUE)
+        pages = [discord.Embed(title=f"{org.iata or org.code} → {dst.iata or dst.code}", description=c, color=BLUE)
                  .set_footer(text=f"{len(matches)} flights • {window} • AeroDataBox") for c in chunk_lines(lines, 3500)]
         await Paginator(pages, interaction.user.id).send(interaction)
 
@@ -460,7 +460,7 @@ class Flight(commands.Cog):
                 wind = f"{m.get('wdir', 'VRB')}° @ {m.get('wspd', 0)} kt" + (f" G{m['wgst']}" if m.get("wgst") else "")
                 temp = f"{m['temp']:.0f}°C / {m['temp'] * 9 / 5 + 32:.0f}°F" if m.get("temp") is not None else "—"
                 embed.add_field(name=f"Weather ({m.get('fltCat', '?')})",
-                                value=f"🌡️ {temp} • 💨 {wind} • 👁️ {m.get('visib', '?')} SM\n`{m.get('rawOb', '')}`", inline=False)
+                                value=f"{temp} • wind {wind} • vis {m.get('visib', '?')} SM\n`{m.get('rawOb', '')}`", inline=False)
         live = await av.live_near(self.session, ap.lat, ap.lon, 10)
         embed.add_field(name="Traffic", value=f"{len(live)} aircraft within 10 nm right now", inline=False)
         view = discord.ui.View()
@@ -483,9 +483,9 @@ class Flight(commands.Cog):
         code = ap.icao or ap.ident
         m, t = await asyncio.gather(av.metar(self.session, code), av.taf(self.session, code))
         if not m and not t:
-            return await interaction.followup.send(f"❌ No weather reports available for **{ap.label}**.")
+            return await interaction.followup.send(f"No weather reports available for **{ap.label}**.")
         cat_color = {"VFR": 0x2ecc71, "MVFR": 0x3498db, "IFR": 0xe74c3c, "LIFR": 0x9b59b6}
-        embed = discord.Embed(title=f"🌤️ Weather — {ap.iata or code} {ap.name}", color=cat_color.get((m or {}).get("fltCat"), BLUE))
+        embed = discord.Embed(title=f"Weather — {ap.iata or code} {ap.name}", color=cat_color.get((m or {}).get("fltCat"), BLUE))
         if m:
             clouds = ", ".join(f"{c['cover']} {c['base']:,} ft" for c in m.get("clouds", []) if c.get("base") is not None) or "Clear"
             obs = datetime.fromtimestamp(m["obsTime"], timezone.utc) if m.get("obsTime") else None

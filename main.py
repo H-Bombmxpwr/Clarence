@@ -149,9 +149,9 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 
     try:
         if interaction.response.is_done():
-            await interaction.followup.send(f"❌ {msg}", ephemeral=True)
+            await interaction.followup.send(f"{msg}", ephemeral=True)
         else:
-            await interaction.response.send_message(f"❌ {msg}", ephemeral=True)
+            await interaction.response.send_message(f"{msg}", ephemeral=True)
     except discord.HTTPException:
         pass
 
