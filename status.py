@@ -2,11 +2,11 @@
 import json
 import random
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 
 LYRICS_PATH = "constants/lyrics.json"
 STATUS_SPACER = "               "
-OWNER_ID = 239605426033786881
 
 
 def _load_blocks(path: str = LYRICS_PATH):
@@ -32,7 +32,6 @@ def _load_blocks(path: str = LYRICS_PATH):
 
 class Status(commands.Cog):
     """Rotating lyric presence (hidden cog)"""
-    __cog_command_attrs__ = {"hidden": True}
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -91,8 +90,14 @@ class Status(commands.Cog):
         if not self._rotate_status.is_running():
             self._rotate_status.start()
 
-    @commands.command(name="preview_status", aliases=["ps"])
-    async def preview_status(self, ctx: commands.Context):
+    def reshuffle(self):
+        if not self._blocks:
+            self._blocks = _load_blocks()
+        self._shuffle_blocks()
+        self._rebuild_entries()
+
+    @app_commands.command(name="status", description="Show the song lyrics I'm cycling through in my status")
+    async def preview_status(self, interaction: discord.Interaction):
         """Show previous, current, and next songs, with current line highlighted red."""
         if not self._entries:
             emb = discord.Embed(
@@ -100,7 +105,7 @@ class Status(commands.Cog):
                 description="No lyrics found in constants/lyrics.json",
                 color=0x00A38D,
             )
-            return await ctx.send(embed=emb)
+            return await interaction.response.send_message(embed=emb, ephemeral=True)
 
         cur_i = self._last_shown_idx
         cur_block = self._map_index_to_block[cur_i]
@@ -125,21 +130,10 @@ class Status(commands.Cog):
 
         emb = discord.Embed(
             title="Status Rotation (Preview)",
-            description=f"{prev_txt}\n\n{cur_txt}\n\n{next_txt}",
+            description=f"{prev_txt}\n\n{cur_txt}\n\n{next_txt}"[:4000],
             color=0x00A38D,
         )
-        await ctx.send(embed=emb)
-
-    @commands.command(name="reload_lyrics", hidden=True)
-    async def reload_lyrics(self, ctx: commands.Context):
-        """Owner-only: reshuffle order of the songs."""
-        if ctx.author.id != OWNER_ID:
-            return
-        if not self._blocks:
-            self._blocks = _load_blocks()
-        self._shuffle_blocks()
-        self._rebuild_entries()
-        await ctx.send("Lyric status order reshuffled.")
+        await interaction.response.send_message(embed=emb)
 
 
 async def setup(client: commands.Bot):

@@ -1,10 +1,12 @@
 # cogs/owner.py
+"""Owner-only commands. Registered only in the DEV_GUILD_ID server so nobody else sees them."""
 import discord
+from discord import app_commands
 from discord.ext import commands
-from datetime import date, datetime, timezone
-from typing import Optional
-import json
-import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+from functionality.ui import ConfirmView
 
 OWNER_ID = 239605426033786881  # Your Discord ID
 
@@ -191,183 +193,134 @@ class Owner(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
 
-    def is_owner(self, user_id: int) -> bool:
-        """Check if user is the bot owner"""
-        return user_id == OWNER_ID
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != OWNER_ID:
+            await interaction.response.send_message("❌ This command is owner-only.", ephemeral=True)
+            return False
+        return True
 
-    @commands.command(name="dashboard", aliases=["dash", "admin"], hidden=True)
-    async def dashboard(self, ctx: commands.Context):
-        """
-        Interactive bot dashboard (Owner only)
-        
-        Shows all servers, statistics, and management options.
-        """
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        servers = sorted(self.client.guilds, key=lambda g: g.member_count, reverse=True)
+    async def extension_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        available = set(self.client.extensions) | {f"cogs.{p.stem}" for p in Path("cogs").glob("*.py")} | {"status"}
+        return [app_commands.Choice(name=e, value=e) for e in sorted(available) if current.lower() in e][:25]
+
+    @app_commands.command(description="Interactive bot dashboard")
+    async def dashboard(self, interaction: discord.Interaction):
+        servers = sorted(self.client.guilds, key=lambda g: g.member_count or 0, reverse=True)
         view = ServerSelectView(self.client, servers)
-        await ctx.send(embed=view.get_embed(), view=view)
+        await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=True)
 
-    @commands.command(name="servers", aliases=["guilds"], hidden=True)
-    async def servers(self, ctx: commands.Context):
-        """List all servers the bot is in (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        servers = sorted(self.client.guilds, key=lambda g: g.member_count, reverse=True)
-        
-        embed = discord.Embed(
-            title=f"🤖 Active Servers ({len(servers)})",
-            color=0x9b59b6,
-            timestamp=datetime.now(timezone.utc)
-        )
-        
-        server_list = ""
-        for i, guild in enumerate(servers[:20], 1):
-            server_list += f"`{i}.` **{guild.name}** ({guild.member_count})\n"
-        
-        embed.description = server_list
-        embed.set_footer(text=f"Total: {sum(g.member_count for g in servers):,} members")
-        
-        await ctx.send(embed=embed)
-
-    @commands.command(name="serverinfo_owner", aliases=["guildinfo"], hidden=True)
-    async def server_info_owner(self, ctx: commands.Context, guild_id: int = None):
-        """Get detailed info about a specific server (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        if guild_id is None:
-            return await ctx.send("Usage: `serverinfo_owner <guild_id>`")
-        
-        guild = self.client.get_guild(guild_id)
+    @app_commands.command(description="Detailed info about any server the bot is in")
+    async def guildinfo(self, interaction: discord.Interaction, guild_id: str):
+        guild = self.client.get_guild(int(guild_id)) if guild_id.isdigit() else None
         if not guild:
-            return await ctx.send("❌ Server not found.")
-        
+            return await interaction.response.send_message("❌ Server not found.", ephemeral=True)
         embed = discord.Embed(title=guild.name, color=0x3498db)
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
-        
-        embed.add_field(name="ID", value=str(guild.id), inline=True)
-        embed.add_field(name="Owner", value=str(guild.owner) if guild.owner else "?", inline=True)
-        embed.add_field(name="Members", value=str(guild.member_count), inline=True)
-        embed.add_field(name="Channels", value=str(len(guild.channels)), inline=True)
-        embed.add_field(name="Created", value=f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
-        
-        await ctx.send(embed=embed)
+        embed.add_field(name="ID", value=str(guild.id))
+        embed.add_field(name="Owner", value=str(guild.owner) if guild.owner else "?")
+        embed.add_field(name="Members", value=str(guild.member_count))
+        embed.add_field(name="Channels", value=str(len(guild.channels)))
+        embed.add_field(name="Created", value=f"<t:{int(guild.created_at.timestamp())}:R>")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @commands.command(name="leave_server", hidden=True)
-    async def leave_server(self, ctx: commands.Context, guild_id: int):
-        """Make the bot leave a server (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        guild = self.client.get_guild(guild_id)
+    @app_commands.command(description="Make the bot leave a server")
+    async def leaveserver(self, interaction: discord.Interaction, guild_id: str):
+        guild = self.client.get_guild(int(guild_id)) if guild_id.isdigit() else None
         if not guild:
-            return await ctx.send("❌ Server not found.")
-        
-        name = guild.name
-        await guild.leave()
-        await ctx.send(f"✅ Left **{name}**")
+            return await interaction.response.send_message("❌ Server not found.", ephemeral=True)
+        view = ConfirmView(interaction.user.id)
+        await interaction.response.send_message(f"Leave **{guild.name}**?", view=view, ephemeral=True)
+        await view.wait()
+        if view.value:
+            await guild.leave()
+            await interaction.followup.send(f"✅ Left **{guild.name}**", ephemeral=True)
 
-    @commands.command(name="broadcast", hidden=True)
-    async def broadcast(self, ctx: commands.Context, *, message: str):
-        """Send a message to all server owners (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        # Confirmation
-        await ctx.send(f"⚠️ This will DM all **{len(self.client.guilds)}** server owners. Type `confirm` to proceed.")
-        
-        def check(m):
-            return m.author == ctx.author and m.channel == ctx.channel and m.content.lower() == "confirm"
-        
-        try:
-            await self.client.wait_for("message", check=check, timeout=30)
-        except:
-            return await ctx.send("❌ Broadcast cancelled.")
-        
-        success = 0
-        failed = 0
-        
-        embed = discord.Embed(
-            title="📢 Message from Bot Owner",
-            description=message,
-            color=0x3498db,
-            timestamp=datetime.now(timezone.utc)
-        )
-        embed.set_footer(text=f"From {ctx.author}")
-        
+    @app_commands.command(description="DM a message to every server owner")
+    async def broadcast(self, interaction: discord.Interaction, message: str):
+        view = ConfirmView(interaction.user.id)
+        await interaction.response.send_message(f"⚠️ This will DM all **{len(self.client.guilds)}** server owners.",
+                                                view=view, ephemeral=True)
+        await view.wait()
+        if not view.value:
+            return
+        embed = discord.Embed(title="📢 Message from Bot Owner", description=message, color=0x3498db,
+                              timestamp=datetime.now(timezone.utc))
+        embed.set_footer(text=f"From {interaction.user}")
+        success = failed = 0
         for guild in self.client.guilds:
-            if guild.owner:
-                try:
-                    await guild.owner.send(embed=embed)
-                    success += 1
-                except:
-                    failed += 1
-        
-        await ctx.send(f"✅ Sent to **{success}** owners. Failed: **{failed}**")
+            try:
+                await guild.owner.send(embed=embed)
+                success += 1
+            except Exception:
+                failed += 1
+        await interaction.followup.send(f"✅ Sent to **{success}** owners. Failed: **{failed}**", ephemeral=True)
 
-    @commands.command(name="reload", hidden=True)
-    async def reload_cog(self, ctx: commands.Context, cog_name: str):
-        """Reload a cog (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
+    @app_commands.command(description="Reload an extension")
+    @app_commands.autocomplete(extension=extension_autocomplete)
+    async def reload(self, interaction: discord.Interaction, extension: str):
         try:
-            await self.client.reload_extension(f"cogs.{cog_name}")
-            await ctx.send(f"✅ Reloaded `{cog_name}`")
+            await self.client.reload_extension(extension)
+            await self.client.sync_commands()
+            await interaction.response.send_message(f"✅ Reloaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await ctx.send(f"❌ Error: {e}")
+            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
 
-    @commands.command(name="load", hidden=True)
-    async def load_cog(self, ctx: commands.Context, cog_name: str):
-        """Load a cog (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
+    @app_commands.command(description="Load an extension")
+    @app_commands.autocomplete(extension=extension_autocomplete)
+    async def load(self, interaction: discord.Interaction, extension: str):
         try:
-            await self.client.load_extension(f"cogs.{cog_name}")
-            await ctx.send(f"✅ Loaded `{cog_name}`")
+            await self.client.load_extension(extension)
+            await self.client.sync_commands()
+            await interaction.response.send_message(f"✅ Loaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await ctx.send(f"❌ Error: {e}")
+            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
 
-    @commands.command(name="unload", hidden=True)
-    async def unload_cog(self, ctx: commands.Context, cog_name: str):
-        """Unload a cog (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
+    @app_commands.command(description="Unload an extension")
+    @app_commands.autocomplete(extension=extension_autocomplete)
+    async def unload(self, interaction: discord.Interaction, extension: str):
+        if extension == "cogs.owner":
+            return await interaction.response.send_message("❌ Unloading the owner cog would lock you out.", ephemeral=True)
         try:
-            await self.client.unload_extension(f"cogs.{cog_name}")
-            await ctx.send(f"✅ Unloaded `{cog_name}`")
+            await self.client.unload_extension(extension)
+            await self.client.sync_commands()
+            await interaction.response.send_message(f"✅ Unloaded `{extension}`", ephemeral=True)
         except Exception as e:
-            await ctx.send(f"❌ Error: {e}")
+            await interaction.response.send_message(f"❌ {type(e).__name__}: {e}", ephemeral=True)
 
-    @commands.command(name="cogs", hidden=True)
-    async def list_cogs(self, ctx: commands.Context):
-        """List all loaded cogs (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        cog_list = "\n".join([f"✅ `{name}`" for name in self.client.cogs])
-        embed = discord.Embed(
-            title="🔧 Loaded Cogs",
-            description=cog_list or "No cogs loaded",
-            color=0x2ecc71
-        )
-        await ctx.send(embed=embed)
+    @app_commands.command(description="List loaded extensions and cogs")
+    async def cogs(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="🔧 Loaded", color=0x2ecc71,
+                              description="**Extensions**\n" + "\n".join(f"✅ `{e}`" for e in self.client.extensions)
+                                          + "\n\n**Cogs**\n" + ", ".join(self.client.cogs))
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @commands.command(name="shutdown", hidden=True)
-    async def shutdown(self, ctx: commands.Context):
-        """Shutdown the bot (Owner only)"""
-        if not self.is_owner(ctx.author.id):
-            return await ctx.send("❌ This command is owner-only.")
-        
-        await ctx.send("👋 Shutting down...")
-        await self.client.close()
+    @app_commands.command(description="Force re-sync slash commands with Discord")
+    async def sync(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        await self.client.sync_commands(force=True)
+        await interaction.followup.send(f"✅ Synced {len(self.client.command_ids)} global commands.", ephemeral=True)
+
+    @app_commands.command(description="Reshuffle the lyric status rotation")
+    async def reloadlyrics(self, interaction: discord.Interaction):
+        status = self.client.get_cog("Status")
+        if not status:
+            return await interaction.response.send_message("❌ Status cog not loaded.", ephemeral=True)
+        status.reshuffle()
+        await interaction.response.send_message("Lyric status order reshuffled.", ephemeral=True)
+
+    @app_commands.command(description="Shut down the bot")
+    async def shutdown(self, interaction: discord.Interaction):
+        view = ConfirmView(interaction.user.id)
+        await interaction.response.send_message("Shut down the bot?", view=view, ephemeral=True)
+        await view.wait()
+        if view.value:
+            await interaction.followup.send("👋 Shutting down...", ephemeral=True)
+            await self.client.close()
 
 
 async def setup(client: commands.Bot):
-    await client.add_cog(Owner(client))
+    if not client.dev_guild:
+        print("[owner] DEV_GUILD_ID not set - owner commands are disabled")
+        return
+    await client.add_cog(Owner(client), guild=client.dev_guild)

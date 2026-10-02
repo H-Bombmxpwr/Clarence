@@ -1,881 +1,894 @@
 # cogs/poker.py
-import json
-import os
+"""
+Texas Hold'em, played in a channel with everyone who joins.
+
+- One table per channel; players join from the lobby or between hands
+- Proper button/blind rotation (including heads-up rules), min-raise rules, all-ins and side pots
+- Hole cards are shown privately with the "My cards" button
+- Chip balances persist per server in poker.json (inside DATA_DIR)
+"""
 import asyncio
-import discord
-import requests
-import contextlib
+import random
+import time
+from collections import deque
+from dataclasses import dataclass, field
 from io import BytesIO
-from PIL import Image
 from itertools import combinations
+from typing import Optional
+
+import discord
+from discord import app_commands
 from discord.ext import commands
-from typing import Optional, Dict, List, Any
+from PIL import Image
+
+from functionality.store import JsonStore
 
 START_BANK = 1000
-SMALL_BLIND = 10
-BIG_BLIND = 20
-POKER_FILE = "storage/poker.json"
-API = "https://www.deckofcardsapi.com/api/deck/"
+REFILL_AMOUNT = 500
+REFILL_COOLDOWN = 24 * 3600
+MAX_PLAYERS = 9
+TURN_TIMEOUT = 60
+BETWEEN_HANDS = 10
+CARD_IMG = "https://deckofcardsapi.com/static/img/{}.png"
+GREEN = 0x2f7d5c
 
-# ---------- persistence ----------
-def load_bank() -> Dict:
-    os.makedirs(os.path.dirname(POKER_FILE), exist_ok=True)
-    if not os.path.exists(POKER_FILE):
-        with open(POKER_FILE, "w") as f:
-            json.dump({}, f, indent=2)
-    with open(POKER_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except Exception:
-            return {}
-
-
-def save_bank(data: Dict):
-    with open(POKER_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+RANKS = "23456789TJQKA"
+SUITS = "SHDC"
+SUIT_EMOJI = {"S": "♠️", "H": "♥️", "D": "♦️", "C": "♣️"}
+RANK_NAME = {14: "Ace", 13: "King", 12: "Queen", 11: "Jack", 10: "Ten", 9: "Nine", 8: "Eight", 7: "Seven",
+             6: "Six", 5: "Five", 4: "Four", 3: "Three", 2: "Two"}
+CATEGORY = ["High Card", "One Pair", "Two Pair", "Three of a Kind", "Straight", "Flush", "Full House",
+            "Four of a Kind", "Straight Flush"]
 
 
-def get_balance(gid: int, uid: int) -> int:
-    data = load_bank()
-    g = data.setdefault(str(gid), {})
-    bal = g.get(str(uid), START_BANK)
-    g[str(uid)] = bal
-    save_bank(data)
-    return bal
+# ============================================================================ cards & hand evaluation
+
+def card_str(card: str) -> str:
+    rank = "10" if card[0] == "T" else card[0]
+    return f"{rank}{SUIT_EMOJI[card[1]]}"
 
 
-def add_balance(gid: int, uid: int, delta: int) -> int:
-    data = load_bank()
-    g = data.setdefault(str(gid), {})
-    bal = g.get(str(uid), START_BANK) + delta
-    g[str(uid)] = max(0, bal)
-    save_bank(data)
-    return g[str(uid)]
+def cards_str(cards: list[str]) -> str:
+    return " ".join(card_str(c) for c in cards) or "—"
 
 
-# ---------- hand evaluation ----------
-RANK_ORDER = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14}
-RANK_NAME = {14: "Ace", 13: "King", 12: "Queen", 11: "Jack", 10: "Ten", 9: "Nine", 8: "Eight", 7: "Seven", 6: "Six", 5: "Five", 4: "Four", 3: "Three", 2: "Two"}
-SUIT_EMOJI = {'S': '♠️', 'H': '♥️', 'D': '♦️', 'C': '♣️'}
-RANK_DISPLAY = {'A': 'A', 'K': 'K', 'Q': 'Q', 'J': 'J', '0': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2'}
+def _value(card: str) -> int:
+    return RANKS.index(card[0]) + 2
 
 
-def parse_card(code: str):
-    r, s = code[0], code[1]
-    return RANK_ORDER[r], s
+def _straight_high(values: set[int]) -> int:
+    vals = set(values)
+    if 14 in vals:
+        vals.add(1)  # wheel
+    for high in range(14, 4, -1):
+        if all(v in vals for v in range(high - 4, high + 1)):
+            return high
+    return 0
 
 
-def card_to_str(code: str) -> str:
-    """Convert card code to readable string like 'A♠️'"""
-    r, s = code[0], code[1]
-    return f"{RANK_DISPLAY.get(r, r)}{SUIT_EMOJI.get(s, s)}"
-
-
-def _straight_high(uniq_desc):
-    for i in range(len(uniq_desc) - 4):
-        seq = uniq_desc[i:i + 5]
-        if seq[0] - seq[4] == 4:
-            return True, seq[0]
-    if set([14, 5, 4, 3, 2]).issubset(set(uniq_desc)):
-        return True, 5
-    return False, 0
-
-
-def hand_rank_5(cards):
-    ranks = sorted((c[0] for c in cards), reverse=True)
+def rank_five(cards: tuple[str, ...]) -> tuple:
+    values = sorted((_value(c) for c in cards), reverse=True)
     suits = [c[1] for c in cards]
-    counts = {r: ranks.count(r) for r in set(ranks)}
-    by_count = sorted(counts.items(), key=lambda x: (x[1], x[0]), reverse=True)
+    counts = {v: values.count(v) for v in set(values)}
+    groups = sorted(counts.items(), key=lambda kv: (kv[1], kv[0]), reverse=True)  # by count, then value
+    flush = len(set(suits)) == 1
+    straight = _straight_high(set(values)) if len(counts) == 5 else 0
 
-    flush_suit = None
-    for s in "SHDC":
-        if suits.count(s) == 5:
-            flush_suit = s
-            break
-
-    uniq = sorted(set(ranks), reverse=True)
-    straight, sh = _straight_high(uniq)
-
-    if flush_suit:
-        rs = sorted([c[0] for c in cards if c[1] == flush_suit], reverse=True)
-        u = sorted(set(rs), reverse=True)
-        sf, sfh = _straight_high(u)
-        if sf:
-            return (8, sfh)
-
-    kinds = sorted(counts.values(), reverse=True)
-    if kinds == [4, 1]:
-        quad = by_count[0][0]
-        kicker = max([r for r in ranks if r != quad])
-        return (7, quad, kicker)
-    if kinds == [3, 2]:
-        trips = by_count[0][0]
-        pair = by_count[1][0]
-        return (6, trips, pair)
-    if flush_suit:
-        return (5, ranks)
+    if straight and flush:
+        return (8, straight)
+    if groups[0][1] == 4:
+        return (7, groups[0][0], groups[1][0])
+    if groups[0][1] == 3 and groups[1][1] == 2:
+        return (6, groups[0][0], groups[1][0])
+    if flush:
+        return (5, *values)
     if straight:
-        return (4, sh)
-    if kinds == [3, 1, 1]:
-        trips = by_count[0][0]
-        kick = [r for r in ranks if r != trips][:2]
-        return (3, trips, kick)
-    if kinds == [2, 2, 1]:
-        p1, p2 = sorted([r for r, c in by_count if c == 2], reverse=True)
-        k = max([r for r in ranks if r not in (p1, p2)])
-        return (2, p1, p2, k)
-    if kinds == [2, 1, 1, 1]:
-        p = by_count[0][0]
-        kick = [r for r in ranks if r != p][:3]
-        return (1, p, kick)
-    return (0, ranks)
+        return (4, straight)
+    if groups[0][1] == 3:
+        return (3, groups[0][0], *[v for v, _ in groups[1:]])
+    if groups[0][1] == 2 and groups[1][1] == 2:
+        return (2, groups[0][0], groups[1][0], groups[2][0])
+    if groups[0][1] == 2:
+        return (1, groups[0][0], *[v for v, _ in groups[1:]])
+    return (0, *values)
 
 
-def best_7(cards7):
-    best = None
-    for comb in combinations(cards7, 5):
-        val = hand_rank_5(comb)
-        if not best or val > best:
-            best = val
-    return best
+def best_hand(cards: list[str]) -> tuple:
+    return max(rank_five(combo) for combo in combinations(cards, 5))
 
 
-def codes_to_tuples(codes):
-    return [parse_card(c) for c in codes]
-
-
-def compare_hands(players_cards, board_codes):
-    board = codes_to_tuples(board_codes)
-    scores = {}
-    for uid, codes in players_cards.items():
-        seven = codes_to_tuples([c['code'] for c in codes]) + board
-        scores[uid] = best_7(seven)
-    best = max(scores.values())
-    winners = [uid for uid, v in scores.items() if v == best]
-    return winners, scores
-
-
-def rank_to_text(rank_tuple) -> str:
-    cat = rank_tuple[0]
+def describe(rank: tuple) -> str:
+    cat = rank[0]
+    n = lambda v: RANK_NAME[v]
     if cat == 8:
-        return f"Straight Flush, high {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}"
+        return "Royal Flush" if rank[1] == 14 else f"Straight Flush, {n(rank[1])} high"
     if cat == 7:
-        return f"Four of a Kind, {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}s"
+        return f"Four of a Kind, {n(rank[1])}s"
     if cat == 6:
-        return f"Full House, {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}s over {RANK_NAME.get(rank_tuple[2], rank_tuple[2])}s"
+        return f"Full House, {n(rank[1])}s full of {n(rank[2])}s"
     if cat == 5:
-        return "Flush"
+        return f"Flush, {n(rank[1])} high"
     if cat == 4:
-        return f"Straight, high {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}"
+        return f"Straight, {n(rank[1])} high"
     if cat == 3:
-        return f"Three of a Kind, {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}s"
+        return f"Three of a Kind, {n(rank[1])}s"
     if cat == 2:
-        return f"Two Pair, {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}s and {RANK_NAME.get(rank_tuple[2], rank_tuple[2])}s"
+        return f"Two Pair, {n(rank[1])}s and {n(rank[2])}s"
     if cat == 1:
-        return f"One Pair, {RANK_NAME.get(rank_tuple[1], rank_tuple[1])}s"
-    return f"High Card {RANK_NAME.get(rank_tuple[1][0], rank_tuple[1][0])}"
+        return f"Pair of {n(rank[1])}s"
+    return f"{n(rank[1])} High"
 
 
-# ---------- image helpers ----------
-def _fetch_img(url: str) -> Image.Image:
-    r = requests.get(url, timeout=12)
-    r.raise_for_status()
-    return Image.open(BytesIO(r.content)).convert("RGBA")
+def new_deck() -> list[str]:
+    deck = [r + s for r in RANKS for s in SUITS]
+    random.SystemRandom().shuffle(deck)
+    return deck
 
 
-def compose_cards_strip(card_objs: List[Dict], height: int = 200, pad: int = 8, bg=(34, 139, 34, 255)) -> Optional[BytesIO]:
-    """Compose card images into a horizontal strip"""
-    imgs = []
-    for c in card_objs:
+# ============================================================================ images
+
+_img_cache: dict[str, Image.Image] = {}
+
+
+async def _card_image(session, card: str) -> Optional[Image.Image]:
+    code = ("0" if card[0] == "T" else card[0]) + card[1]
+    if code not in _img_cache:
         try:
-            im = _fetch_img(c["image"])
-            h = height
-            w = int(im.width * (h / im.height))
-            im = im.resize((w, h), Image.LANCZOS)
-            imgs.append(im)
+            async with session.get(CARD_IMG.format(code), timeout=10) as r:
+                r.raise_for_status()
+                _img_cache[code] = Image.open(BytesIO(await r.read())).convert("RGBA")
         except Exception:
-            pass
-    if not imgs:
+            return None
+    return _img_cache[code]
+
+
+async def cards_image(session, cards: list[str], height: int = 160) -> Optional[discord.File]:
+    imgs = [await _card_image(session, c) for c in cards]
+    if not imgs or any(i is None for i in imgs):
         return None
-    total_w = sum(im.width for im in imgs) + pad * (len(imgs) + 1)
-    canvas = Image.new("RGBA", (total_w, height + 2 * pad), bg)
-    x = pad
-    for im in imgs:
-        canvas.paste(im, (x, pad), im)
-        x += im.width + pad
-    out = BytesIO()
-    canvas.save(out, format="PNG")
-    out.seek(0)
-    return out
+
+    def compose() -> BytesIO:
+        pad = 8
+        scaled = [im.resize((int(im.width * height / im.height), height), Image.LANCZOS) for im in imgs]
+        canvas = Image.new("RGBA", (sum(i.width for i in scaled) + pad * (len(scaled) + 1), height + 2 * pad), (0, 100, 0, 255))
+        x = pad
+        for im in scaled:
+            canvas.paste(im, (x, pad), im)
+            x += im.width + pad
+        buf = BytesIO()
+        canvas.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
+
+    return discord.File(await asyncio.to_thread(compose), filename="cards.png")
 
 
-# ---------- UI Views ----------
-class CardRevealButton(discord.ui.Button):
-    """Button that shows cards only to the player who clicks it"""
-    def __init__(self, poker_cog, player_id: int, label: str = "🃏 View My Cards"):
-        super().__init__(style=discord.ButtonStyle.primary, label=label)
-        self.poker = poker_cog
-        self.player_id = player_id
+# ============================================================================ bank
 
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.player_id:
-            return await interaction.response.send_message("❌ These aren't your cards!", ephemeral=True)
-        
-        cards = self.poker.hole.get(self.player_id)
-        if not cards:
-            return await interaction.response.send_message("No cards dealt yet.", ephemeral=True)
-        
-        # Create text representation
-        card_str = " | ".join([card_to_str(c['code']) for c in cards])
-        
-        # Try to create image
-        buf = compose_cards_strip(cards, height=200)
-        if buf:
-            file = discord.File(buf, filename="mycards.png")
-            emb = discord.Embed(
-                title="🎴 Your Hole Cards",
-                description=f"**{card_str}**",
-                color=0x2f7d5c
-            )
-            emb.set_image(url="attachment://mycards.png")
-            await interaction.response.send_message(embed=emb, file=file, ephemeral=True)
-        else:
-            await interaction.response.send_message(f"🎴 Your cards: **{card_str}**", ephemeral=True)
+bank = JsonStore("poker.json")
 
 
-class HandStrengthButton(discord.ui.Button):
-    """Button that shows current hand strength"""
-    def __init__(self, poker_cog, player_id: int):
-        super().__init__(style=discord.ButtonStyle.secondary, label="📊 Hand Strength", row=1)
-        self.poker = poker_cog
-        self.player_id = player_id
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.player_id:
-            return await interaction.response.send_message("❌ Not your hand!", ephemeral=True)
-        
-        if self.player_id not in self.poker.in_hand:
-            return await interaction.response.send_message("You're not in the hand.", ephemeral=True)
-        
-        hole = self.poker.hole.get(self.player_id, [])
-        if not hole:
-            return await interaction.response.send_message("No cards dealt.", ephemeral=True)
-        
-        board_codes = [c["code"] for c in self.poker.board]
-        if not board_codes:
-            # Pre-flop - just show hole cards
-            card_str = " | ".join([card_to_str(c['code']) for c in hole])
-            return await interaction.response.send_message(
-                f"🎴 Your hole cards: **{card_str}**\n*Board not dealt yet - hand strength unknown*",
-                ephemeral=True
-            )
-        
-        seven = codes_to_tuples([c['code'] for c in hole]) + codes_to_tuples(board_codes)
-        hand_rank = best_7(seven)
-        txt = rank_to_text(hand_rank)
-        
-        card_str = " | ".join([card_to_str(c['code']) for c in hole])
-        board_str = " ".join([card_to_str(c) for c in board_codes])
-        
-        await interaction.response.send_message(
-            f"🎴 Your cards: **{card_str}**\n"
-            f"📋 Board: **{board_str}**\n"
-            f"💪 Best hand: **{txt}**",
-            ephemeral=True
-        )
+def account(guild_id: int, user_id: int) -> dict:
+    g = bank.guild(guild_id)
+    acct = g.get(str(user_id))
+    if acct is None or isinstance(acct, int):  # migrate old {uid: balance} format
+        acct = {"balance": START_BANK if acct is None else acct, "hands": 0, "won": 0, "biggest_pot": 0,
+                "net": 0, "last_refill": 0}
+        g[str(user_id)] = acct
+    return acct
 
 
-class PlayerCardsView(discord.ui.View):
-    """View with buttons for a specific player"""
-    def __init__(self, poker_cog, player_id: int, timeout: float = 300):
-        super().__init__(timeout=timeout)
-        self.add_item(CardRevealButton(poker_cog, player_id))
-        self.add_item(HandStrengthButton(poker_cog, player_id))
+# ============================================================================ table state
+
+@dataclass
+class Seat:
+    member: discord.Member
+    stack: int
+    sat_with: int
+    hole: list[str] = field(default_factory=list)
+    folded: bool = False
+    all_in: bool = False
+    street_bet: int = 0     # chips put in on the current street
+    hand_total: int = 0     # chips put in this hand
+    leaving: bool = False
+    timeouts: int = 0
+
+    @property
+    def id(self) -> int:
+        return self.member.id
+
+    @property
+    def name(self) -> str:
+        return self.member.display_name
+
+    def pay(self, amount: int) -> int:
+        amount = min(amount, self.stack)
+        self.stack -= amount
+        self.street_bet += amount
+        self.hand_total += amount
+        if self.stack == 0:
+            self.all_in = True
+        return amount
 
 
-class ActionButton(discord.ui.Button):
-    """Button for poker actions"""
-    def __init__(self, action: str, label: str, style: discord.ButtonStyle, player_id: int):
-        super().__init__(style=style, label=label)
-        self.action = action
-        self.player_id = player_id
-        self.clicked = False
-        self.result = None
+class RaiseModal(discord.ui.Modal, title="Raise"):
+    amount = discord.ui.TextInput(label="Raise to (total bet this round)", max_length=10)
 
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id != self.player_id:
-            return await interaction.response.send_message("❌ Not your turn!", ephemeral=True)
-        
-        self.clicked = True
-        self.result = self.action
-        self.view.stop()
-        await interaction.response.defer()
-
-
-class ActionView(discord.ui.View):
-    """View for poker betting actions"""
-    def __init__(self, player_id: int, can_check: bool, call_amount: int, timeout: float = 60):
-        super().__init__(timeout=timeout)
-        self.player_id = player_id
-        self.result = None
-        
-        # Fold button
-        self.add_item(ActionButton("fold", "❌ Fold", discord.ButtonStyle.danger, player_id))
-        
-        # Check or Call
-        if can_check:
-            self.add_item(ActionButton("check", "✅ Check", discord.ButtonStyle.success, player_id))
-        else:
-            self.add_item(ActionButton("call", f"📞 Call ${call_amount}", discord.ButtonStyle.primary, player_id))
-        
-        # Raise and All-in
-        self.add_item(ActionButton("raise", "💰 Raise", discord.ButtonStyle.secondary, player_id))
-        self.add_item(ActionButton("allin", "🔥 All-In", discord.ButtonStyle.danger, player_id))
-
-    async def on_timeout(self):
-        self.result = "timeout"
-
-
-class RaiseModal(discord.ui.Modal):
-    """Modal for entering raise amount"""
-    def __init__(self, min_raise: int, max_raise: int, player_balance: int):
-        super().__init__(title="Enter Raise Amount")
-        self.amount = None
-        self.min_raise = min_raise
-        self.max_raise = max_raise
-        
-        self.amount_input = discord.ui.TextInput(
-            label=f"Amount (Min: ${min_raise}, Max: ${max_raise})",
-            placeholder=str(min_raise),
-            required=True,
-            min_length=1,
-            max_length=10
-        )
-        self.add_item(self.amount_input)
+    def __init__(self, table: "Table", seat: Seat):
+        super().__init__(timeout=TURN_TIMEOUT)
+        self.table = table
+        self.seat = seat
+        lo, hi = table.raise_bounds(seat)
+        self.amount.placeholder = f"{lo} – {hi}"
+        self.amount.label = f"Raise to (min {lo}, all-in {hi})"[:45]
 
     async def on_submit(self, interaction: discord.Interaction):
+        lo, hi = self.table.raise_bounds(self.seat)
         try:
-            self.amount = int(self.amount_input.value)
-            if self.amount < self.min_raise:
-                self.amount = self.min_raise
-            elif self.amount > self.max_raise:
-                self.amount = self.max_raise
+            value = int(str(self.amount).replace(",", "").replace("$", "").strip())
         except ValueError:
-            self.amount = self.min_raise
+            return await interaction.response.send_message("❌ Enter a number.", ephemeral=True)
+        if value >= hi:
+            value = hi
+        elif value < lo:
+            return await interaction.response.send_message(f"❌ The minimum raise is to **{lo}**.", ephemeral=True)
         await interaction.response.defer()
+        self.table.resolve(self.seat, ("raise", value))
 
 
-# ---------- Main Cog ----------
-class Poker(commands.Cog):
-    """Texas Hold'em Poker - Play in chat with friends!"""
+class TableView(discord.ui.View):
+    """Buttons on the table message. Rebuilt on every update so labels stay current."""
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.active = False
-        self.msg_id = None
-        self.players: List[discord.Member] = []
-        self.dealer = 0
-        self.deck_id = None
-        self.hole: Dict[int, List[Dict]] = {}
-        self.board: List[Dict] = []
-        self.in_hand: set = set()
-        self.bets: Dict[int, int] = {}
-        self.pot = 0
-        self.current_bet = 0
+    def __init__(self, table: "Table"):
+        super().__init__(timeout=None)
+        self.table = table
+        t = table
+        seat = t.current
+        acting = t.state == "playing" and seat is not None
 
-    def new_deck(self):
-        j = requests.get(f"{API}new/shuffle/?deck_count=1", timeout=10).json()
-        self.deck_id = j["deck_id"]
-
-    def draw(self, n: int) -> List[Dict]:
-        j = requests.get(f"{API}{self.deck_id}/draw/?count={n}", timeout=10).json()
-        return j["cards"]
-
-    async def post_board_image(self, ctx, label: str):
-        """Post the community cards"""
-        if not self.board:
+        if t.state in ("lobby", "between"):
+            self.add_button("Join", discord.ButtonStyle.success, self.join, emoji="🪑")
+            self.add_button("Leave", discord.ButtonStyle.secondary, self.leave)
+            if t.state == "lobby":
+                self.add_button("Start", discord.ButtonStyle.primary, self.start, emoji="▶️")
+                self.add_button("Cancel", discord.ButtonStyle.danger, self.cancel)
             return
-        
-        board_str = " ".join([card_to_str(c['code']) for c in self.board])
-        buf = compose_cards_strip(self.board, height=180, bg=(0, 100, 0, 255))
-        
-        if buf:
-            file = discord.File(buf, filename="board.png")
-            emb = discord.Embed(
-                title=f"🃏 {label}",
-                description=f"**{board_str}**\n\n💰 Pot: **${self.pot}**",
-                color=0x2f7d5c
-            )
-            emb.set_image(url="attachment://board.png")
-            await ctx.send(file=file, embed=emb)
+
+        # hole cards are only ever shown as replies only the clicking player can see (Discord can't push
+        # those unprompted, so each player taps this once per hand)
+        self.add_button("My cards", discord.ButtonStyle.primary, self.my_cards, emoji="🃏")
+        if acting:
+            to_call = t.to_call(seat)
+            self.add_button("Fold", discord.ButtonStyle.danger, self.fold)
+            if to_call == 0:
+                self.add_button("Check", discord.ButtonStyle.success, self.check)
+            else:
+                self.add_button(f"Call {min(to_call, seat.stack)}", discord.ButtonStyle.success, self.call)
+            lo, hi = t.raise_bounds(seat)
+            if hi > t.current_bet and lo <= hi and to_call < seat.stack:
+                self.add_button("Bet" if t.current_bet == 0 else "Raise", discord.ButtonStyle.primary, self.raise_)
+            self.add_button(f"All-in ({seat.stack})", discord.ButtonStyle.secondary, self.allin, emoji="🔥")
+        self.add_button("Join next hand", discord.ButtonStyle.secondary, self.join, row=1)
+        self.add_button("Leave table", discord.ButtonStyle.secondary, self.leave, row=1)
+
+    def add_button(self, label, style, callback, emoji=None, row=None):
+        button = discord.ui.Button(label=label, style=style, emoji=emoji, row=row)
+        button.callback = callback
+        self.add_item(button)
+
+    async def _own_turn(self, interaction: discord.Interaction) -> Optional[Seat]:
+        seat = self.table.current
+        if self.table.state != "playing" or not seat or interaction.user.id != seat.id:
+            await interaction.response.send_message("It's not your turn.", ephemeral=True)
+            return None
+        return seat
+
+    async def fold(self, interaction: discord.Interaction):
+        if seat := await self._own_turn(interaction):
+            await interaction.response.defer()
+            self.table.resolve(seat, ("fold", 0))
+
+    async def check(self, interaction: discord.Interaction):
+        if seat := await self._own_turn(interaction):
+            await interaction.response.defer()
+            self.table.resolve(seat, ("check", 0))
+
+    async def call(self, interaction: discord.Interaction):
+        if seat := await self._own_turn(interaction):
+            await interaction.response.defer()
+            self.table.resolve(seat, ("call", 0))
+
+    async def raise_(self, interaction: discord.Interaction):
+        if seat := await self._own_turn(interaction):
+            await interaction.response.send_modal(RaiseModal(self.table, seat))
+
+    async def allin(self, interaction: discord.Interaction):
+        if seat := await self._own_turn(interaction):
+            await interaction.response.defer()
+            self.table.resolve(seat, ("allin", 0))
+
+    async def my_cards(self, interaction: discord.Interaction):
+        seat = self.table.seat_of(interaction.user.id)
+        if not seat or not seat.hole:
+            return await interaction.response.send_message("You aren't in this hand.", ephemeral=True)
+        text = f"Your cards: **{cards_str(seat.hole)}**"
+        if len(self.table.board) >= 3:
+            text += f"\nBoard: {cards_str(self.table.board)}\nYou have: **{describe(best_hand(seat.hole + self.table.board))}**"
+        text += f"\nStack: **{seat.stack}**" + (" • folded" if seat.folded else "")
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        image = await cards_image(self.table.cog.bot.session, seat.hole, height=140)
+        if image:
+            await interaction.followup.send(text, file=image, ephemeral=True)
         else:
-            await ctx.send(f"**{label}**: {board_str}\n💰 Pot: ${self.pot}")
+            await interaction.followup.send(text, ephemeral=True)
 
-    async def send_hole_cards_to_player(self, ctx, player: discord.Member):
-        """Send private hole cards view to a player"""
-        view = PlayerCardsView(self, player.id)
-        await ctx.send(f"🎴 {player.mention} - Click to view your cards!", view=view)
+    async def join(self, interaction: discord.Interaction):
+        await self.table.join(interaction)
 
-    @commands.command(help="Check your poker balance")
-    async def balance(self, ctx, member: discord.Member = None):
-        """Check poker balance"""
-        member = member or ctx.author
-        if ctx.guild is None:
-            return await ctx.send("Use this in a server.")
-        
-        bal = get_balance(ctx.guild.id, member.id)
-        emb = discord.Embed(
-            title="💰 Poker Balance",
-            description=f"{member.display_name}: **${bal}**",
-            color=0xffd700
-        )
-        await ctx.send(embed=emb)
+    async def leave(self, interaction: discord.Interaction):
+        await self.table.leave(interaction)
 
-    @commands.command(help="Give money to a player (Admin only)")
-    @commands.has_permissions(administrator=True)
-    async def give_money(self, ctx, target: discord.Member, amount: int):
-        """Admin command to give poker money"""
-        if ctx.guild is None:
-            return await ctx.send("Use this in a server.")
-        if amount <= 0:
-            return await ctx.send("Amount must be positive.")
-        
-        new_bal = add_balance(ctx.guild.id, target.id, amount)
-        await ctx.send(f"💵 Gave **${amount}** to {target.display_name}. New balance: **${new_bal}**")
+    async def start(self, interaction: discord.Interaction):
+        t = self.table
+        if interaction.user.id != t.host.id:
+            return await interaction.response.send_message("Only the host can start the game.", ephemeral=True)
+        if len(t.seats) < 2:
+            return await interaction.response.send_message("Need at least 2 players.", ephemeral=True)
+        await interaction.response.defer()
+        t.start_task()
 
-    @commands.command(help="Start a Texas Hold'em poker game!")
-    async def poker(self, ctx):
-        """Start a poker game - react ♠️ to join!"""
-        if self.active:
-            return await ctx.send("⚠️ A poker game is already running!")
-        
-        if ctx.guild is None:
-            return await ctx.send("Poker must be played in a server.")
-        
-        self.active = True
-        self.players = []
-        self.dealer = 0
+    async def cancel(self, interaction: discord.Interaction):
+        t = self.table
+        if interaction.user.id != t.host.id and not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("Only the host can cancel.", ephemeral=True)
+        await interaction.response.edit_message(content="🚫 Game cancelled.", embed=None, view=None, attachments=[])
+        t.cog.tables.pop(t.channel.id, None)
 
-        emb = discord.Embed(
-            title="🎰 Texas Hold'em Poker",
-            description=(
-                "**How to play:**\n"
-                "• React ♠️ to join the game\n"
-                "• Host clicks ✅ to start\n"
-                "• Click ❌ to cancel\n\n"
-                f"💵 Starting balance: ${START_BANK}\n"
-                f"💰 Blinds: ${SMALL_BLIND}/${BIG_BLIND}"
-            ),
-            color=0x2f7d5c
-        )
-        emb.set_footer(text=f"Started by {ctx.author.display_name}")
-        
-        m = await ctx.send(embed=emb)
-        self.msg_id = m.id
-        
-        for em in ['♠️', '✅', '❌']:
-            await m.add_reaction(em)
 
-        def check(r, u):
-            return u == ctx.author and str(r.emoji) in ['✅', '❌'] and r.message.id == m.id
+class Table:
+    def __init__(self, cog: "Poker", channel: discord.TextChannel, host: discord.Member, small_blind: int):
+        self.cog = cog
+        self.channel = channel
+        self.guild = channel.guild
+        self.host = host
+        self.sb = small_blind
+        self.bb = small_blind * 2
+        self.seats: list[Seat] = []        # seated players, in seat order
+        self.waiting: list[Seat] = []      # joined mid-hand, sit down next hand
+        self.state = "lobby"               # lobby | playing | between | ended
+        self.button = -1
+        self.hand_no = 0
+        self.message: Optional[discord.Message] = None
+        self.log: deque[str] = deque(maxlen=8)
+        self.ending = False
 
-        while True:
-            try:
-                r, _ = await self.bot.wait_for("reaction_add", timeout=180, check=check)
-                emo = str(r.emoji)
-                
-                if emo == '❌':
-                    self.active = False
-                    self.players = []
-                    with contextlib.suppress(Exception):
-                        await m.delete()
-                    return await ctx.send("🚫 Game cancelled.")
-                
-                if emo == '✅':
-                    with contextlib.suppress(Exception):
-                        await m.delete()
-                    if len(self.players) < 2:
-                        self.active = False
-                        return await ctx.send("❌ Need at least 2 players to start!")
+        # per-hand state
+        self.in_hand: list[Seat] = []
+        self.deck: list[str] = []
+        self.board: list[str] = []
+        self.current: Optional[Seat] = None
+        self.current_bet = 0
+        self.min_raise = 0
+        self.street = ""
+        self._future: Optional[asyncio.Future] = None
+        self._task: Optional[asyncio.Task] = None
+        self._board_file_cards: list[str] = []
+
+    # ------------------------------------------------------------------ seating
+
+    def seat_of(self, user_id: int) -> Optional[Seat]:
+        return next((s for s in self.seats + self.waiting if s.id == user_id), None)
+
+    async def join(self, interaction: discord.Interaction):
+        user = interaction.user
+        if self.seat_of(user.id):
+            return await interaction.response.send_message("You're already at the table.", ephemeral=True)
+        if self.cog.seated_anywhere(user.id):
+            return await interaction.response.send_message("You're already playing at another table.", ephemeral=True)
+        if len(self.seats) + len(self.waiting) >= MAX_PLAYERS:
+            return await interaction.response.send_message("The table is full.", ephemeral=True)
+        balance = account(self.guild.id, user.id)["balance"]
+        if balance < self.bb:
+            return await interaction.response.send_message(
+                f"You only have **{balance}** chips (big blind is {self.bb}). Try `/poker refill`.", ephemeral=True)
+        seat = Seat(member=user, stack=balance, sat_with=balance)
+        if self.state == "playing":
+            self.waiting.append(seat)
+            await interaction.response.send_message("🪑 You'll be dealt in next hand.", ephemeral=True)
+        else:
+            self.seats.append(seat)
+            await interaction.response.defer()
+        self.log.append(f"🪑 **{seat.name}** sat down with {balance}")
+        await self.update()
+
+    async def leave(self, interaction: discord.Interaction):
+        seat = self.seat_of(interaction.user.id)
+        if not seat:
+            return await interaction.response.send_message("You're not at the table.", ephemeral=True)
+        if seat in self.waiting:
+            self.waiting.remove(seat)
+        elif self.state == "playing":
+            # never reshuffle seats mid-hand; the game loop removes leaving players before the next deal
+            seat.leaving = True
+            await interaction.response.send_message("You'll leave the table after this hand.", ephemeral=True)
+            if self.current is seat:
+                self.resolve(seat, ("fold", 0))
+            return
+        else:
+            self.seats.remove(seat)
+            self.settle_seat(seat)
+        await interaction.response.defer()
+        self.log.append(f"👋 **{seat.name}** left with {seat.stack}")
+        if self.state == "lobby" and seat.id == self.host.id and self.seats:
+            self.host = self.seats[0].member
+        await self.update()
+
+    def settle_seat(self, seat: Seat):
+        acct = account(self.guild.id, seat.id)
+        acct["balance"] = seat.stack
+        bank.save()
+
+    # ------------------------------------------------------------------ betting helpers
+
+    def to_call(self, seat: Seat) -> int:
+        return max(0, self.current_bet - seat.street_bet)
+
+    def raise_bounds(self, seat: Seat) -> tuple[int, int]:
+        """(minimum legal raise-to amount, all-in amount)"""
+        all_in_to = seat.street_bet + seat.stack
+        min_to = self.current_bet + self.min_raise if self.current_bet else self.bb
+        return min(min_to, all_in_to), all_in_to
+
+    def resolve(self, seat: Seat, action: tuple[str, int]):
+        if self._future and not self._future.done() and self.current is seat:
+            self._future.set_result(action)
+
+    def pot_total(self) -> int:
+        return sum(s.hand_total for s in self.in_hand)
+
+    # ------------------------------------------------------------------ rendering
+
+    def embed(self) -> discord.Embed:
+        if self.state == "lobby":
+            e = discord.Embed(title="🎰 Texas Hold'em — waiting for players", color=GREEN,
+                              description=f"Blinds **{self.sb}/{self.bb}** • host {self.host.mention}\n"
+                                          f"Press **Join** to sit down with your chip balance. The host presses **Start** (2–{MAX_PLAYERS} players).")
+            e.add_field(name=f"Players ({len(self.seats)})",
+                        value="\n".join(f"🪑 {s.member.mention} — {s.stack}" for s in self.seats) or "Nobody yet", inline=False)
+            return e
+
+        title = f"🎰 Hand #{self.hand_no}" + (f" — {self.street}" if self.street else "")
+        e = discord.Embed(title=title, color=GREEN)
+        e.description = f"**Board:** {cards_str(self.board)}\n**Pot:** {self.pot_total()}" + (
+            f" • to call: {self.current_bet}" if self.current_bet else "")
+        lines = []
+        for i, s in enumerate(self.seats):
+            tags = []
+            if i == self.button:
+                tags.append("🔘")
+            if s is self.current:
+                tags.append("👉")
+            status = "folded" if s.folded else "ALL-IN" if s.all_in else ""
+            bet = f" • bet {s.street_bet}" if s.street_bet else ""
+            if s not in self.in_hand:
+                status = "sitting out"
+            name = f"~~{s.name}~~" if s.folded else f"**{s.name}**"
+            lines.append(f"{''.join(tags)} {name} — {s.stack}{bet}" + (f" • *{status}*" if status else ""))
+        for s in self.waiting:
+            lines.append(f"⏳ {s.name} — {s.stack} • *next hand*")
+        e.add_field(name="Table", value="\n".join(lines)[:1024], inline=False)
+        if self.log:
+            e.add_field(name="Action", value="\n".join(self.log)[:1024], inline=False)
+        if self.state == "playing" and self.current:
+            e.set_footer(text=f"{self.current.name} to act • {TURN_TIMEOUT}s • press 🃏 My cards to see your hand")
+        elif self.state == "between":
+            e.set_footer(text=f"Next hand in {BETWEEN_HANDS}s • join or leave now")
+        if self.board:
+            e.set_image(url="attachment://cards.png")
+        return e
+
+    async def update(self):
+        kwargs = {"embed": self.embed(), "view": TableView(self) if self.state != "ended" else None}
+        if self.board != self._board_file_cards:
+            file = await cards_image(self.cog.bot.session, self.board) if self.board else None
+            kwargs["attachments"] = [file] if file else []
+            self._board_file_cards = list(self.board)
+        try:
+            if self.message:
+                await self.message.edit(**kwargs)
+            else:
+                files = kwargs.pop("attachments", [])
+                self.message = await self.channel.send(files=files, **kwargs)
+        except discord.NotFound:
+            files = kwargs.pop("attachments", None) or []
+            self.message = await self.channel.send(files=files, **kwargs)
+        except discord.HTTPException:
+            pass
+
+    # ------------------------------------------------------------------ game loop
+
+    def start_task(self):
+        if not self._task:
+            self._task = asyncio.create_task(self.run())
+
+    async def run(self):
+        try:
+            while not self.ending:
+                self.seats.extend(self.waiting)
+                self.waiting.clear()
+                for s in [s for s in self.seats if s.stack < self.bb or s.leaving]:
+                    self.seats.remove(s)
+                    self.settle_seat(s)
+                    self.log.append(f"👋 **{s.name}** left the table with {s.stack}")
+                if len(self.seats) < 2:
                     break
-                    
-            except asyncio.TimeoutError:
-                self.active = False
-                self.players = []
-                with contextlib.suppress(Exception):
-                    await m.delete()
-                return await ctx.send("⏰ Timed out. Game cancelled.")
-
-        await self.play_loop(ctx)
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        if not self.active or payload.user_id == self.bot.user.id:
-            return
-        if self.msg_id is None or payload.message_id != self.msg_id:
-            return
-        if str(payload.emoji) != '♠️':
-            return
-        
-        guild = self.bot.get_guild(payload.guild_id)
-        if not guild:
-            return
-        
-        member = guild.get_member(payload.user_id)
-        if not member or member.bot:
-            return
-        
-        if member in self.players:
-            ch = self.bot.get_channel(payload.channel_id)
-            if ch:
-                await ch.send(f"⚠️ {member.display_name} already joined!")
-            return
-        
-        self.players.append(member)
-        bal = get_balance(guild.id, member.id)
-        ch = self.bot.get_channel(payload.channel_id)
-        if ch:
-            await ch.send(f"✅ **{member.display_name}** joined! (Balance: ${bal})")
-
-    async def play_loop(self, ctx):
-        """Main game loop"""
-        while self.active and len([p for p in self.players if get_balance(ctx.guild.id, p.id) > 0]) >= 2:
-            self.players = [p for p in self.players if get_balance(ctx.guild.id, p.id) > 0]
-            await self.play_hand(ctx)
-
-            # Ask to continue
-            emb = discord.Embed(
-                title="🎰 Continue Playing?",
-                description="React ✅ to play another hand, ❌ to end.",
-                color=0x2f7d5c
-            )
-            prompt = await ctx.send(embed=emb)
-            await prompt.add_reaction('✅')
-            await prompt.add_reaction('❌')
-
-            try:
-                def check(r, u):
-                    return u in self.players and str(r.emoji) in ['✅', '❌'] and r.message.id == prompt.id
-                
-                r, _ = await self.bot.wait_for("reaction_add", timeout=30, check=check)
-                with contextlib.suppress(Exception):
-                    await prompt.delete()
-                
-                if str(r.emoji) == '❌':
-                    self.active = False
+                await self.play_hand()
+                if self.ending:
                     break
-            except asyncio.TimeoutError:
-                with contextlib.suppress(Exception):
-                    await prompt.delete()
-                self.active = False
-                break
+                self.state = "between"
+                self.current = None
+                await self.update()
+                await asyncio.sleep(BETWEEN_HANDS)
+        except Exception as e:
+            print(f"[poker] game crashed: {e!r}")
+            await self.channel.send("⚠️ The poker game hit an error and ended. Balances from completed hands were saved.")
+        finally:
+            await self.finish()
 
-        self.active = False
-        
-        # Show final standings
-        standings = []
-        for p in self.players:
-            bal = get_balance(ctx.guild.id, p.id)
-            standings.append((p.display_name, bal))
-        
-        standings.sort(key=lambda x: x[1], reverse=True)
-        
-        emb = discord.Embed(title="🏆 Final Standings", color=0xffd700)
-        for i, (name, bal) in enumerate(standings, 1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
-            emb.add_field(name=f"{medal} {name}", value=f"${bal}", inline=False)
-        
-        await ctx.send(embed=emb)
+    async def finish(self):
+        self.state = "ended"
+        self.current = None
+        for s in self.seats + self.waiting:
+            self.settle_seat(s)
+        self.cog.tables.pop(self.channel.id, None)
+        everyone = self.seats + self.waiting
+        if everyone:
+            e = discord.Embed(title="🏆 Game over — final stacks", color=0xffd700)
+            for i, s in enumerate(sorted(everyone, key=lambda s: s.stack, reverse=True), 1):
+                medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(i, f"{i}.")
+                delta = s.stack - s.sat_with
+                e.add_field(name=f"{medal} {s.name}", value=f"{s.stack} ({'+' if delta >= 0 else ''}{delta})", inline=False)
+            await self.channel.send(embed=e)
+        if self.message:
+            try:
+                await self.message.edit(view=None)
+            except discord.HTTPException:
+                pass
 
-    async def play_hand(self, ctx):
-        """Play a single hand of poker"""
-        gid = ctx.guild.id
-        self.in_hand = set(p.id for p in self.players)
-        self.hole = {}
+    def next_index(self, start: int, cond) -> int:
+        n = len(self.seats)
+        for step in range(1, n + 1):
+            i = (start + step) % n
+            if cond(self.seats[i]):
+                return i
+        return start
+
+    async def play_hand(self):
+        self.hand_no += 1
+        self.state = "playing"
+        self.log.clear()
+        self.deck = new_deck()
         self.board = []
-        self.bets = {p.id: 0 for p in self.players}
-        self.pot = 0
         self.current_bet = 0
+        self.min_raise = self.bb
+        for s in self.seats:
+            s.hole, s.folded, s.all_in, s.street_bet, s.hand_total = [], False, False, 0, 0
+        self.in_hand = [s for s in self.seats if s.stack > 0]
 
-        self.new_deck()
+        # button and blinds
+        self.button = self.next_index(self.button, lambda s: s in self.in_hand)
+        if len(self.in_hand) == 2:  # heads-up: button posts the small blind
+            sb_i = self.button
+        else:
+            sb_i = self.next_index(self.button, lambda s: s in self.in_hand)
+        bb_i = self.next_index(sb_i, lambda s: s in self.in_hand)
+        sb_seat, bb_seat = self.seats[sb_i], self.seats[bb_i]
+        sb_paid = sb_seat.pay(self.sb)
+        bb_paid = bb_seat.pay(self.bb)
+        self.current_bet = self.bb  # a short all-in big blind still means a full big blind to call
+        self.log.append(f"Blinds: {sb_seat.name} {sb_paid}, {bb_seat.name} {bb_paid}")
 
-        # Post blinds
-        sb_pos = (self.dealer + 1) % len(self.players)
-        bb_pos = (self.dealer + 2) % len(self.players)
-        sb = self.players[sb_pos]
-        bb = self.players[bb_pos]
-        dealer = self.players[self.dealer]
+        for _ in range(2):
+            for s in self.in_hand:
+                s.hole.append(self.deck.pop())
+        self.log.append("🎴 Cards dealt — tap **🃏 My cards** to see yours (only you can see it)")
 
-        emb = discord.Embed(
-            title="🎴 New Hand",
-            description=(
-                f"**Dealer:** {dealer.display_name}\n"
-                f"**Small Blind:** {sb.display_name} (${SMALL_BLIND})\n"
-                f"**Big Blind:** {bb.display_name} (${BIG_BLIND})"
-            ),
-            color=0x2f7d5c
-        )
-        await ctx.send(embed=emb)
+        # pre-flop: first to act is left of the big blind (heads-up that's the button/small blind)
+        self.street = "Pre-flop"
+        first = self.next_index(bb_i, lambda s: s in self.in_hand)
+        await self.betting_round(first)
 
-        # Collect blinds
-        add_balance(gid, sb.id, -SMALL_BLIND)
-        self.bets[sb.id] = SMALL_BLIND
-        self.pot += SMALL_BLIND
-
-        add_balance(gid, bb.id, -BIG_BLIND)
-        self.bets[bb.id] = BIG_BLIND
-        self.pot += BIG_BLIND
-        self.current_bet = BIG_BLIND
-
-        # Deal hole cards
-        for p in self.players:
-            self.hole[p.id] = self.draw(2)
-
-        # Send private card views
-        await ctx.send("🎴 **Cards have been dealt!** Click the button below to view your cards privately.")
-        for p in self.players:
-            if p.id in self.in_hand:
-                await self.send_hole_cards_to_player(ctx, p)
-
-        # Pre-flop betting
-        await ctx.send("📢 **Pre-Flop Betting**")
-        await self.betting_round(ctx, start_index=(self.dealer + 3) % len(self.players))
-        if len(self.in_hand) < 2:
-            return await self.award_uncontested(ctx)
-
-        # Flop
-        self.draw(1)  # Burn
-        self.board += self.draw(3)
-        await self.post_board_image(ctx, "The Flop")
-        await self.betting_round(ctx, start_index=(self.dealer + 1) % len(self.players))
-        if len(self.in_hand) < 2:
-            return await self.award_uncontested(ctx)
-
-        # Turn
-        self.draw(1)  # Burn
-        self.board += self.draw(1)
-        await self.post_board_image(ctx, "The Turn")
-        await self.betting_round(ctx, start_index=(self.dealer + 1) % len(self.players))
-        if len(self.in_hand) < 2:
-            return await self.award_uncontested(ctx)
-
-        # River
-        self.draw(1)  # Burn
-        self.board += self.draw(1)
-        await self.post_board_image(ctx, "The River")
-        await self.betting_round(ctx, start_index=(self.dealer + 1) % len(self.players))
-        if len(self.in_hand) < 2:
-            return await self.award_uncontested(ctx)
-
-        await self.showdown(ctx)
-        self.dealer = (self.dealer + 1) % len(self.players)
-
-    async def award_uncontested(self, ctx):
-        """Award pot when everyone else folds"""
-        if not self.in_hand:
-            return
-        
-        winner_id = list(self.in_hand)[0]
-        winner = discord.utils.get(self.players, id=winner_id)
-        add_balance(ctx.guild.id, winner_id, self.pot)
-        
-        emb = discord.Embed(
-            title="🏆 Winner!",
-            description=f"**{winner.display_name}** wins **${self.pot}** (everyone else folded)",
-            color=0xffd700
-        )
-        await ctx.send(embed=emb)
-        self.dealer = (self.dealer + 1) % len(self.players)
-
-    async def betting_round(self, ctx, start_index: int):
-        """Handle a betting round"""
-        round_current = max(self.bets.values()) if self.bets else 0
-        self.current_bet = round_current
-        acted_since_raise = set()
-
-        if len(self.in_hand) < 2:
-            return
-
-        while True:
-            all_match = all((uid not in self.in_hand) or (self.bets[uid] == round_current) for uid in self.bets)
-            everyone_acted = acted_since_raise.issuperset(self.in_hand)
-            if all_match and everyone_acted:
+        for street, count in (("Flop", 3), ("Turn", 1), ("River", 1)):
+            if self.players_left() < 2:
                 break
+            self.deck.pop()  # burn
+            self.board += [self.deck.pop() for _ in range(count)]
+            self.street = street
+            for s in self.in_hand:
+                s.street_bet = 0
+            self.current_bet = 0
+            self.min_raise = self.bb
+            self.log.append(f"— {street}: {cards_str(self.board)}")
+            if self.can_bet():
+                first = self.next_index(self.button, lambda s: s in self.in_hand and not s.folded)
+                await self.betting_round(first)
+            else:
+                await self.update()
+                await asyncio.sleep(2)  # all-in run-out: show each street
 
-            for i in range(len(self.players)):
-                idx = (start_index + i) % len(self.players)
-                p = self.players[idx]
-                pid = p.id
+        await self.showdown()
 
-                if pid not in self.in_hand:
+    def players_left(self) -> int:
+        return sum(1 for s in self.in_hand if not s.folded)
+
+    def can_bet(self) -> bool:
+        return sum(1 for s in self.in_hand if not s.folded and not s.all_in) >= 2
+
+    async def betting_round(self, first_index: int):
+        n = len(self.seats)
+        pending = {s.id for s in self.in_hand if not s.folded and not s.all_in}
+        i = first_index
+        while pending and self.players_left() > 1:
+            seat = self.seats[i % n]
+            i += 1
+            if seat.id not in pending:
+                continue
+            if seat.folded or seat.all_in or seat not in self.in_hand:
+                pending.discard(seat.id)
+                continue
+            # last player with chips who has already matched the bet has nothing to decide
+            others_can_act = any(not s.folded and not s.all_in and s is not seat for s in self.in_hand)
+            if not others_can_act and self.to_call(seat) == 0:
+                pending.discard(seat.id)
+                continue
+
+            action, amount = await self.get_action(seat)
+            pending.discard(seat.id)
+            to_call = self.to_call(seat)
+
+            if action == "fold":
+                seat.folded = True
+                self.log.append(f"❌ {seat.name} folds")
+            elif action == "check" and to_call == 0:
+                self.log.append(f"✅ {seat.name} checks")
+            elif action in ("call", "check"):
+                paid = seat.pay(to_call)
+                self.log.append(f"📞 {seat.name} calls {paid}" + (" (all-in)" if seat.all_in else ""))
+            elif action in ("raise", "allin"):
+                target = seat.street_bet + seat.stack if action == "allin" else amount
+                if target <= self.current_bet:  # all-in for less than a call
+                    paid = seat.pay(target - seat.street_bet)
+                    self.log.append(f"🔥 {seat.name} calls all-in for {paid}")
                     continue
+                raise_size = target - self.current_bet
+                seat.pay(target - seat.street_bet)
+                verb = "bets" if self.current_bet == 0 else "raises to"
+                self.log.append(f"💰 {seat.name} {verb} {target}" + (" (all-in)" if seat.all_in else ""))
+                if raise_size >= self.min_raise:
+                    # full raise: everyone else gets to act again
+                    self.min_raise = raise_size
+                    pending = {s.id for s in self.in_hand if not s.folded and not s.all_in and s is not seat}
+                else:
+                    # short all-in: players who haven't matched it still need to act
+                    pending |= {s.id for s in self.in_hand if not s.folded and not s.all_in
+                                and s is not seat and s.street_bet < target}
+                self.current_bet = target
+        self.current = None
 
-                bal = get_balance(ctx.guild.id, pid)
-                if bal <= 0:
-                    self.in_hand.discard(pid)
-                    continue
+    async def get_action(self, seat: Seat) -> tuple[str, int]:
+        if seat.leaving:
+            return ("fold", 0)
+        self.current = seat
+        loop = asyncio.get_running_loop()
+        self._future = loop.create_future()
+        await self.update()
+        ping = None
+        try:
+            to_call = self.to_call(seat)
+            ping = await self.channel.send(
+                f"{seat.member.mention}, your turn — " + (f"**{to_call}** to call." if to_call else "you can check."),
+                allowed_mentions=discord.AllowedMentions(users=True))
+        except discord.HTTPException:
+            pass
+        try:
+            result = await asyncio.wait_for(self._future, timeout=TURN_TIMEOUT)
+            seat.timeouts = 0
+        except asyncio.TimeoutError:
+            seat.timeouts += 1
+            result = ("check", 0) if self.to_call(seat) == 0 else ("fold", 0)
+            self.log.append(f"⏰ {seat.name} timed out")
+            if seat.timeouts >= 2:
+                seat.leaving = True
+                self.log.append(f"💤 {seat.name} will be removed for inactivity")
+        if ping:
+            try:
+                await ping.delete()
+            except discord.HTTPException:
+                pass
+        self._future = None
+        return result
 
-                all_match = all((uid not in self.in_hand) or (self.bets[uid] == round_current) for uid in self.bets)
-                everyone_acted = acted_since_raise.issuperset(self.in_hand)
-                if all_match and everyone_acted:
-                    break
+    # ------------------------------------------------------------------ showdown & pots
 
-                need = round_current - self.bets[pid]
-                can_check = (need == 0)
+    def build_pots(self) -> list[tuple[int, list[Seat]]]:
+        """Split contributions into main/side pots: [(amount, eligible seats)]."""
+        contributors = [s for s in self.in_hand if s.hand_total > 0]
+        levels = sorted({s.hand_total for s in contributors if not s.folded})
+        pots, prev = [], 0
+        for level in levels:
+            amount = sum(min(s.hand_total, level) - min(s.hand_total, prev) for s in contributors)
+            eligible = [s for s in contributors if not s.folded and s.hand_total >= level]
+            if amount:
+                pots.append((amount, eligible))
+            prev = level
+        # chips from folded players above the highest live contribution go to the last pot
+        leftover = sum(max(0, s.hand_total - prev) for s in contributors)
+        if leftover and pots:
+            pots[-1] = (pots[-1][0] + leftover, pots[-1][1])
+        return pots
 
-                # Create action view
-                view = ActionView(pid, can_check, need)
-                
-                emb = discord.Embed(
-                    title=f"🎯 {p.display_name}'s Turn",
-                    description=(
-                        f"💰 **Pot:** ${self.pot}\n"
-                        f"📊 **Current Bet:** ${round_current}\n"
-                        f"💵 **Your Bet:** ${self.bets[pid]}\n"
-                        f"🏦 **Your Balance:** ${bal}\n"
-                        f"{'✅ You can check' if can_check else f'📞 Call amount: ${need}'}"
-                    ),
-                    color=0x3498db
-                )
-                
-                msg = await ctx.send(f"{p.mention}", embed=emb, view=view)
+    async def showdown(self):
+        self.current = None
+        self.street = "Showdown"
+        live = [s for s in self.in_hand if not s.folded]
+        total_pot = self.pot_total()
+        winnings: dict[int, int] = {}
 
-                # Wait for action
-                await view.wait()
-                
-                with contextlib.suppress(Exception):
-                    await msg.delete()
+        if len(live) == 1:
+            winner = live[0]
+            winnings[winner.id] = total_pot
+            winner.stack += total_pot
+            self.log.append(f"🏆 {winner.name} wins {total_pot} (everyone folded)")
+            ranks = {}
+        else:
+            ranks = {s.id: best_hand(s.hole + self.board) for s in live}
+            # odd chips go to the first winner left of the button
+            order = [self.seats[(self.button + k) % len(self.seats)] for k in range(1, len(self.seats) + 1)]
+            for amount, eligible in self.build_pots():
+                best = max(ranks[s.id] for s in eligible)
+                winners = [s for s in order if s in eligible and ranks[s.id] == best]
+                share, odd = divmod(amount, len(winners))
+                for k, w in enumerate(winners):
+                    won = share + (1 if k < odd else 0)
+                    w.stack += won
+                    winnings[w.id] = winnings.get(w.id, 0) + won
 
-                # Process action
-                action = None
-                for item in view.children:
-                    if isinstance(item, ActionButton) and item.clicked:
-                        action = item.result
-                        break
+        # results message
+        e = discord.Embed(title=f"🃏 Hand #{self.hand_no} results", color=0xffd700,
+                          description=f"**Board:** {cards_str(self.board)}\n**Pot:** {total_pot}")
+        for s in self.in_hand:
+            won = winnings.get(s.id, 0)
+            if s.folded:
+                continue
+            hand = describe(ranks[s.id]) if ranks else ""
+            e.add_field(name=f"{'🏆 ' if won else ''}{s.name}" + (f" +{won}" if won else ""),
+                        value=f"{cards_str(s.hole) if ranks else '(cards hidden)'}\n{hand}", inline=True)
+        await self.channel.send(embed=e)
+        for wid, amount in winnings.items():
+            name = next(s.name for s in self.in_hand if s.id == wid)
+            if ranks:
+                self.log.append(f"🏆 {name} wins {amount}")
 
-                if action is None or action == "timeout":
-                    await ctx.send(f"⏰ {p.display_name} timed out and folds.")
-                    self.in_hand.discard(pid)
-                    continue
-
-                if action == "fold":
-                    await ctx.send(f"❌ {p.display_name} folds.")
-                    self.in_hand.discard(pid)
-                    continue
-
-                if action == "check":
-                    await ctx.send(f"✅ {p.display_name} checks.")
-                    acted_since_raise.add(pid)
-                    continue
-
-                if action == "call":
-                    call_amt = min(need, bal)
-                    add_balance(ctx.guild.id, pid, -call_amt)
-                    self.bets[pid] += call_amt
-                    self.pot += call_amt
-                    await ctx.send(f"📞 {p.display_name} calls ${call_amt}.")
-                    acted_since_raise.add(pid)
-                    continue
-
-                if action == "allin":
-                    shove = bal
-                    add_balance(ctx.guild.id, pid, -shove)
-                    self.bets[pid] += shove
-                    self.pot += shove
-                    if self.bets[pid] > round_current:
-                        round_current = self.bets[pid]
-                        self.current_bet = round_current
-                        acted_since_raise = {pid}
-                        await ctx.send(f"🔥 {p.display_name} goes **ALL-IN** to ${round_current}!")
-                    else:
-                        acted_since_raise.add(pid)
-                        await ctx.send(f"🔥 {p.display_name} goes **ALL-IN** for ${shove}!")
-                    continue
-
-                if action == "raise":
-                    min_raise = round_current + BIG_BLIND
-                    max_raise = bal + self.bets[pid]
-                    
-                    # Ask for raise amount
-                    ask = await ctx.send(f"{p.mention} Enter raise amount (min ${min_raise}, max ${max_raise}):")
-                    
-                    def chk(m):
-                        return m.author == p and m.channel == ctx.channel
-                    
-                    try:
-                        msg = await self.bot.wait_for('message', timeout=30, check=chk)
-                        try:
-                            total = int(msg.content)
-                            total = max(min_raise, min(total, max_raise))
-                        except ValueError:
-                            total = min_raise
-                    except asyncio.TimeoutError:
-                        total = min_raise
-                    
-                    with contextlib.suppress(Exception):
-                        await ask.delete()
-                        await msg.delete()
-                    
-                    addl = total - self.bets[pid]
-                    addl = min(addl, bal)
-                    add_balance(ctx.guild.id, pid, -addl)
-                    self.bets[pid] += addl
-                    self.pot += addl
-
-                    if self.bets[pid] > round_current:
-                        round_current = self.bets[pid]
-                        self.current_bet = round_current
-                        acted_since_raise = {pid}
-                        await ctx.send(f"💰 {p.display_name} raises to ${round_current}!")
-                    else:
-                        acted_since_raise.add(pid)
-
-        # Reset for next round
-        self.current_bet = 0
-        self.bets = {uid: 0 for uid in self.bets}
-
-    async def showdown(self, ctx):
-        """Handle showdown"""
-        board_codes = [c['code'] for c in self.board]
-        pool = {uid: self.hole[uid] for uid in self.in_hand}
-        winners, scores = compare_hands(pool, board_codes)
-        share = self.pot // len(winners) if winners else 0
-
-        # Show board
-        await self.post_board_image(ctx, "Final Board")
-
-        # Show all hands
-        emb = discord.Embed(title="🃏 Showdown", color=0xffd700)
-        
-        for p in self.players:
-            if p.id in self.in_hand:
-                cards = self.hole[p.id]
-                card_str = " | ".join([card_to_str(c['code']) for c in cards])
-                hand_name = rank_to_text(scores[p.id])
-                is_winner = p.id in winners
-                
-                emb.add_field(
-                    name=f"{'🏆 ' if is_winner else ''}{p.display_name}",
-                    value=f"**{card_str}**\n{hand_name}",
-                    inline=True
-                )
-
-        await ctx.send(embed=emb)
-
-        # Award pot
-        winner_names = []
-        for uid in winners:
-            add_balance(ctx.guild.id, uid, share)
-            member = discord.utils.get(self.players, id=uid)
-            winner_names.append(member.display_name)
-
-        emb = discord.Embed(
-            title="🏆 Winner(s)!",
-            description=f"**{', '.join(winner_names)}** win{'s' if len(winners) == 1 else ''} **${share}** each!",
-            color=0xffd700
-        )
-        await ctx.send(embed=emb)
+        # persist balances and stats
+        for s in self.in_hand:
+            acct = account(self.guild.id, s.id)
+            acct["hands"] += 1
+            acct["net"] += s.stack - acct["balance"]
+            acct["balance"] = s.stack
+            if winnings.get(s.id):
+                acct["won"] += 1
+                acct["biggest_pot"] = max(acct["biggest_pot"], winnings[s.id])
+        bank.save()
+        await self.update()
 
 
-async def setup(bot):
+# ============================================================================ cog
+
+class Poker(commands.Cog):
+    """🎰 Texas Hold'em"""
+
+    poker = app_commands.Group(name="poker", description="Texas Hold'em poker", guild_only=True)
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.tables: dict[int, Table] = {}
+
+    def seated_anywhere(self, user_id: int) -> bool:
+        return any(table.seat_of(user_id) for table in self.tables.values())
+
+    async def cog_unload(self):
+        for table in list(self.tables.values()):
+            table.ending = True
+            if table._task:
+                table._task.cancel()
+            for s in table.seats + table.waiting:
+                table.settle_seat(s)
+
+    @poker.command(name="start", description="Open a poker table in this channel")
+    @app_commands.describe(small_blind="Small blind (big blind is double)")
+    @app_commands.choices(small_blind=[app_commands.Choice(name=f"{v}/{v * 2}", value=v) for v in (5, 10, 25, 50, 100)])
+    async def start(self, interaction: discord.Interaction, small_blind: Optional[app_commands.Choice[int]] = None):
+        if interaction.channel.id in self.tables:
+            return await interaction.response.send_message("⚠️ There's already a table in this channel.", ephemeral=True)
+        sb = small_blind.value if small_blind else 10
+        balance = account(interaction.guild.id, interaction.user.id)["balance"]
+        table = Table(self, interaction.channel, interaction.user, sb)
+        self.tables[interaction.channel.id] = table
+        if balance >= sb * 2 and not self.seated_anywhere(interaction.user.id):
+            table.seats.append(Seat(member=interaction.user, stack=balance, sat_with=balance))
+        await interaction.response.send_message(embed=table.embed(), view=TableView(table))
+        table.message = await interaction.original_response()
+
+    @poker.command(name="end", description="End the poker game in this channel after the current hand")
+    async def end(self, interaction: discord.Interaction):
+        table = self.tables.get(interaction.channel.id)
+        if not table:
+            return await interaction.response.send_message("No game in this channel.", ephemeral=True)
+        if interaction.user.id != table.host.id and not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("Only the host or a moderator can end the game.", ephemeral=True)
+        if table.state == "lobby":
+            self.tables.pop(interaction.channel.id, None)
+            await table.message.edit(content="🚫 Game cancelled.", embed=None, view=None)
+            return await interaction.response.send_message("Cancelled.", ephemeral=True)
+        table.ending = True
+        await interaction.response.send_message("🛑 The game will end after this hand.")
+        if table.state == "between" and table._task:
+            table._task.cancel()
+
+    @poker.command(name="balance", description="Check chip balance and stats")
+    async def balance(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
+        member = member or interaction.user
+        acct = account(interaction.guild.id, member.id)
+        bank.save()
+        e = discord.Embed(title=f"💰 {member.display_name}", color=0xffd700)
+        e.add_field(name="Chips", value=f"{acct['balance']:,}")
+        e.add_field(name="Hands played", value=str(acct["hands"]))
+        e.add_field(name="Hands won", value=str(acct["won"]))
+        e.add_field(name="Net", value=f"{'+' if acct['net'] >= 0 else ''}{acct['net']:,}")
+        e.add_field(name="Biggest pot", value=f"{acct['biggest_pot']:,}")
+        await interaction.response.send_message(embed=e)
+
+    @poker.command(name="leaderboard", description="Richest players on this server")
+    async def leaderboard(self, interaction: discord.Interaction):
+        g = bank.guild(interaction.guild.id)
+        rows = []
+        for uid in list(g):
+            acct = account(interaction.guild.id, int(uid))
+            rows.append((acct["balance"], int(uid), acct))
+        rows.sort(reverse=True)
+        if not rows:
+            return await interaction.response.send_message("Nobody has played yet. `/poker start`!", ephemeral=True)
+        lines = [f"{['🥇', '🥈', '🥉'][i] if i < 3 else f'`{i + 1}.`'} <@{uid}> — **{bal:,}** ({a['won']}/{a['hands']} hands won)"
+                 for i, (bal, uid, a) in enumerate(rows[:15])]
+        await interaction.response.send_message(embed=discord.Embed(title="🏆 Poker leaderboard", description="\n".join(lines), color=0xffd700),
+                                                allowed_mentions=discord.AllowedMentions.none())
+
+    @poker.command(name="refill", description=f"Broke? Get {REFILL_AMOUNT} chips (once a day)")
+    async def refill(self, interaction: discord.Interaction):
+        acct = account(interaction.guild.id, interaction.user.id)
+        if self.seated_anywhere(interaction.user.id):
+            return await interaction.response.send_message("You can't refill while sitting at a table.", ephemeral=True)
+        if acct["balance"] >= REFILL_AMOUNT:
+            return await interaction.response.send_message(f"You still have {acct['balance']} chips.", ephemeral=True)
+        wait = acct["last_refill"] + REFILL_COOLDOWN - time.time()
+        if wait > 0:
+            return await interaction.response.send_message(f"You can refill again <t:{int(time.time() + wait)}:R>.", ephemeral=True)
+        acct["balance"] = REFILL_AMOUNT
+        acct["last_refill"] = time.time()
+        bank.save()
+        await interaction.response.send_message(f"💵 Refilled to **{REFILL_AMOUNT}** chips.")
+
+    @poker.command(name="give", description="Give chips to a player (admin)")
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    async def give(self, interaction: discord.Interaction, member: discord.Member, amount: app_commands.Range[int, -1_000_000, 1_000_000]):
+        if self.seated_anywhere(member.id):
+            return await interaction.response.send_message("They're sitting at a table — try after the game.", ephemeral=True)
+        acct = account(interaction.guild.id, member.id)
+        acct["balance"] = max(0, acct["balance"] + amount)
+        bank.save()
+        await interaction.response.send_message(f"💵 {member.mention} now has **{acct['balance']:,}** chips.")
+
+
+async def setup(bot: commands.Bot):
     await bot.add_cog(Poker(bot))

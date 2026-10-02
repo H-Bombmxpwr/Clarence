@@ -48,12 +48,13 @@ coverage.xml
 *.mo
 *.pot
 
-storage/prefixes.json
-storage/swears.json
-storage/guild_config.json
-storage/nft.json
-storage/poker.json
-storage/trivia.json
+# Runtime data (lives in DATA_DIR; defaults to storage/)
+storage/*.json
+storage/*.csv
+storage/.command_hash
+storage/*.tmp
+!storage/lyrics.json
+constants/cookies.txt
 
 
 # Django stuff:

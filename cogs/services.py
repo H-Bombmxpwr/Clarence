@@ -1,252 +1,229 @@
 # cogs/services.py
-import discord
-from discord.ext import commands
+import asyncio
 import os
-import functionality.functions as funcs
-import requests
-import xkcd
-from typing import Optional
-from datetime import date
-from urllib.parse import quote
-from pyfiglet import Figlet
 import random
+from typing import Literal, Optional
+from urllib.parse import quote
+
+import discord
 import wikipedia
+import xkcd
+from discord import app_commands
+from discord.ext import commands
 from discord.ui import Button, View
-from contextlib import suppress
+from pyfiglet import Figlet
+
+import functionality.functions as funcs
+
+COMPLIMENTS = [
+    "You light up every room you walk into.", "Your sense of humor is elite.", "You're more fun than bubble wrap.",
+    "You have impeccable taste.", "You're the human version of a perfectly ripe avocado.",
+    "Talking to you is the best part of my day.", "You'd survive a horror movie for sure.",
+    "You're even better than a unicorn, because you're real.", "Your playlist is probably fantastic.",
+    "You make bad days better.", "You're one of a kind — the good kind.", "You have main character energy.",
+]
 
 
-class Misc(commands.Cog, name="Misc"):
-    """🔧 Local Utility Commands"""
-    
-    def __init__(self, client):
-        self.client = client
-
-    @commands.command(help="Say hello!", aliases=["hi", "hey", "sup"])
-    async def hello(self, ctx):
-        responses = ["Hi!", "Hello!", "What's up!", "Hey!", "Sup!", "Big Chillin!", "Hey Hey Hey", "Let's Go!"]
-        await ctx.send(f"{random.choice(responses)} {ctx.author.mention}")
-
-    @commands.command(help="Generate ASCII art from text", aliases=["figlet"])
-    @commands.cooldown(1, 3, commands.BucketType.user)
-    async def ascii(self, ctx, *, text: str):
-        if len(text) > 16:
-            return await ctx.send("❌ Text too long (max 16 characters)")
-        
-        ascii_text = Figlet(font="small").renderText(text)
-        await ctx.send(f"```\n{ascii_text}\n```")
-
-    @commands.command(help="Ping/annoy a user multiple times", aliases=["annoy"])
-    async def bug(self, ctx, member: discord.Member, times: int, *, message: str = "we need you"):
-        if times > 30:
-            return await ctx.send("❌ Max 30 pings!")
-        if member.id == self.client.user.id:
-            return await ctx.send("❌ I'm not gonna bug myself!")
-        
-        for i in range(1, times + 1):
-            await ctx.send(f"Hey {member.mention} {message}, {i}!")
-
-    @commands.command(help="Get info about a user")
-    async def userinfo(self, ctx, target: Optional[discord.Member] = None):
-        target = target or ctx.author
-
-        embed = discord.Embed(title="👤 User Information", color=target.color)
-        embed.set_thumbnail(url=target.display_avatar.url)
-        
-        embed.add_field(name="Name", value=str(target), inline=True)
-        embed.add_field(name="ID", value=target.id, inline=True)
-        embed.add_field(name="Bot?", value="Yes" if target.bot else "No", inline=True)
+def user_info_embed(target: discord.Member | discord.User) -> discord.Embed:
+    embed = discord.Embed(title="👤 User Information", color=getattr(target, "color", None) or 0x3498db)
+    embed.set_thumbnail(url=target.display_avatar.url)
+    embed.add_field(name="Name", value=str(target), inline=True)
+    embed.add_field(name="ID", value=target.id, inline=True)
+    embed.add_field(name="Bot?", value="Yes" if target.bot else "No", inline=True)
+    embed.add_field(name="Created", value=f"<t:{int(target.created_at.timestamp())}:R>", inline=True)
+    if isinstance(target, discord.Member):
+        embed.add_field(name="Joined", value=f"<t:{int(target.joined_at.timestamp())}:R>" if target.joined_at else "?", inline=True)
         embed.add_field(name="Top Role", value=target.top_role.mention, inline=True)
         embed.add_field(name="Status", value=str(target.status).title(), inline=True)
-        
         activity = "N/A"
         if target.activity:
             activity = f"{target.activity.type.name.title()}: {target.activity.name}"
         embed.add_field(name="Activity", value=activity, inline=True)
-        
-        embed.add_field(name="Created", value=f"<t:{int(target.created_at.timestamp())}:R>", inline=True)
-        embed.add_field(name="Joined", value=f"<t:{int(target.joined_at.timestamp())}:R>", inline=True)
+        roles = [r.mention for r in reversed(target.roles[1:])]
+        if roles:
+            embed.add_field(name=f"Roles ({len(roles)})", value=" ".join(roles)[:1024], inline=False)
+    return embed
 
-        await ctx.send(embed=embed)
+
+class Misc(commands.Cog, name="Misc"):
+    """🔧 Local Utility Commands"""
+
+    def __init__(self, client):
+        self.client = client
+        self.ctx_userinfo = app_commands.ContextMenu(name="User Info", callback=self.userinfo_context)
+
+    async def cog_load(self):
+        self.client.tree.add_command(self.ctx_userinfo)
+
+    async def cog_unload(self):
+        self.client.tree.remove_command(self.ctx_userinfo.name, type=self.ctx_userinfo.type)
+
+    @app_commands.command(description="Say hello!")
+    async def hello(self, interaction: discord.Interaction):
+        responses = ["Hi!", "Hello!", "What's up!", "Hey!", "Sup!", "Big Chillin!", "Hey Hey Hey", "Let's Go!"]
+        await interaction.response.send_message(f"{random.choice(responses)} {interaction.user.mention}")
+
+    @app_commands.command(description="Generate ASCII art from text")
+    @app_commands.checks.cooldown(1, 3)
+    async def ascii(self, interaction: discord.Interaction, text: app_commands.Range[str, 1, 16]):
+        ascii_text = Figlet(font="small").renderText(text)
+        await interaction.response.send_message(f"```\n{ascii_text}\n```")
+
+    @app_commands.command(description="Ping/annoy a user multiple times")
+    @app_commands.guild_only()
+    async def bug(self, interaction: discord.Interaction, member: discord.Member, times: app_commands.Range[int, 1, 30],
+                  message: str = "we need you"):
+        if member.id == self.client.user.id:
+            return await interaction.response.send_message("❌ I'm not gonna bug myself!", ephemeral=True)
+        await interaction.response.send_message(f"Hey {member.mention} {message}, 1!")
+        for i in range(2, times + 1):
+            await interaction.channel.send(f"Hey {member.mention} {message}, {i}!")
+
+    @app_commands.command(description="Get info about a user")
+    async def userinfo(self, interaction: discord.Interaction, target: Optional[discord.User] = None):
+        await interaction.response.send_message(embed=user_info_embed(target or interaction.user))
+
+    async def userinfo_context(self, interaction: discord.Interaction, member: discord.User):
+        await interaction.response.send_message(embed=user_info_embed(member), ephemeral=True)
+
+    @app_commands.command(description="Check the bot's latency")
+    async def ping(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"🏓 Pong! `{round(self.client.latency * 1000)}ms`")
 
 
 class Api(commands.Cog, name="Api"):
-    """API-powered Commands"""
-    
+    """🌐 API-powered Commands"""
+
     def __init__(self, client):
         self.client = client
 
-    @commands.command(help="Generate AI art (if configured)")
-    async def ai(self, ctx, *, query: str = None):
-        if not query:
-            return await ctx.send("Usage: `ai <description>`")
-        
+    @property
+    def session(self):
+        return self.client.session
+
+    @app_commands.command(description="Generate AI art (if configured)")
+    async def ai(self, interaction: discord.Interaction, prompt: str):
         api_key = os.getenv('ai')
         if not api_key:
-            return await ctx.send("❌ AI generation not configured")
-        
-        async with ctx.typing():
-            try:
-                r = requests.post(
-                    "https://api.deepai.org/api/text2img",
-                    data={'text': query},
-                    headers={'api-key': api_key},
-                    timeout=30
-                )
-                data = r.json()
-                if 'output_url' in data:
-                    embed = discord.Embed(title="AI Generation", description=f"Prompt: {query}", color=0xFFFF00)
-                    embed.set_image(url=data['output_url'])
-                    await ctx.send(embed=embed)
-                else:
-                    await ctx.send("❌ Generation failed")
-            except Exception as e:
-                await ctx.send(f"❌ Error: {e}")
-
-    @commands.command(help="Search Wikipedia", aliases=["wiki", "w"])
-    async def wikipedia(self, ctx, *, query: str = None):
-        if not query:
-            return await ctx.send("Usage: `wikipedia <query>`")
-        
-        async with ctx.typing():
-            try:
-                suggestion = wikipedia.suggest(query)
-                if suggestion:
-                    query = suggestion
-                
-                page = wikipedia.page(query)
-                summary = wikipedia.summary(query, sentences=3)
-                
-                embed = discord.Embed(
-                    title=page.title,
-                    description=summary,
-                    color=0xC0C0C0
-                )
-                if page.images:
-                    embed.set_image(url=page.images[0])
-                
-                view = View()
-                view.add_item(Button(label="Read More", url=page.url))
-                
-                await ctx.send(embed=embed, view=view)
-            except wikipedia.exceptions.DisambiguationError as e:
-                options = "\n".join(e.options[:5])
-                await ctx.send(f"❓ Multiple results found:\n{options}\n\nBe more specific!")
-            except Exception as e:
-                await ctx.send(f"❌ Error: {e}")
-
-    @commands.command(help="Get an insult", aliases=['i'])
-    async def insult(self, ctx, member: discord.Member = None):
+            return await interaction.response.send_message("❌ AI generation not configured", ephemeral=True)
+        await interaction.response.defer()
         try:
-            quote = funcs.get_insult()
-            if member:
-                await ctx.send(f"{member.mention}, {quote}")
+            async with self.session.post("https://api.deepai.org/api/text2img", data={'text': prompt},
+                                         headers={'api-key': api_key}, timeout=60) as r:
+                data = await r.json(content_type=None)
+            if 'output_url' in data:
+                embed = discord.Embed(title="AI Generation", description=f"Prompt: {prompt}", color=0xFFFF00)
+                embed.set_image(url=data['output_url'])
+                await interaction.followup.send(embed=embed)
             else:
-                await ctx.send(quote)
-        except:
-            await ctx.send("❌ Insult API is down")
+                await interaction.followup.send("❌ Generation failed")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error: {e}")
 
-    @commands.command(help="Get a compliment", aliases=['c'])
-    async def compliment(self, ctx, member: discord.Member = None):
-        try:
-            quote = funcs.get_compliment()
-            if member:
-                await ctx.send(f"{member.mention}, {quote}")
-            else:
-                await ctx.send(quote)
-        except:
-            await ctx.send("❌ Compliment API is down")
+    @app_commands.command(description="Search Wikipedia")
+    async def wikipedia(self, interaction: discord.Interaction, query: str):
+        await interaction.response.defer()
 
-    @commands.command(help="Get a pickup line", aliases=['p'])
-    async def pickup(self, ctx, member: discord.Member = None):
-        try:
-            quote = funcs.get_pickup()
-            target = f"Hey {member.mention}, " if member else ""
-            await ctx.send(f"💕 {target}{quote}")
-        except:
-            await ctx.send("❌ Pickup line API is down")
+        def lookup():
+            page = wikipedia.page(query, auto_suggest=True)
+            return page, wikipedia.summary(page.title, sentences=3, auto_suggest=False)
 
-    @commands.command(help="Get a joke", aliases=['j'])
-    async def joke(self, ctx):
         try:
-            joke = funcs.get_joke()
-            embed = discord.Embed(
-                title=f"{joke['category']} Joke",
-                description=f"{joke['setup']}\n\n||{joke['delivery']}||",
-                color=0xffa500
-            )
-            await ctx.send(embed=embed)
-        except:
-            await ctx.send("❌ Joke API is down")
+            page, summary = await asyncio.to_thread(lookup)
+            embed = discord.Embed(title=page.title, url=page.url, description=summary, color=0xC0C0C0)
+            images = [i for i in page.images if i.lower().endswith((".jpg", ".jpeg", ".png"))]
+            if images:
+                embed.set_thumbnail(url=images[0])
+            view = View()
+            view.add_item(Button(label="Read More", url=page.url))
+            await interaction.followup.send(embed=embed, view=view)
+        except wikipedia.exceptions.DisambiguationError as e:
+            options = "\n".join(f"• {o}" for o in e.options[:8])
+            await interaction.followup.send(f"❓ **{query}** could mean:\n{options}\n\nBe more specific!")
+        except wikipedia.exceptions.PageError:
+            await interaction.followup.send(f"❌ No Wikipedia page found for **{query}**.")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error: {e}")
 
-    @commands.command(help="Get latest/random xkcd comic")
-    async def xkcd(self, ctx, mode: str = "latest"):
+    @app_commands.command(description="Get an insult")
+    async def insult(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
         try:
-            if mode.lower() == "random":
-                comic = xkcd.getRandomComic()
-            else:
-                comic = xkcd.getLatestComic()
-            
-            embed = discord.Embed(
-                title=f"xkcd #{comic.number}: {comic.title}",
-                url=comic.link,
-                color=0x40e0d0
-            )
+            quote_ = await asyncio.to_thread(funcs.get_insult)
+        except Exception:
+            return await interaction.response.send_message("❌ Insult API is down", ephemeral=True)
+        await interaction.response.send_message(f"{member.mention}, {quote_}" if member else quote_)
+
+    @app_commands.command(description="Give someone a compliment")
+    async def compliment(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
+        text = random.choice(COMPLIMENTS)
+        await interaction.response.send_message(f"{member.mention}, {text}" if member else text)
+
+    @app_commands.command(description="Get a pickup line")
+    async def pickup(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
+        try:
+            async with self.session.get("https://rizzapi.vercel.app/random", timeout=10) as r:
+                line = (await r.json(content_type=None))["text"]
+        except Exception:
+            return await interaction.response.send_message("❌ Pickup line API is down", ephemeral=True)
+        target = f"Hey {member.mention}, " if member else ""
+        await interaction.response.send_message(f"💕 {target}{line}")
+
+    @app_commands.command(description="Get a joke")
+    async def joke(self, interaction: discord.Interaction):
+        try:
+            async with self.session.get("https://v2.jokeapi.dev/joke/Any?type=twopart", timeout=10) as r:
+                joke = await r.json(content_type=None)
+            embed = discord.Embed(title=f"{joke['category']} Joke",
+                                  description=f"{joke['setup']}\n\n||{joke['delivery']}||", color=0xffa500)
+            await interaction.response.send_message(embed=embed)
+        except Exception:
+            await interaction.response.send_message("❌ Joke API is down", ephemeral=True)
+
+    @app_commands.command(description="Get the latest or a random xkcd comic")
+    async def xkcd(self, interaction: discord.Interaction, mode: Literal["latest", "random"] = "latest"):
+        await interaction.response.defer()
+        try:
+            comic = await asyncio.to_thread(xkcd.getRandomComic if mode == "random" else xkcd.getLatestComic)
+            embed = discord.Embed(title=f"xkcd #{comic.number}: {comic.title}", url=comic.link, color=0x40e0d0)
             embed.set_image(url=comic.getImageLink())
             embed.set_footer(text=comic.getAltText())
-            
-            await ctx.send(embed=embed)
+            await interaction.followup.send(embed=embed)
         except Exception as e:
-            await ctx.send(f"❌ Error: {e}")
+            await interaction.followup.send(f"❌ Error: {e}")
 
-    @commands.command(help="Get a random animal image", aliases=["an"])
-    async def animal(self, ctx, animal: str = None):
-        animals = ["dog", "cat", "panda", "fox", "bird", "koala", "red_panda", "raccoon", "kangaroo"]
-        
-        if not animal:
-            embed = discord.Embed(title="🐾 Available Animals", description="\n".join(animals), color=0x088f8f)
-            return await ctx.send(embed=embed)
-        
-        if animal.lower() in ["red", "redpanda"]:
-            animal = "red_panda"
-        
+    @app_commands.command(description="Get a random animal picture")
+    async def animal(self, interaction: discord.Interaction, animal: Literal["dog", "cat", "fox", "duck"] = "dog"):
+        urls = {
+            "dog": ("https://dog.ceo/api/breeds/image/random", lambda d: d["message"]),
+            "cat": ("https://api.thecatapi.com/v1/images/search", lambda d: d[0]["url"]),
+            "fox": ("https://randomfox.ca/floof/", lambda d: d["image"]),
+            "duck": ("https://random-d.uk/api/v2/random", lambda d: d["url"].replace("http://", "https://")),
+        }
+        url, pick = urls[animal]
         try:
-            r = requests.get(f"https://some-random-api.com/animal/{animal}", timeout=10)
-            if r.status_code == 200:
-                data = r.json()
-                embed = discord.Embed(title=f"🐾 {animal.title()}", color=0x088f8f)
-                embed.set_image(url=data["image"])
-                if "fact" in data:
-                    embed.add_field(name="Fun Fact", value=data["fact"][:500])
-                await ctx.send(embed=embed)
-            else:
-                await ctx.send(f"❌ Unknown animal: {animal}")
-        except:
-            await ctx.send("❌ API error")
+            async with self.session.get(url, timeout=10) as r:
+                image = pick(await r.json(content_type=None))
+        except Exception:
+            return await interaction.response.send_message("❌ Animal API error", ephemeral=True)
+        embed = discord.Embed(title=f"🐾 {animal.title()}", color=0x088f8f)
+        embed.set_image(url=image)
+        await interaction.response.send_message(embed=embed)
 
-    @commands.command(help="Search for GIFs")
-    async def gif(self, ctx, *, query: str):
+    @app_commands.command(description="Search for a GIF")
+    async def gif(self, interaction: discord.Interaction, query: str):
         tenor_key = os.getenv('TENORKEY')
         if not tenor_key:
-            return await ctx.send("❌ GIF search not configured")
-        
-        async with ctx.typing():
-            try:
-                r = requests.get(
-                    f"https://g.tenor.com/v1/search?q={quote(query)}&contentfilter=medium&key={tenor_key}",
-                    timeout=10
-                )
-                data = r.json()
-                if data.get("results"):
-                    await ctx.send(data["results"][0]["url"])
-                else:
-                    await ctx.send("❌ No GIFs found")
-            except:
-                await ctx.send("❌ GIF search failed")
-
-    @commands.command(help="Flip a coin")
-    async def coin(self, ctx):
-        result = random.choice(["Heads", "Tails"])
-        await ctx.send(f"🪙 **{result}!**")
+            return await interaction.response.send_message("❌ GIF search not configured", ephemeral=True)
+        try:
+            async with self.session.get(f"https://tenor.googleapis.com/v2/search?q={quote(query)}&key={tenor_key}&limit=1&contentfilter=medium",
+                                        timeout=10) as r:
+                data = await r.json(content_type=None)
+            if data.get("results"):
+                await interaction.response.send_message(data["results"][0]["url"])
+            else:
+                await interaction.response.send_message("❌ No GIFs found", ephemeral=True)
+        except Exception:
+            await interaction.response.send_message("❌ GIF search failed", ephemeral=True)
 
 
 async def setup(client):

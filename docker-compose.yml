@@ -1,0 +1,26 @@
+# Local development: `docker compose up` runs Lavalink and the bot together.
+# Put DISCORD_TOKEN etc. in keys.env first.
+services:
+  lavalink:
+    build: ./lavalink
+    restart: unless-stopped
+    environment:
+      LAVALINK_SERVER_PASSWORD: youshallnotpass
+    ports:
+      - "2333:2333"
+
+  bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - lavalink
+    env_file: keys.env
+    environment:
+      LAVALINK_URI: http://lavalink:2333
+      LAVALINK_PASSWORD: youshallnotpass
+      DATA_DIR: /data
+    volumes:
+      - clarence-data:/data
+
+volumes:
+  clarence-data:

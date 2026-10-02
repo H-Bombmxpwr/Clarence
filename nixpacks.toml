@@ -1,9 +1,4 @@
-# Nixpacks configuration for Railway deployment
-# Installs FFmpeg for discord.py voice/audio support
-
-[phases.setup]
-nixPkgs = ["ffmpeg-full"]
-aptPkgs = ["ffmpeg"]
-
+# Nixpacks configuration for Railway deployment.
+# Audio runs on the separate Lavalink service, so FFmpeg isn't needed.
 [start]
 cmd = "python main.py"

@@ -1,27 +1,12 @@
-# Use Python 3.11 slim image
+# Clarence bot. Audio is handled by the separate Lavalink service (see lavalink/),
+# so no FFmpeg/Opus is needed here.
 FROM python:3.11-slim
 
-# Install FFmpeg and other dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    libopus0 \
-    libopus-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Verify FFmpeg is installed
-RUN ffmpeg -version
-
-# Set working directory
 WORKDIR /app
-
-# Copy requirements first for better caching
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application
 COPY . .
 
-# Run the bot
+# Persistent data (mount a volume here and set DATA_DIR=/data)
+ENV DATA_DIR=/data
 CMD ["python", "main.py"]
