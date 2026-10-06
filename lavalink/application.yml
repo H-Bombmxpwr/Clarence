@@ -73,7 +73,7 @@ lavalink:
       lowPass: true
     bufferDurationMs: 1000      # larger buffer rides out CPU/GC hiccups instead of skipping
     frameBufferDurationMs: 5000
-    opusEncodingQuality: 10
+    opusEncodingQuality: 5       # 10 is much more CPU for no audible gain over Discord
     resamplingQuality: LOW      # inaudible through Discord, much cheaper on a small instance
     trackStuckThresholdMs: 10000
     useSeekGhosting: true

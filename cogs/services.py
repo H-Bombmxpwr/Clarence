@@ -34,11 +34,8 @@ def user_info_embed(target: discord.Member | discord.User) -> discord.Embed:
     if isinstance(target, discord.Member):
         embed.add_field(name="Joined", value=f"<t:{int(target.joined_at.timestamp())}:R>" if target.joined_at else "?", inline=True)
         embed.add_field(name="Top Role", value=target.top_role.mention, inline=True)
-        embed.add_field(name="Status", value=str(target.status).title(), inline=True)
-        activity = "N/A"
-        if target.activity:
-            activity = f"{target.activity.type.name.title()}: {target.activity.name}"
-        embed.add_field(name="Activity", value=activity, inline=True)
+        if target.activity:  # only known when the presences intent is on (it's off to save memory/CPU)
+            embed.add_field(name="Activity", value=f"{target.activity.type.name.title()}: {target.activity.name}", inline=True)
         roles = [r.mention for r in reversed(target.roles[1:])]
         if roles:
             embed.add_field(name=f"Roles ({len(roles)})", value=" ".join(roles)[:1024], inline=False)

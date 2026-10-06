@@ -33,7 +33,7 @@ Put these in `keys.env` for local runs, or in the Railway service's **Variables*
 The bot needs the `applications.commands` scope for slash commands:
 `https://discord.com/api/oauth2/authorize?client_id=877014219499925515&permissions=8&scope=bot%20applications.commands`
 
-In the Developer Portal, enable the **Server Members** and **Message Content** privileged intents.
+In the Developer Portal, enable the **Server Members** and **Message Content** privileged intents (Presence isn't needed).
 
 ### 3. Run locally
 ```bash
@@ -65,7 +65,16 @@ Clarence runs as **two services** in one Railway project.
 - New service from the same repo with **Root Directory** = `lavalink`. It builds `lavalink/Dockerfile`.
 - Variables: `LAVALINK_SERVER_PASSWORD=<something secret>`, `SERVER_ADDRESS=::` (for Railway private networking).
 - On the bot service set `LAVALINK_URI=http://<lavalink-service-name>.railway.internal:2333` and `LAVALINK_PASSWORD` to the same secret.
-- Give it ~512 MB–1 GB RAM.
+- Turn on **Settings → Serverless (App Sleeping)**. The bot only connects to Lavalink when someone uses a
+  music command and disconnects after 3 idle minutes (`LAVALINK_IDLE_SECONDS` on the bot service), so Lavalink
+  sleeps and costs almost nothing while nobody's listening. The first `/play` after it sleeps takes ~15–40s to wake it.
+- It runs in ~350–450 MB RAM (256 MB Java heap, set in `lavalink/Dockerfile`).
+
+### Keeping the bill down
+- Leave **App Sleeping off on the bot service**: it holds a permanent Discord connection, so it would never sleep anyway.
+- Don't add replicas, and set no more than ~0.5 vCPU / 512 MB as the per-service limit so a runaway can't run up costs.
+- The bot doesn't request the presences intent (it's the noisiest Discord event and was the bot's biggest RAM/CPU cost),
+  so you can turn **Presence Intent** off in the Developer Portal.
 
 ### About YouTube
 No cookies, OAuth or YouTube accounts are used. Lavalink's [youtube-source](https://github.com/lavalink-devs/youtube-source)

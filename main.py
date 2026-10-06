@@ -53,7 +53,11 @@ log = logging.getLogger("clarence")
 class Clarence(commands.Bot):
     def __init__(self):
         # Slash-command only: the prefix is never used, but commands.Bot requires one
-        super().__init__(command_prefix=commands.when_mentioned, intents=discord.Intents.all(), help_command=None)
+        # Everything except presences: presence updates are by far the busiest gateway event and
+        # caching them costs a lot of RAM/CPU, and nothing but /userinfo's activity line used them.
+        intents = discord.Intents.all()
+        intents.presences = False
+        super().__init__(command_prefix=commands.when_mentioned, intents=intents, help_command=None)
         self.session: aiohttp.ClientSession = None
         self.dev_guild = discord.Object(DEV_GUILD_ID) if DEV_GUILD_ID else None
         self.command_ids: dict[str, int] = {}

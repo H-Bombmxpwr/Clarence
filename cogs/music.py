@@ -6,6 +6,10 @@ Needs a Lavalink v4 server — see lavalink/ and the README. Configure with:
   LAVALINK_URI       (default http://localhost:2333)
   LAVALINK_PASSWORD  (default youshallnotpass)
 
+To keep hosting cheap, the bot only connects to Lavalink when someone uses a music command and
+disconnects after LAVALINK_IDLE_SECONDS with no players, so a Railway Lavalink service with
+App Sleeping (serverless) enabled can sleep while nobody is listening.
+
 No YouTube cookies/accounts are used. If YouTube refuses a track (common on datacenter IPs),
 the bot automatically retries the same song from SoundCloud.
 """
@@ -16,10 +20,11 @@ import re
 import time
 from typing import Optional, cast
 
+import aiohttp
 import discord
 import wavelink
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from functionality.lyrics import fetch_lyrics
 from functionality.store import JsonStore
@@ -33,6 +38,9 @@ if not URL_RE.match(LAVALINK_URI):
     # e.g. "lavalink.railway.internal:2333" — aiohttp needs a scheme
     LAVALINK_URI = f"http://{LAVALINK_URI}"
 LAVALINK_PASSWORD = os.getenv("LAVALINK_PASSWORD", "youshallnotpass")
+# Disconnect from Lavalink after this long with no players so it can sleep
+LAVALINK_IDLE_SECONDS = int(os.getenv("LAVALINK_IDLE_SECONDS") or 180)
+LAVALINK_WAKE_TIMEOUT = 90  # a slept Lavalink needs ~15-40s to boot
 MAX_PLAYLIST = 500
 EMBED_COLOR = 0x1db954
 # Discord rate-limits message edits, and Lavalink only reports the position every 5s anyway
@@ -199,19 +207,71 @@ class Music(commands.Cog):
         guild_only_cog(self)
 
     async def cog_load(self):
-        if not wavelink.Pool.nodes:
-            node = wavelink.Node(uri=LAVALINK_URI, password=LAVALINK_PASSWORD, inactive_player_timeout=300)
-            # Pool.connect retries until Lavalink is reachable, so don't block startup on it
-            asyncio.create_task(self._connect_node(node))
+        self._wake_task: Optional[asyncio.Task] = None
+        self._last_used = time.monotonic()
+        self._idle_check.start()
 
-    async def _connect_node(self, node: wavelink.Node):
+    async def ensure_node(self) -> bool:
+        """Connect to Lavalink if we aren't already, waking it if it's asleep. Returns True once it's usable."""
+        self._last_used = time.monotonic()
+        if self.node_ready():
+            return True
+        if not self._wake_task or self._wake_task.done():
+            self._wake_task = asyncio.create_task(self._connect_node())
+        try:
+            return await asyncio.wait_for(asyncio.shield(self._wake_task), LAVALINK_WAKE_TIMEOUT)
+        except asyncio.TimeoutError:
+            return False
+
+    async def _connect_node(self) -> bool:
         await self.bot.wait_until_ready()
+        deadline = time.monotonic() + LAVALINK_WAKE_TIMEOUT
+        # Any request wakes a slept Railway service; poll until Lavalink has finished booting.
+        # Done by hand because wavelink's own retry backoff waits up to 30s between attempts.
+        async with aiohttp.ClientSession(headers={"Authorization": LAVALINK_PASSWORD}) as session:
+            while True:
+                try:
+                    async with session.get(f"{LAVALINK_URI}/version", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                        if resp.status == 200:
+                            break
+                except (aiohttp.ClientError, asyncio.TimeoutError):
+                    pass
+                if time.monotonic() > deadline:
+                    log.warning("Lavalink at %s didn't come up", LAVALINK_URI)
+                    return False
+                await asyncio.sleep(2)
+
+        for stale in list(wavelink.Pool.nodes.values()):
+            await stale.close(eject=True)
+        # retries=0: if the connection later drops, the next music command reconnects instead of wavelink retrying forever
+        node = wavelink.Node(uri=LAVALINK_URI, password=LAVALINK_PASSWORD, inactive_player_timeout=300, retries=0)
         try:
             await wavelink.Pool.connect(nodes=[node], client=self.bot, cache_capacity=100)
         except Exception:
             log.exception("Could not connect to Lavalink at %s", LAVALINK_URI)
+            return False
+        while not self.node_ready():  # CONNECTED once Lavalink sends its session id
+            if time.monotonic() > deadline or node.status is wavelink.NodeStatus.DISCONNECTED:
+                return False
+            await asyncio.sleep(0.2)
+        self._last_used = time.monotonic()
+        return True
+
+    @tasks.loop(seconds=60)
+    async def _idle_check(self):
+        """Drop the Lavalink connection once nobody is listening, so the Lavalink service can sleep."""
+        if self._wake_task and not self._wake_task.done():
+            return
+        if any(n.players for n in wavelink.Pool.nodes.values()):
+            self._last_used = time.monotonic()
+            return
+        if wavelink.Pool.nodes and time.monotonic() - self._last_used > LAVALINK_IDLE_SECONDS:
+            log.info("No music players for %ss, disconnecting from Lavalink", LAVALINK_IDLE_SECONDS)
+            for node in list(wavelink.Pool.nodes.values()):
+                await node.close(eject=True)
 
     async def cog_unload(self):
+        self._idle_check.cancel()
         for vc in list(self.bot.voice_clients):
             await vc.disconnect(force=True)
 
@@ -232,10 +292,16 @@ class Music(commands.Cog):
             else:
                 await interaction.response.send_message(f"{msg}", ephemeral=True)
 
-        if not self.node_ready():
-            await fail("The music server (Lavalink) isn't connected right now. Try again in a minute.")
-            return None
         voice = interaction.user.voice
+        if connect and voice and voice.channel and not self.node_ready():
+            if not interaction.response.is_done():
+                await interaction.response.defer(thinking=True)
+            if not await self.ensure_node():
+                await fail("The music server (Lavalink) isn't responding right now. Try again in a minute.")
+                return None
+        elif not self.node_ready():
+            await fail("I'm not playing anything.")
+            return None
         player = cast(Optional[MusicPlayer], interaction.guild.voice_client)
 
         if not voice or not voice.channel:
@@ -535,7 +601,13 @@ class Music(commands.Cog):
     # ------------------------------------------------------------------ autocomplete
 
     async def query_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        if len(current) < 3 or URL_RE.match(current) or not self.node_ready():
+        if not self.node_ready():
+            # Start waking Lavalink while they type so it's ready by the time they hit enter
+            if interaction.user.voice and (not self._wake_task or self._wake_task.done()):
+                self._wake_task = asyncio.create_task(self._connect_node())
+            return []
+        self._last_used = time.monotonic()
+        if len(current) < 3 or URL_RE.match(current):
             return []
         try:
             results = await asyncio.wait_for(wavelink.Playable.search(current), timeout=2.5)
@@ -575,7 +647,10 @@ class Music(commands.Cog):
         player = await self.get_player(interaction, connect=True)
         if player:
             player.home = interaction.channel
-            await interaction.response.send_message(f"Joined {player.channel.mention}")
+            if interaction.response.is_done():  # deferred while waking Lavalink
+                await interaction.followup.send(f"Joined {player.channel.mention}")
+            else:
+                await interaction.response.send_message(f"Joined {player.channel.mention}")
 
     @app_commands.command(description="Leave the voice channel and clear the queue")
     async def leave(self, interaction: discord.Interaction):
